@@ -12,7 +12,7 @@
 ---
 
 ## 📥 Download the Full Report
-**[📄 Click here to download the Unified Technical Reference Manual (PDF)](./Manuel_Architecture_Humanoïde_OpenSource.pdf)**
+**[📄 Click here to download the Unified Technical Reference Manual (PDF)](./Technical_&_Engineering_Annexes_1.pdf)**
 
 *(Includes: BOM Recommendations, Thermal Analysis, Control Loop Tuning, and Wiring Topologies)*
 
