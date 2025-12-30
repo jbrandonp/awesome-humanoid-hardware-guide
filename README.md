@@ -1,4 +1,4 @@
-# 🤖 The Open Source Humanoid Guide: From Signal to Behavior
+# 🤖 Humanoid Guide
 ### A Technical Survival Manual for Sim-to-Real Transfer
 
 ![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)
