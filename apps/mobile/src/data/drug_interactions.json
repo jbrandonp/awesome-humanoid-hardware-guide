@@ -1,0 +1,21 @@
+{
+  "Artemether 20mg / Lumefantrine 120mg": [
+    {
+      "interactingDrug": "Amoxicilline 1g",
+      "severity": "high",
+      "description": "Risque d'allongement de l'intervalle QT. À utiliser avec précaution."
+    },
+    {
+      "interactingDrug": "Paracétamol 1000mg",
+      "severity": "low",
+      "description": "Aucune interaction majeure, surveillance hépatique si prise prolongée."
+    }
+  ],
+  "Ibuprofène 400mg": [
+    {
+      "interactingDrug": "Aspirine 200mg",
+      "severity": "high",
+      "description": "Risque hémorragique accru. Éviter l'association d'AINS."
+    }
+  ]
+}

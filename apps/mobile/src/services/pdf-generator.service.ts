@@ -1,4 +1,5 @@
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
+import medicalDict from '../i18n/medical_dict.json';
 
 interface PrescriptionItem {
   id: string;
@@ -7,17 +8,34 @@ interface PrescriptionItem {
 }
 
 export class PdfGeneratorService {
-  static async generatePrescription(patientName: string, date: string, items: PrescriptionItem[]): Promise<string> {
+  static async generatePrescription(
+    patientName: string,
+    date: string,
+    items: PrescriptionItem[],
+    language: 'fr' | 'en' | 'hi' | 'mr' = 'en'
+  ): Promise<string> {
 
     // ABDM Compliance : Mocking a QR Code generation via simple base64 image or placeholder
     const dummyQrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ABDM_CERTIFIED_PRESCRIPTION_12345';
 
-    const itemsHtml = items.map(item => `
+    const itemsHtml = items.map(item => {
+      // Local Offline Translation
+      let dosageText = item.dosage || 'Selon prescription médicale';
+
+      if (language !== 'fr' && item.dosage && medicalDict[item.dosage as keyof typeof medicalDict]) {
+         const translations = medicalDict[item.dosage as keyof typeof medicalDict];
+         dosageText = (translations as any)[language] || item.dosage;
+      }
+
+      return `
       <tr>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.name}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #ddd;">${item.dosage || 'Selon prescription médicale'}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd; font-weight: bold;">${item.name}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #ddd;">
+           ${item.dosage ? `<i>(FR) ${item.dosage}</i><br/>` : ''}
+           <span style="color: #0056b3;">${dosageText}</span>
+        </td>
       </tr>
-    `).join('');
+    `}).join('');
 
     const htmlContent = `
       <html>

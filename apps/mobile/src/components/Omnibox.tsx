@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, TextInput, FlatList, Text, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
 import Fuse from 'fuse.js';
+import { DrugInteractionChecker } from '../services/drug-interaction.service';
 
 // --- Mocks pour la Base de Données ---
 // Ces données seraient idéalement tirées d'un @nozbe/watermelondb Collection via withObservables
@@ -36,6 +37,14 @@ export function Omnibox() {
 
   const handleSelectItem = (item: any) => {
     if (!selectedItems.find(i => i.id === item.id)) {
+      if (item.type === 'medication') {
+        const currentMeds = selectedItems.filter(i => i.type === 'medication').map(i => i.name);
+        const interactions = DrugInteractionChecker.checkInteractions(item.name, currentMeds);
+
+        if (interactions.length > 0) {
+          showCustomAlert(`⚠️ AVERTISSEMENT INTERACTION !\n\n${item.name} interagit avec : ${interactions.map(i => i.interactingDrug).join(', ')}.\n\nDétail : ${interactions[0].description}`);
+        }
+      }
       setSelectedItems([...selectedItems, item]);
     }
     setQuery('');

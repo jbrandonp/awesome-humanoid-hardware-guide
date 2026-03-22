@@ -8,9 +8,11 @@ import { SessionTimeoutMiddleware } from './auth/session-timeout.middleware';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuditModule, DpdpaModule } from './audit/audit-dpdpa.module';
 import { AbdmModule } from './abdm/abdm.module';
+import { OcrModule } from './ocr/ocr.module';
+import { FhirModule } from './fhir/fhir.module';
 
 @Module({
-  imports: [SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule],
+  imports: [SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule],
   controllers: [AppController],
   providers: [AppService],
 })

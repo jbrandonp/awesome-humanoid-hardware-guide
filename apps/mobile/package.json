@@ -11,6 +11,7 @@
     "@nozbe/with-observables": "^1.6.0",
     "@testing-library/react-native": "*",
     "expo": "*",
+    "expo-battery": "~10.0.8",
     "expo-splash-screen": "*",
     "expo-status-bar": "*",
     "expo-system-ui": "*",
