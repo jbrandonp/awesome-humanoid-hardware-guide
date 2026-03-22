@@ -7,11 +7,14 @@
   },
   "dependencies": {
     "@expo/metro-config": "*",
+    "@nozbe/watermelondb": "^0.28.0",
+    "@nozbe/with-observables": "^1.6.0",
     "@testing-library/react-native": "*",
     "expo": "*",
     "expo-splash-screen": "*",
     "expo-status-bar": "*",
     "expo-system-ui": "*",
+    "fuse.js": "^7.1.0",
     "jest-expo": "*",
     "metro-config": "*",
     "metro-resolver": "*",
@@ -19,6 +22,7 @@
     "react-native": "*",
     "react-native-svg": "*",
     "react-native-svg-transformer": "*",
-    "react-native-web": "*"
+    "react-native-web": "*",
+    "yjs": "^13.6.30"
   }
 }
