@@ -5,6 +5,7 @@
   "scripts": {},
   "private": true,
   "devDependencies": {
+    "@babel/plugin-proposal-decorators": "^7.29.0",
     "@expo/cli": "~54.0.16",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.0",
@@ -35,6 +36,7 @@
     "metro-config": "~0.83.0",
     "metro-resolver": "~0.83.0",
     "nx": "22.6.1",
+    "prisma": "^5.22.0",
     "tslib": "^2.3.0",
     "typescript": "~5.9.2",
     "vite": "^7.0.0",
@@ -53,6 +55,7 @@
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/platform-fastify": "^11.1.17",
+    "@prisma/client": "^5.22.0",
     "axios": "^1.6.0",
     "expo": "~54.0.0",
     "expo-splash-screen": "~31.0.11",

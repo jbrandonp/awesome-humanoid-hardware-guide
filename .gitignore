@@ -61,3 +61,4 @@ cache/
 
 vite.config.*.timestamp*
 test-output
+node_modules\n.nx\ndist\ntarget\n.expo\ncoverage

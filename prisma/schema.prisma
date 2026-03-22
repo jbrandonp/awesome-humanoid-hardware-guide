@@ -1,0 +1,115 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   // admin, doctor, nurse
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  auditLogs    AuditLog[]
+  dpdpaConsent DpdpaConsent[]
+}
+
+model Patient {
+  id          String    @id @default(uuid())
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  // Sync Status Fields
+  status      String    @map("_status") @default("created") // synced, created, updated, deleted
+  deletedAt   DateTime? @map("deleted_at")
+
+  auditLogs    AuditLog[]
+  dpdpaConsent DpdpaConsent[]
+  visits       Visit[]
+  vitals       Vital[]
+  prescriptions Prescription[]
+}
+
+model Visit {
+  id        String   @id @default(uuid())
+  patientId String   @map("patient_id")
+  date      DateTime
+  notes     Bytes?   // Will store Yjs Binary Updates (Uint8Array)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // Sync Status Fields
+  status      String    @map("_status") @default("created")
+  deletedAt   DateTime? @map("deleted_at")
+
+  patient      Patient       @relation(fields: [patientId], references: [id])
+  prescriptions Prescription[]
+}
+
+model Vital {
+  id            String   @id @default(uuid())
+  patientId     String   @map("patient_id")
+  bloodPressure String?  @map("blood_pressure")
+  heartRate     Int?     @map("heart_rate")
+  temperature   Float?
+  recordedAt    DateTime @map("recorded_at")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  // Sync Status Fields
+  status      String    @map("_status") @default("created")
+  deletedAt   DateTime? @map("deleted_at")
+
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+model Prescription {
+  id             String   @id @default(uuid())
+  visitId        String   @map("visit_id")
+  patientId      String   @map("patient_id")
+  medicationName String   @map("medication_name")
+  dosage         String
+  instructions   String?
+  prescribedAt   DateTime @map("prescribed_at")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  // Sync Status Fields
+  status      String    @map("_status") @default("created")
+  deletedAt   DateTime? @map("deleted_at")
+
+  visit   Visit   @relation(fields: [visitId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  patientId String   @map("patient_id")
+  action    String
+  metadata  Json     @default("{}") // jsonb
+  timestamp DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model DpdpaConsent {
+  id        String   @id @default(uuid())
+  patientId String   @map("patient_id")
+  userId    String   @map("user_id")
+  grantedAt DateTime @default(now())
+  expiresAt DateTime
+  purpose   String
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("dpdpa_consents")
+}
