@@ -1,0 +1,23 @@
+import { z } from 'zod';
+
+export const PatientSchema = z.object({
+  id: z.string().uuid(),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  dateOfBirth: z.string().datetime(), // ISO 8601
+  _status: z.enum(['synced', 'created', 'updated', 'deleted']),
+  deleted_at: z.string().datetime().nullable(),
+});
+
+export type Patient = z.infer<typeof PatientSchema>;
+
+export const VisitSchema = z.object({
+  id: z.string().uuid(),
+  patientId: z.string().uuid(),
+  date: z.string().datetime(),
+  notes: z.string(), // This will later use Yjs Y.Text on client
+  _status: z.enum(['synced', 'created', 'updated', 'deleted']),
+  deleted_at: z.string().datetime().nullable(),
+});
+
+export type Visit = z.infer<typeof VisitSchema>;
