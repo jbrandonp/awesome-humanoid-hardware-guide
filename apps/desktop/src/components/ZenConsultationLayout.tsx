@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useHardwareOptimization } from '../hooks/useHardwareOptimization';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { ClinicalTicker } from './ClinicalTicker';
+import { DesktopOmnibox } from './DesktopOmnibox';
 
 export function ZenConsultationLayout() {
   useHardwareOptimization(); // Désactive les animations (Windows 7 / Low-Resource)
@@ -62,17 +64,8 @@ export function ZenConsultationLayout() {
        </header>
 
        {/* Élément Central: L'Omnibox (Focus initial) */}
-       <main className="flex-1 max-w-4xl w-full mx-auto">
-          <div className="relative group">
-             <input
-               ref={omniboxRef}
-               tabIndex={3}
-               type="text"
-               placeholder="Tapez un Médicament, Diagnostic ICD-10, ou Ctrl+P (Protocoles)..."
-               className="w-full bg-medical-surface border border-medical-border text-xl p-6 rounded-xl shadow-sm placeholder-slate-500 focus:ring-4 focus:ring-medical-primary focus:outline-none"
-             />
-             <div className="absolute right-4 top-6 text-sm text-slate-400">Prescription Éclair (15s)</div>
-          </div>
+       <main className="flex-1 max-w-4xl w-full mx-auto mt-8 mb-24 relative z-10">
+          <DesktopOmnibox ref={omniboxRef} />
 
           {/* Raccourcis visuels (Si Ctrl+P activé) */}
           {showProtocols && (
@@ -101,6 +94,8 @@ export function ZenConsultationLayout() {
              )}
           </div>
        </main>
+
+       <ClinicalTicker />
     </div>
   );
 }
