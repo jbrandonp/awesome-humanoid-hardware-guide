@@ -1,13 +1,23 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { SyncController } from './sync/sync.controller';
-import { SyncService } from './sync/sync.service';
 import { SyncModule } from './sync/sync.module';
+import { WhisperModule } from './whisper/whisper.module';
+import { AuthModule } from './auth/auth.module';
+import { SessionTimeoutMiddleware } from './auth/session-timeout.middleware';
+import { PrismaModule } from './prisma/prisma.module';
+import { AuditModule, DpdpaModule } from './audit/audit-dpdpa.module';
+import { AbdmModule } from './abdm/abdm.module';
 
 @Module({
-  imports: [SyncModule],
-  controllers: [AppController, SyncController],
-  providers: [AppService, SyncService],
+  imports: [SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule],
+  controllers: [AppController],
+  providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(SessionTimeoutMiddleware)
+      .forRoutes({ path: '*', method: RequestMethod.ALL });
+  }
+}
