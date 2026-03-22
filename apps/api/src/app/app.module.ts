@@ -10,9 +10,15 @@ import { AuditModule, DpdpaModule } from './audit/audit-dpdpa.module';
 import { AbdmModule } from './abdm/abdm.module';
 import { OcrModule } from './ocr/ocr.module';
 import { FhirModule } from './fhir/fhir.module';
+import { MongooseModule } from '@nestjs/mongoose';
+import { ClinicalRecordModule } from './clinical-record/clinical-record.module';
+import { BillingModule } from './billing/billing.module';
 
 @Module({
-  imports: [SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule],
+  imports: [
+    MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin'),
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

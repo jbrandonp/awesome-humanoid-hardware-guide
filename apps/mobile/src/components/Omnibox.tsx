@@ -11,6 +11,8 @@ const MEDICAL_DATABASE = [
   { id: '3', type: 'medication', name: 'Artemether 20mg / Lumefantrine 120mg', dosage: '1 cp matin et soir pendant 3 jours' },
   { id: '4', type: 'medication', name: 'Paracétamol 1000mg', dosage: '1 cp toutes les 6h si fièvre > 38.5°C' },
   { id: '5', type: 'medication', name: 'Amoxicilline 1g', dosage: '1 cp matin, midi et soir pendant 7 jours' },
+  { id: '6', type: 'lab', code: 'HGB', name: 'Hémoglobine' },
+  { id: '7', type: 'lab', code: 'GLU', name: 'Glycémie à jeun' },
 ];
 
 const QUICK_PROTOCOLS = {
@@ -87,7 +89,7 @@ export function Omnibox() {
       {/* Barre de recherche */}
       <TextInput
         style={styles.input}
-        placeholder="Rechercher Diagnostic, Médicament (ex: Parac...)"
+        placeholder="Rechercher Médicament, Diagnostic ICD-10, Labo..."
         value={query}
         onChangeText={setQuery}
         autoCapitalize="none"
@@ -102,7 +104,7 @@ export function Omnibox() {
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.resultItem} onPress={() => handleSelectItem(item)}>
               <Text style={styles.resultItemText}>
-                {item.type === 'icd10' ? `[${item.code}] ` : '💊 '}
+                {item.type === 'icd10' ? `[${item.code}] ` : item.type === 'lab' ? '🔬 ' : '💊 '}
                 {item.name}
               </Text>
               {item.dosage && <Text style={styles.resultItemSubText}>{item.dosage}</Text>}
@@ -116,7 +118,7 @@ export function Omnibox() {
         <Text style={styles.cartTitle}>Ordonnance en cours :</Text>
         {selectedItems.map((item, index) => (
           <View key={index} style={styles.cartItem}>
-             <Text>{item.type === 'icd10' ? `📋 Diagnostic : [${item.code}] ${item.name}` : `💊 Médicament : ${item.name}`}</Text>
+             <Text>{item.type === 'icd10' ? `📋 Diagnostic : [${item.code}] ${item.name}` : item.type === 'lab' ? `🔬 Examen : ${item.name}` : `💊 Médicament : ${item.name}`}</Text>
           </View>
         ))}
       </View>
