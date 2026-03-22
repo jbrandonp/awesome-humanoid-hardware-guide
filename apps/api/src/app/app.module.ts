@@ -14,11 +14,15 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ClinicalRecordModule } from './clinical-record/clinical-record.module';
 import { BillingModule } from './billing/billing.module';
 import { IotModule } from './iot/iot.module';
+import { PeerConsultModule } from './peer-consult/peer-consult.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TickerModule } from './ticker/ticker.module';
 
 @Module({
   imports: [
     MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin'),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule
+    ScheduleModule.forRoot(),
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule
   ],
   controllers: [AppController],
   providers: [AppService],

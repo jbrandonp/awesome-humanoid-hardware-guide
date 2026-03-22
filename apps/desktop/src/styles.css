@@ -1,1 +1,27 @@
-/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Styles de base pour le mode "Medical Dark Mode" */
+body.dark {
+  @apply bg-medical-dark text-medical-text;
+}
+
+body.light {
+  @apply bg-slate-50 text-slate-800;
+}
+
+/* Toggle "Haute Lisibilité" (Agrandit toutes les typographies de 15%) */
+body.high-legibility {
+  font-size: 115% !important;
+}
+
+/* Contour de focus pour le "Zero-Mouse Policy" */
+*:focus-visible {
+  @apply outline-none ring-2 ring-medical-primary ring-offset-2 ring-offset-medical-dark !important;
+}
+
+/* Modificateurs CSS d'urgence */
+.alert-danger {
+  @apply bg-medical-danger text-white font-bold p-3 rounded shadow-md;
+}
