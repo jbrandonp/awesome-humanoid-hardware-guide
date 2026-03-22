@@ -2,6 +2,43 @@ use mdns_sd::{ServiceDaemon, ServiceEvent};
 use std::time::Duration;
 use tokio::time::timeout;
 
+use keyring::Entry;
+
+mod thermal_printer;
+mod hardware_diag;
+
+#[tauri::command]
+fn save_token(token: String) -> Result<(), String> {
+    let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
+    entry.set_password(&token).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_token() -> Result<String, String> {
+    let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
+    let password = entry.get_password().map_err(|e| e.to_string())?;
+    Ok(password)
+}
+
+#[tauri::command]
+fn delete_token() -> Result<(), String> {
+    let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
+    entry.delete_password().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn get_os_info() -> Result<String, String> {
+    let os_name = std::env::consts::OS;
+    let is_windows = cfg!(windows);
+
+    if is_windows {
+      return Ok(format!("{} (Fallback checks on Frontend for exact Win7 ver)", os_name));
+    }
+    Ok(os_name.to_string())
+}
+
 #[tauri::command]
 async fn discover_medical_api() -> Result<String, String> {
     let mdns = ServiceDaemon::new().map_err(|e| e.to_string())?;
@@ -40,7 +77,15 @@ async fn discover_medical_api() -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![discover_medical_api])
+    .invoke_handler(tauri::generate_handler![
+      discover_medical_api,
+      get_os_info,
+      save_token,
+      get_token,
+      delete_token,
+      thermal_printer::print_thermal_receipt,
+      hardware_diag::check_hardware_health
+    ])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

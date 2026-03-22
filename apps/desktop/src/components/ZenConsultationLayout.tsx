@@ -3,6 +3,7 @@ import { useHardwareOptimization } from '../hooks/useHardwareOptimization';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { ClinicalTicker } from './ClinicalTicker';
 import { DesktopOmnibox } from './DesktopOmnibox';
+import { HardwareStatusIndicator } from './HardwareStatusIndicator';
 
 export function ZenConsultationLayout() {
   useHardwareOptimization(); // Désactive les animations (Windows 7 / Low-Resource)
@@ -39,22 +40,28 @@ export function ZenConsultationLayout() {
 
   return (
     <div className="min-h-screen flex flex-col p-8 transition-colors duration-150 ease-in-out">
-       {/* Paramètres Accessibilité (Minimalistes) */}
-       <div className="flex justify-end gap-4 mb-4">
-         <button
-           tabIndex={1}
+       {/* Paramètres Accessibilité & Diagnostic Hardware */}
+       <div className="flex justify-between items-start gap-4 mb-4">
+
+         {/* Diagnostic Matériel (RAM / Imprimante) */}
+         <HardwareStatusIndicator />
+
+         <div className="flex gap-4">
+           <button
+             tabIndex={1}
            onClick={() => setIsHighLegibility(!isHighLegibility)}
            className="px-4 py-2 rounded bg-medical-border text-sm hover:bg-slate-600 focus:outline-none focus:ring-2"
          >
             {isHighLegibility ? 'Texte Normal' : 'A+ Haute Lisibilité'}
          </button>
-         <button
-           tabIndex={2}
-           onClick={() => setIsDarkMode(!isDarkMode)}
-           className="px-4 py-2 rounded bg-medical-border text-sm hover:bg-slate-600 focus:outline-none focus:ring-2"
-         >
-            {isDarkMode ? 'Mode Jour' : 'Mode Nuit Clinique'}
-         </button>
+           <button
+             tabIndex={2}
+             onClick={() => setIsDarkMode(!isDarkMode)}
+             className="px-4 py-2 rounded bg-medical-border text-sm hover:bg-slate-600 focus:outline-none focus:ring-2"
+           >
+              {isDarkMode ? 'Mode Jour' : 'Mode Nuit Clinique'}
+           </button>
+         </div>
        </div>
 
        {/* En-tête Patient "Zen" (Zéro menu latéral) */}
