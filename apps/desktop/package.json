@@ -1,0 +1,8 @@
+{
+  "name": "@systeme-sante/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1"
+  }
+}

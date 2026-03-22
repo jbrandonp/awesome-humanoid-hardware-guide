@@ -1,0 +1,10 @@
+{
+  "name": "@systeme-sante/desktop-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@systeme-sante/desktop"
+    ]
+  }
+}
