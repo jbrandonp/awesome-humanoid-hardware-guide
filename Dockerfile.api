@@ -1,0 +1,35 @@
+# Builder Stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+# Génération Prisma
+RUN npx prisma generate
+# Compilation de l'API avec Nx
+RUN npx nx build api --prod
+
+# Production Stage
+FROM node:18-alpine
+
+WORKDIR /app
+# Variables d'environnements (surpassables au run)
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# On copie uniquement les dépendances de prod (via un installeur propre)
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copie Prisma client
+COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
+COPY --from=builder /app/prisma /app/prisma
+
+# Copie de l'artefact buildé de l'API
+COPY --from=builder /app/dist/apps/api /app/dist/apps/api
+
+EXPOSE 3000
+
+CMD ["node", "dist/apps/api/main.js"]

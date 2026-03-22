@@ -45,6 +45,35 @@ services:
     command: server /data --console-address ":9001"
     restart: always
 
+  # --- PRODUCTION DEPLOYMENT ---
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: systeme-sante-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://medical_user:medical_password@postgres:5432/medical_db?schema=public
+      MONGO_URL: mongodb://mongo_admin:mongo_password@mongodb:27017/medical_db?authSource=admin
+      JWT_SECRET: production-secret-key-change-me
+      PORT: 3000
+    restart: always
+
+  nginx:
+    image: nginx:alpine
+    container_name: systeme-sante-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: always
+
 volumes:
   postgres_data:
   mongodb_data:
