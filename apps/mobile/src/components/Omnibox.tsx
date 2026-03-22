@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, TextInput, FlatList, Text, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
 import Fuse from 'fuse.js';
+import { DrugInteractionChecker } from '../services/drug-interaction.service';
 
 // --- Mocks pour la Base de Données ---
 // Ces données seraient idéalement tirées d'un @nozbe/watermelondb Collection via withObservables
@@ -10,6 +11,8 @@ const MEDICAL_DATABASE = [
   { id: '3', type: 'medication', name: 'Artemether 20mg / Lumefantrine 120mg', dosage: '1 cp matin et soir pendant 3 jours' },
   { id: '4', type: 'medication', name: 'Paracétamol 1000mg', dosage: '1 cp toutes les 6h si fièvre > 38.5°C' },
   { id: '5', type: 'medication', name: 'Amoxicilline 1g', dosage: '1 cp matin, midi et soir pendant 7 jours' },
+  { id: '6', type: 'lab', code: 'HGB', name: 'Hémoglobine' },
+  { id: '7', type: 'lab', code: 'GLU', name: 'Glycémie à jeun' },
 ];
 
 const QUICK_PROTOCOLS = {
@@ -36,6 +39,14 @@ export function Omnibox() {
 
   const handleSelectItem = (item: any) => {
     if (!selectedItems.find(i => i.id === item.id)) {
+      if (item.type === 'medication') {
+        const currentMeds = selectedItems.filter(i => i.type === 'medication').map(i => i.name);
+        const interactions = DrugInteractionChecker.checkInteractions(item.name, currentMeds);
+
+        if (interactions.length > 0) {
+          showCustomAlert(`⚠️ AVERTISSEMENT INTERACTION !\n\n${item.name} interagit avec : ${interactions.map(i => i.interactingDrug).join(', ')}.\n\nDétail : ${interactions[0].description}`);
+        }
+      }
       setSelectedItems([...selectedItems, item]);
     }
     setQuery('');
@@ -78,7 +89,7 @@ export function Omnibox() {
       {/* Barre de recherche */}
       <TextInput
         style={styles.input}
-        placeholder="Rechercher Diagnostic, Médicament (ex: Parac...)"
+        placeholder="Rechercher Médicament, Diagnostic ICD-10, Labo..."
         value={query}
         onChangeText={setQuery}
         autoCapitalize="none"
@@ -93,7 +104,7 @@ export function Omnibox() {
           renderItem={({ item }) => (
             <TouchableOpacity style={styles.resultItem} onPress={() => handleSelectItem(item)}>
               <Text style={styles.resultItemText}>
-                {item.type === 'icd10' ? `[${item.code}] ` : '💊 '}
+                {item.type === 'icd10' ? `[${item.code}] ` : item.type === 'lab' ? '🔬 ' : '💊 '}
                 {item.name}
               </Text>
               {item.dosage && <Text style={styles.resultItemSubText}>{item.dosage}</Text>}
@@ -107,7 +118,7 @@ export function Omnibox() {
         <Text style={styles.cartTitle}>Ordonnance en cours :</Text>
         {selectedItems.map((item, index) => (
           <View key={index} style={styles.cartItem}>
-             <Text>{item.type === 'icd10' ? `📋 Diagnostic : [${item.code}] ${item.name}` : `💊 Médicament : ${item.name}`}</Text>
+             <Text>{item.type === 'icd10' ? `📋 Diagnostic : [${item.code}] ${item.name}` : item.type === 'lab' ? `🔬 Examen : ${item.name}` : `💊 Médicament : ${item.name}`}</Text>
           </View>
         ))}
       </View>

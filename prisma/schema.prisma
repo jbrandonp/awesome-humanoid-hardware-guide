@@ -7,13 +7,24 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  PHARMACIST
+  LAB_TECH
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  role      String   // admin, doctor, nurse
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String
+  role             Role     @default(DOCTOR)
+  totpSecret       String?  @map("totp_secret") // Base32 encoded secret for offline MFA
+  mfaEnabled       Boolean  @default(false) @map("mfa_enabled")
+  backupCodes      String[] @map("backup_codes") // Array of hashed backup codes
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   auditLogs    AuditLog[]
   dpdpaConsent DpdpaConsent[]
@@ -92,11 +103,15 @@ model AuditLog {
   patientId String   @map("patient_id")
   action    String
   metadata  Json     @default("{}") // jsonb
+  ipAddress String?  @map("ip_address") // Traçabilité complète
   timestamp DateTime @default(now())
 
   user    User    @relation(fields: [userId], references: [id])
   patient Patient @relation(fields: [patientId], references: [id])
 
+  // Partitioned logically by timestamp or patient_id
+  @@index([patientId, timestamp])
+  @@index([userId, timestamp])
   @@map("audit_logs")
 }
 

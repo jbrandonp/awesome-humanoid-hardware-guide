@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { ZenConsultationLayout } from '../components/ZenConsultationLayout';
 
 export function App() {
   const [apiUrl, setApiUrl] = useState<string | null>(null);
@@ -59,10 +60,7 @@ export function App() {
   }
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-      <h1>Système de Santé - Connecté</h1>
-      <p style={{ color: 'green' }}>API branchée sur : {apiUrl}</p>
-    </div>
+    <ZenConsultationLayout />
   );
 }
 

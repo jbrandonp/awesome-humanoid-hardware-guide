@@ -1,0 +1,7 @@
+{
+  "name": "resilience-test",
+  "version": "1.0.0",
+  "scripts": {
+    "stress:sync": "node stress-sync.js"
+  }
+}
