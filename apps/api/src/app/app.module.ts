@@ -13,11 +13,12 @@ import { FhirModule } from './fhir/fhir.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ClinicalRecordModule } from './clinical-record/clinical-record.module';
 import { BillingModule } from './billing/billing.module';
+import { IotModule } from './iot/iot.module';
 
 @Module({
   imports: [
     MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin'),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule
   ],
   controllers: [AppController],
   providers: [AppService],
