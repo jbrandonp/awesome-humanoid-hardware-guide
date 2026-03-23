@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "dependencies": {
-    "@nozbe/watermelondb": "^0.28.0",
+    "@nozbe/watermelondb": "^0.25.5",
     "@nozbe/with-observables": "^1.6.0",
     "@tauri-apps/api": "^2.10.1",
     "lokijs": "^1.5.12",

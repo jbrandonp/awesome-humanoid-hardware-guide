@@ -132,6 +132,9 @@ model DpdpaConsent {
   expiresAt DateTime
   purpose   String
 
+  consentHash String? @map("consent_hash") // SHA-256 hash of consent parameters
+  version     Int     @default(1)
+
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
