@@ -59,7 +59,7 @@ export const FhirBundleSchema = z.object({
   type: z.enum(['document', 'searchset', 'collection']),
   entry: z.array(z.object({
     fullUrl: z.string(),
-    resource: z.union([FhirPatientSchema, FhirObservationSchema, FhirMedicationRequestSchema, z.any()])
+    resource: z.union([FhirPatientSchema, FhirObservationSchema, FhirMedicationRequestSchema])
   }))
 });
 
@@ -101,12 +101,21 @@ export class FhirService {
 
     const mongoRecords = await this.clinicalRecordService.getPatientRecords(patientId);
 
-    // 2. SÉRIALISATION MAPPING (Transformation en FHIR R4)
-    const fhirBundle: any = {
-      resourceType: 'Bundle',
-      type: 'document',
-      entry: []
-    };
+    // 2. VÉRIFICATION DES DONNÉES CLINIQUES VITALES MANQUANTES
+    // Un dossier patient vide ou sans constantes vitales n'a pas d'utilité médicale
+    // pour un confrère. On lève une exception stricte.
+    if (patient.vitals.length === 0) {
+       this.logger.warn(`[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune constante vitale enregistrée.`);
+       throw new UnprocessableEntityException("Dossier incomplet : Impossible de générer un Bundle FHIR pour un patient sans aucune constante vitale (Vitals). Veuillez acquérir des données avant l'export.");
+    }
+
+    if (patient.visits.length === 0) {
+       this.logger.warn(`[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune visite/consultation.`);
+       throw new UnprocessableEntityException("Dossier incomplet : Le patient ne possède aucun historique de consultation.");
+    }
+
+    // 3. SÉRIALISATION MAPPING STRICTE (Zéro 'any')
+    const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
 
     // A. Mapper le Patient
     try {
@@ -122,11 +131,11 @@ export class FhirService {
         gender: 'unknown' // Donnée par défaut tolérée par FHIR si manquante dans la DB source
       };
 
-      fhirBundle.entry.push({
+      entries.push({
         fullUrl: `urn:uuid:${patient.id}`,
         resource: patientResource
       });
-    } catch (e) {
+    } catch (parseError: unknown) {
       throw new UnprocessableEntityException("Données d'identité du patient corrompues. Le nom ou la date de naissance sont manquants.");
     }
 
@@ -134,7 +143,7 @@ export class FhirService {
     for (const vital of patient.vitals) {
       // Si la température existe (Mapping Température Corporelle)
       if (vital.temperature) {
-        fhirBundle.entry.push({
+        entries.push({
           fullUrl: `urn:uuid:${vital.id}-temp`,
           resource: {
             resourceType: 'Observation',
@@ -152,7 +161,7 @@ export class FhirService {
 
       // Mapping Rythme Cardiaque (Heart Rate)
       if (vital.heartRate) {
-        fhirBundle.entry.push({
+        entries.push({
           fullUrl: `urn:uuid:${vital.id}-hr`,
           resource: {
             resourceType: 'Observation',
@@ -170,7 +179,7 @@ export class FhirService {
 
       // Mapping Pression Artérielle (Blood Pressure)
       if (vital.bloodPressure) {
-        fhirBundle.entry.push({
+        entries.push({
           fullUrl: `urn:uuid:${vital.id}-bp`,
           resource: {
             resourceType: 'Observation',
@@ -190,7 +199,7 @@ export class FhirService {
     // C. Mapper les Prescriptions (MedicationRequest)
     for (const visit of patient.visits) {
       for (const prescription of visit.prescriptions) {
-        fhirBundle.entry.push({
+        entries.push({
           fullUrl: `urn:uuid:${prescription.id}`,
           resource: {
             resourceType: 'MedicationRequest',
@@ -213,7 +222,7 @@ export class FhirService {
     for (const record of mongoRecords) {
       // Exemple : Dossier Pédiatrique dynamique avec un Z-Score de croissance
       if (record.specialty === 'PEDIATRICS' && record.data?.headCircumference) {
-         fhirBundle.entry.push({
+         entries.push({
            fullUrl: `urn:uuid:${record._id}`,
            resource: {
               resourceType: 'Observation',
@@ -230,10 +239,15 @@ export class FhirService {
       }
     }
 
-    // 3. VALIDATION FINALE SÉCURISÉE (ZOD PARSING)
-    // Si notre mapper a produit un JSON qui viole la spécification stricte de FHIR,
-    // Zod va crasher immédiatement. L'application refusera de générer le fichier
-    // plutôt que d'envoyer un dossier médical illégal et corrompu à un autre hôpital.
+    const fhirBundle: FhirBundle = {
+      resourceType: 'Bundle',
+      type: 'document',
+      entry: entries
+    };
+
+    // 4. VALIDATION FINALE SÉCURISÉE (ZOD PARSING)
+    // Le mapper strict TypeScript a empêché l'utilisation de `any`.
+    // Zod certifie que la structure est 100% conforme à HL7/FHIR R4 avant émission.
     const validationResult = FhirBundleSchema.safeParse(fhirBundle);
 
     if (!validationResult.success) {
@@ -258,14 +272,10 @@ export class FhirService {
       }
     });
 
-    const fhirBundle: any = {
-      resourceType: 'Bundle',
-      type: 'searchset',
-      entry: []
-    };
+    const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
 
     for (const rx of activePrescriptions) {
-       fhirBundle.entry.push({
+       entries.push({
           fullUrl: `urn:uuid:${rx.id}`,
           resource: {
             resourceType: 'MedicationRequest',
@@ -282,6 +292,12 @@ export class FhirService {
           }
        });
     }
+
+    const fhirBundle: FhirBundle = {
+      resourceType: 'Bundle',
+      type: 'searchset',
+      entry: entries
+    };
 
     const validationResult = FhirBundleSchema.safeParse(fhirBundle);
     if (!validationResult.success) {
