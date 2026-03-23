@@ -1,64 +1,124 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# ==============================================================================
+# .gitignore - SYSTÈME DE SANTÉ RÉSILIENT V3.0 (PRODUCTION READY)
+# Ce fichier a été structuré pour un monorepo Nx contenant :
+# NestJS, React Native (Expo), React (Web/Tauri), Rust, Prisma, WatermelonDB
+# ==============================================================================
 
-# compiled output
-dist
-tmp
-out-tsc
-
-# dependencies
-node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
-.DS_Store
-Thumbs.db
-
-.nx/cache
-.nx/workspace-data
-.claude/worktrees
-.claude/settings.local.json
-
-# Expo
+# ------------------------------------------------------------------------------
+# 1. DÉPENDANCES ET PAQUETS (NODE & RUST)
+# ------------------------------------------------------------------------------
 node_modules/
-.expo/
-.yarn/
+.pnp
+.pnp.js
+Cargo.lock
+# (Note: Cargo.lock est souvent versionné pour des binaires finaux, mais dans
+# un monorepo avec de multiples crates ou plugins, il peut être ignoré à la racine)
+apps/desktop/src-tauri/target/
+
+# ------------------------------------------------------------------------------
+# 2. ARTEFACTS DE COMPILATION (NX, NESTJS, REACT, TAURI)
+# ------------------------------------------------------------------------------
 dist/
-npm-debug.*
+build/
+out-tsc/
+.nx/
+*.tsbuildinfo
+apps/api/dist/
+apps/desktop/dist/
+apps/desktop/out/
+apps/desktop/.next/
+apps/mobile/web-build/
+apps/mobile/dist/
+
+# ------------------------------------------------------------------------------
+# 3. ENVIRONNEMENT MOBILE (EXPO & NATIVE)
+# ------------------------------------------------------------------------------
+.expo/
+.expo-shared/
 *.jks
+*.keystore
 *.p8
-*.p12
-*.key
 *.mobileprovision
-*.orig.*
-web-build/
-cache/
+*.orig
+# Dossiers natifs générés par Prebuild (Sauf si personnalisés manuellement)
+# apps/mobile/android/
+# apps/mobile/ios/
+# Dépendances natives iOS/macOS
+Pods/
+Podfile.lock
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
 
+# ------------------------------------------------------------------------------
+# 4. ENVIRONNEMENTS & SÉCURITÉ (ZERO-TRUST)
+# Ne JAMAIS commiter de secrets en production médicale
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+docker-compose.override.yml
+*.pem
+*.rsa
+# Clés privées ABDM ou certificats HTTPS locaux
+certs/
+secrets/
 
-vite.config.*.timestamp*
-test-output
-node_modules\n.nx\ndist\ntarget\n.expo\ncoverage
+# ------------------------------------------------------------------------------
+# 5. LOGS, CRASHDUMPS ET DIAGNOSTICS MATÉRIELS
+# ------------------------------------------------------------------------------
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.seed
+*.pid
+# Fichiers de couverture de tests
+coverage/
+.nyc_output/
+*.lcov
+
+# ------------------------------------------------------------------------------
+# 6. BASES DE DONNÉES LOCALES & CACHES
+# ------------------------------------------------------------------------------
+# SQLite / Prisma / WatermelonDB Caches
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+# Dossiers de volumes Docker locaux (Postgres, Mongo, Minio)
+postgres_data/
+mongodb_data/
+minio_data/
+# Modèles d'Intelligence Artificielle Locaux (trop lourds pour Git)
+models/*.bin
+models/ggml-*.bin
+
+# ------------------------------------------------------------------------------
+# 7. FICHIERS SYSTÈMES ET ÉDITEURS (OS/IDE)
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
