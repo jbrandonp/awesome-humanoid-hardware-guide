@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
-import { BleManager, Device, BleError, State, Characteristic } from 'react-native-ble-plx';
+import { BleManager, Device, BleError, State, Characteristic, Service } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
 import { database } from '../database';
+import { BackgroundSyncService } from '../services/background-sync.service';
 
 // ============================================================================
 // INTERFACES TYPÉES STRICTES (ZÉRO 'ANY' POLICY)
@@ -29,6 +30,7 @@ export interface BleScannerState {
   lastMeasurement: MedicalVitalMeasurement | null;
   systemError: string | null;
   bluetoothState: State | 'UNKNOWN';
+  batteryLevel?: number | null;
 }
 
 // Profils GATT Standardisés (IEEE 11073 / Bluetooth SIG)
@@ -44,6 +46,10 @@ const GATT_PROFILES = {
   GLUCOSE: {
     service: '1808',
     characteristic: '2A18'
+  },
+  BATTERY: {
+    service: '180F',
+    characteristic: '2A19'
   }
 };
 
@@ -60,6 +66,7 @@ const ALL_MEDICAL_SERVICES = [
 export function useBleScanner(): BleScannerState & {
   startScan: () => Promise<void>;
   stopScanAndDisconnect: () => Promise<void>;
+  connectToSavedDevice: (macAddress: string) => Promise<void>;
 } {
   const managerRef = useRef<BleManager | null>(null);
 
@@ -69,12 +76,31 @@ export function useBleScanner(): BleScannerState & {
   const [lastMeasurement, setLastMeasurement] = useState<MedicalVitalMeasurement | null>(null);
   const [systemError, setSystemError] = useState<string | null>(null);
   const [bluetoothState, setBluetoothState] = useState<State | 'UNKNOWN'>('UNKNOWN');
+  const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
+
+  // Helper pour décoder le format IEEE-11073 16-bit SFLOAT
+  const decodeSFLOAT = (buffer: Buffer, offset: number): number => {
+    const rawValue = buffer.readUInt16LE(offset);
+    const mantissa = rawValue & 0x0FFF;
+    let exponent = (rawValue >> 12) & 0x000F;
+
+    if (exponent >= 0x0008) {
+      exponent = -((0x000F + 1) - exponent);
+    }
+
+    let signedMantissa = mantissa;
+    if (signedMantissa >= 0x0800) {
+      signedMantissa = -((0x0FFF + 1) - signedMantissa);
+    }
+
+    return signedMantissa * Math.pow(10, exponent);
+  };
 
   // Initialisation et nettoyage sécurisé de la RAM (Windows 7 / Low-End Tablets)
   useEffect(() => {
     managerRef.current = new BleManager();
 
-    const subscription = managerRef.current.onStateChange((state) => {
+    const subscription = managerRef.current.onStateChange((state: State) => {
       setBluetoothState(state);
       if (state === State.PoweredOff) {
          setSystemError("Le Bluetooth est désactivé. Veuillez l'activer pour l'acquisition médicale.");
@@ -221,20 +247,43 @@ export function useBleScanner(): BleScannerState & {
       let targetChar = '';
       let vitalType: VitalType = 'BLOOD_PRESSURE';
 
-      if (services.find(s => s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service))) {
+      if (services.find((s: Service) => s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service))) {
          targetService = GATT_PROFILES.BLOOD_PRESSURE.service;
          targetChar = GATT_PROFILES.BLOOD_PRESSURE.characteristic;
          vitalType = 'BLOOD_PRESSURE';
-      } else if (services.find(s => s.uuid.includes(GATT_PROFILES.HEART_RATE.service))) {
+      } else if (services.find((s: Service) => s.uuid.includes(GATT_PROFILES.HEART_RATE.service))) {
          targetService = GATT_PROFILES.HEART_RATE.service;
          targetChar = GATT_PROFILES.HEART_RATE.characteristic;
          vitalType = 'HEART_RATE';
-      } else if (services.find(s => s.uuid.includes(GATT_PROFILES.GLUCOSE.service))) {
+      } else if (services.find((s: Service) => s.uuid.includes(GATT_PROFILES.GLUCOSE.service))) {
          targetService = GATT_PROFILES.GLUCOSE.service;
          targetChar = GATT_PROFILES.GLUCOSE.characteristic;
          vitalType = 'GLUCOSE';
       } else {
          throw new Error("Périphérique non supporté.");
+      }
+
+      // Lecture du niveau de batterie si le service est présent (Hardware Management)
+      const hasBatteryService = services.find((s: Service) => s.uuid.includes(GATT_PROFILES.BATTERY.service));
+      if (hasBatteryService) {
+         try {
+           const batteryChar = await readyDevice.readCharacteristicForService(
+             GATT_PROFILES.BATTERY.service,
+             GATT_PROFILES.BATTERY.characteristic
+           );
+
+           if (batteryChar && batteryChar.value) {
+             const buffer = Buffer.from(batteryChar.value, 'base64');
+             const level = buffer.readUInt8(0);
+             setBatteryLevel(level);
+
+             if (level <= 20) {
+               setSystemError(`Alerte Matérielle : La batterie du capteur médical est très faible (${level}%). Pensez à le recharger.`);
+             }
+           }
+         } catch (batteryErr) {
+           console.warn("[BLE] Impossible de lire le niveau de batterie", batteryErr);
+         }
       }
 
       // Souscription aux valeurs envoyées en temps réel par le capteur
@@ -285,6 +334,47 @@ export function useBleScanner(): BleScannerState & {
     }
   };
 
+  /**
+   * Reconnexion directe à un appareil sauvegardé (Bonding / Offline-First)
+   * Évite de rescanner tout l'environnement clinique.
+   */
+  const connectToSavedDevice = async (macAddress: string): Promise<void> => {
+    setSystemError(null);
+    setLastMeasurement(null);
+    setBatteryLevel(null);
+
+    const manager = managerRef.current;
+    if (!manager) {
+       setSystemError("CRITICAL: Le module matériel Bluetooth n'a pas pu être initialisé.");
+       return;
+    }
+
+    if (bluetoothState !== State.PoweredOn) {
+       setSystemError("ERREUR 101 : Bluetooth inactif. Allumez-le pour continuer.");
+       return;
+    }
+
+    await stopScanAndDisconnect();
+    console.log(`[BLE] Reconnexion directe à l'appareil sauvegardé ${macAddress}...`);
+
+    try {
+      const devices = await manager.devices([macAddress]);
+      if (devices.length > 0) {
+        await connectAndSubscribe(devices[0], manager);
+        return;
+      }
+
+      // Si l'appareil n'est pas connu du gestionnaire, on le connecte directement
+      const device = await manager.connectToDevice(macAddress, { timeout: 10000 });
+      await connectAndSubscribe(device, manager);
+
+    } catch (connectionError: unknown) {
+      handleBleError(connectionError as BleError, "Impossible de se reconnecter à l'appareil sauvegardé. Assurez-vous qu'il est allumé et à portée.");
+      setIsConnected(false);
+      setActiveDevice(null);
+    }
+  };
+
   // ============================================================================
   // ROUTAGE ET DÉCODAGE HEXADÉCIMAL STRICT (SANS 'ANY')
   // ============================================================================
@@ -304,20 +394,40 @@ export function useBleScanner(): BleScannerState & {
     if (buffer.length < 7) throw new Error("Payload Blood Pressure trop court.");
 
     const flags = buffer.readUInt8(0);
-    const isPulsePresent = (flags & 0x02) !== 0;
+    const unitIsKpa = (flags & 0x01) !== 0; // 0 = mmHg, 1 = kPa
+    const isTimeStampPresent = (flags & 0x02) !== 0;
+    const isPulsePresent = (flags & 0x04) !== 0;
 
     // IEEE 11073 SFLOAT extraction
-    const rawSystolic = buffer.readUInt16LE(1);
-    const rawDiastolic = buffer.readUInt16LE(3);
-    const rawMap = buffer.readUInt16LE(5);
-    const pulseRate = (isPulsePresent && buffer.length >= 9) ? buffer.readUInt16LE(7) : undefined;
+    let systolic = decodeSFLOAT(buffer, 1);
+    let diastolic = decodeSFLOAT(buffer, 3);
+    let map = decodeSFLOAT(buffer, 5);
+
+    // Si l'appareil renvoie des KiloPascals (KPa), on convertit en mmHg (Standard Clinique FR)
+    if (unitIsKpa) {
+      systolic = systolic * 7.50062;
+      diastolic = diastolic * 7.50062;
+      map = map * 7.50062;
+    }
+
+    // Calcul de l'offset dynamique selon les flags
+    let currentOffset = 7;
+
+    // Si la date est présente (Base Time = 7 bytes)
+    if (isTimeStampPresent) {
+      currentOffset += 7;
+    }
+
+    const pulseRate = (isPulsePresent && buffer.length >= (currentOffset + 2))
+        ? decodeSFLOAT(buffer, currentOffset)
+        : undefined;
 
     return {
       type: 'BLOOD_PRESSURE',
-      systolicMmHg: rawSystolic,
-      diastolicMmHg: rawDiastolic,
-      mapMmHg: rawMap,
-      heartRateBpm: pulseRate,
+      systolicMmHg: Math.round(systolic),
+      diastolicMmHg: Math.round(diastolic),
+      mapMmHg: Math.round(map),
+      heartRateBpm: pulseRate ? Math.round(pulseRate) : undefined,
       timestampIso: new Date().toISOString(),
       hardwareMacAddress: hardwareId
     };
@@ -346,14 +456,48 @@ export function useBleScanner(): BleScannerState & {
    */
   const decodeGlucose = (base64Payload: string, hardwareId: string): MedicalVitalMeasurement => {
     const buffer = Buffer.from(base64Payload, 'base64');
-    // Le vrai profil IEEE est complexe (sfloat), on simule une extraction sécurisée
-    if (buffer.length < 3) throw new Error("Payload Glucose corrompu.");
 
-    const glucoseMgDl = buffer.readUInt16LE(1);
+    if (buffer.length < 10) throw new Error("Payload Glucose corrompu ou incomplet.");
+
+    const flags = buffer.readUInt8(0);
+    const hasTimeOffset = (flags & 0x01) !== 0;
+    const hasGlucoseValue = (flags & 0x02) !== 0;
+    const unitIsMolL = (flags & 0x04) !== 0; // 0 = kg/L, 1 = mol/L
+
+    let currentOffset = 1;
+
+    // Sequence Number (2 bytes)
+    currentOffset += 2;
+
+    // Base Time (7 bytes)
+    currentOffset += 7;
+
+    if (hasTimeOffset) {
+        currentOffset += 2; // Time Offset
+    }
+
+    if (!hasGlucoseValue) {
+       throw new Error("Mesure de glucose absente du payload.");
+    }
+
+    // IEEE 11073 16-bit SFLOAT extraction
+    let glucoseVal = decodeSFLOAT(buffer, currentOffset);
+    currentOffset += 2; // Concentration
+    currentOffset += 1; // Type & Sample Location
+
+    // Conversion en mg/dL (Standard Clinique)
+    let glucoseMgDl = 0;
+    if (unitIsMolL) {
+       // mol/L -> mmol/L puis mmol/L -> mg/dL (facteur 18.0182)
+       glucoseMgDl = glucoseVal * 1000 * 18.0182;
+    } else {
+       // kg/L -> mg/dL (facteur 100,000)
+       glucoseMgDl = glucoseVal * 100000;
+    }
 
     return {
       type: 'GLUCOSE',
-      glucoseMgDl: glucoseMgDl,
+      glucoseMgDl: Math.round(glucoseMgDl),
       timestampIso: new Date().toISOString(),
       hardwareMacAddress: hardwareId
     };
@@ -383,6 +527,15 @@ export function useBleScanner(): BleScannerState & {
         });
       });
       console.log(`[DB] Donnée ${vitalData.type} sauvegardée hors-ligne avec succès.`);
+
+      // Intégration Edge Caching (Offline-First)
+      // On met en file d'attente la transmission vers NestJS
+      await BackgroundSyncService.enqueueTransaction(
+         'HIGH',
+         '/api/iot/vitals',
+         vitalData
+      );
+
     } catch (dbError: unknown) {
       // Gestion des pannes de base de données (ex: mémoire insuffisante, disque Windows 7 plein)
       // L'application NE CRASHE PAS. Le hook attrape l'erreur et affiche un message.
@@ -412,7 +565,9 @@ export function useBleScanner(): BleScannerState & {
     lastMeasurement,
     systemError,
     bluetoothState,
+    batteryLevel,
     startScan,
-    stopScanAndDisconnect
+    stopScanAndDisconnect,
+    connectToSavedDevice
   };
 }
