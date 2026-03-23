@@ -17,12 +17,13 @@ import { IotModule } from './iot/iot.module';
 import { PeerConsultModule } from './peer-consult/peer-consult.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TickerModule } from './ticker/ticker.module';
+import { IntelligenceModule } from './intelligence/intelligence.module';
 
 @Module({
   imports: [
     MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin'),
     ScheduleModule.forRoot(),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule
   ],
   controllers: [AppController],
   providers: [AppService],

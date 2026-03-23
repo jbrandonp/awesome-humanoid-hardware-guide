@@ -37,14 +37,20 @@ export function Omnibox() {
 
   const searchResults = query ? fuse.search(query).map(result => result.item) : [];
 
-  const handleSelectItem = (item: any) => {
+  const handleSelectItem = async (item: any) => {
     if (!selectedItems.find(i => i.id === item.id)) {
       if (item.type === 'medication') {
         const currentMeds = selectedItems.filter(i => i.type === 'medication').map(i => i.name);
-        const interactions = DrugInteractionChecker.checkInteractions(item.name, currentMeds);
+
+        // Mock ID Patient / Praticien pour la sécurité
+        const patientId = "dummy-patient-uuid";
+        const practitionerId = "dummy-dr-uuid";
+
+        // Appel asynchrone de l'IA (Timeout géré < 2s)
+        const interactions = await DrugInteractionChecker.checkInteractionsLive(item.name, currentMeds, patientId, practitionerId);
 
         if (interactions.length > 0) {
-          showCustomAlert(`⚠️ AVERTISSEMENT INTERACTION !\n\n${item.name} interagit avec : ${interactions.map(i => i.interactingDrug).join(', ')}.\n\nDétail : ${interactions[0].description}`);
+          showCustomAlert(`⚠️ AVERTISSEMENT INTERACTION !\n\n${item.name} interagit avec : ${interactions.map(i => i.interactingDrugA || i.interactingDrugB).join(', ')}.\n\nDétail : ${interactions[0].medicalDescription}`);
         }
       }
       setSelectedItems([...selectedItems, item]);

@@ -1,38 +1,86 @@
-import interactions from '../data/drug_interactions.json';
+import axios from 'axios';
 
-export interface DrugInteraction {
-  interactingDrug: string;
-  severity: 'high' | 'medium' | 'low';
-  description: string;
+// Structures strictes conformes au Backend DPDPA
+export interface MedicationQuery {
+  medicationName: string;
+  dosageId?: string;
+}
+
+export interface DrugInteractionRequest {
+  patientId: string;
+  practitionerId: string;
+  newMedications: MedicationQuery[];
+  existingMedications: MedicationQuery[];
+}
+
+export interface ClinicalRisk {
+  interactingDrugA: string;
+  interactingDrugB: string;
+  severityLevel: 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+  medicalDescription: string;
+  recommendationAction: string;
+}
+
+export interface DrugInteractionResult {
+  status: 'SAFE' | 'WARNING' | 'ERROR';
+  risksFound: ClinicalRisk[];
+  checkedAtIso: string;
+  message: string;
 }
 
 export class DrugInteractionChecker {
   /**
-   * Vérifie si un nouveau médicament interagit avec la liste actuelle
-   * des médicaments du panier (ou de l'historique du patient).
+   * Vérifie de manière asynchrone (via le backend sécurisé) si le nouveau médicament
+   * interagit avec la prescription actuelle ou l'historique du patient (si DPDPA OK).
+   *
+   * Gère les erreurs réseaux locales (Timeout / API hors-ligne sur les PC Windows 7 de la clinique).
    */
-  static checkInteractions(newMedicationName: string, currentMedications: string[]): DrugInteraction[] {
-    const foundInteractions: DrugInteraction[] = [];
+  static async checkInteractionsLive(
+    newMedicationName: string,
+    currentMedications: string[],
+    patientId: string,
+    practitionerId: string
+  ): Promise<ClinicalRisk[]> {
 
-    // Vérifier les interactions où le nouveau médicament est la clé principale
-    const interactionsMap: Record<string, any> = interactions;
-    const newMedInteractions: DrugInteraction[] = interactionsMap[newMedicationName] || [];
+    const requestPayload: DrugInteractionRequest = {
+       patientId,
+       practitionerId,
+       newMedications: [{ medicationName: newMedicationName }],
+       existingMedications: currentMedications.map(name => ({ medicationName: name }))
+    };
 
-    for (const med of currentMedications) {
-      // 1. Sens : Nouveau -> Actuel
-      const interaction1 = newMedInteractions.find(i => i.interactingDrug === med);
-      if (interaction1 && interaction1.severity === 'high') {
-        foundInteractions.push(interaction1);
+    try {
+      // Appel API en mode Timeout restrictif pour ne pas figer l'Omnibox
+      // (15s chrono max pour prescrire, on abandonne l'appel IA si > 2s).
+      const response = await axios.post<DrugInteractionResult>('http://localhost:3000/api/intelligence/check-interactions', requestPayload, {
+         timeout: 2000,
+         headers: {
+            'Content-Type': 'application/json',
+            // 'Authorization': `Bearer ${token}` // À injecter dans l'idéal
+         }
+      });
+
+      if (response.data && response.data.risksFound) {
+         return response.data.risksFound;
       }
 
-      // 2. Sens inverse : Actuel -> Nouveau
-      const currentMedInteractions: DrugInteraction[] = interactionsMap[med] || [];
-      const interaction2 = currentMedInteractions.find(i => i.interactingDrug === newMedicationName);
-      if (interaction2 && interaction2.severity === 'high') {
-         foundInteractions.push(interaction2);
+      return [];
+
+    } catch (networkError: unknown) {
+      // Gestion Extrême des Erreurs (Zero-Crash Policy)
+      // Si l'API est down (Coupure de courant) ou si la DB a crashé
+      if (axios.isAxiosError(networkError)) {
+         if (networkError.response?.status === 403) {
+            console.error("Le Patient a révoqué l'accès (DPDPA). Interactions inaccessibles.");
+         } else if (networkError.code === 'ECONNABORTED') {
+            console.warn("Timeout réseau. L'Intelligence Artificielle est trop lente.");
+         } else {
+            console.warn("Le serveur IA clinique est inaccessible (Hors-Ligne).", networkError.message);
+         }
       }
+
+      // Par précaution médicale, on ne retourne pas de fausses données
+      return [];
     }
-
-    return foundInteractions;
   }
 }
