@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Res, HttpStatus, Query, Req, ForbiddenException } from '@nestjs/common';
 import { FhirService } from './fhir.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditLog } from '../audit/audit.decorator';
@@ -10,12 +10,31 @@ export class FhirController {
 
   /**
    * Export complet (RGPD / DPDPA Portability)
+   * Le flux ZIP sécurisé est renvoyé afin de réduire l'utilisation de la RAM
    */
   @Get('patient/:id/export')
   @UseGuards(AuthGuard('jwt'))
   @AuditLog('FHIR_EXPORT_FULL_RECORD')
-  async exportRecord(@Param('id') id: string) {
-    return this.fhirService.exportPatientToFhir(id);
+  async exportRecord(
+    @Param('id') id: string,
+    @Res() res: FastifyReply,
+    @Req() req: any,
+    @Query('password') password?: string
+  ) {
+    // Check authorization: only the patient themselves or an ADMIN can export
+    const user = req.user;
+    if (user.role !== 'ADMIN' && user.id !== id && user.patientId !== id) {
+      throw new ForbiddenException("Vous n'êtes pas autorisé à exporter ce dossier.");
+    }
+
+    const archive = await this.fhirService.exportPatientToZipStream(id, password);
+
+    // Fastify stream headers
+    res.header('Content-Type', 'application/zip');
+    res.header('Content-Disposition', `attachment; filename="patient-${id}-export.zip"`);
+
+    // Stream directly back to the client
+    return res.send(archive);
   }
 
   /**

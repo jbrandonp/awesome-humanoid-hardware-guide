@@ -2,6 +2,11 @@ import { Injectable, Logger, NotFoundException, UnprocessableEntityException } f
 import { PrismaService } from '../prisma/prisma.service';
 import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
 import { z } from 'zod';
+import * as archiver from 'archiver';
+import * as archiverZipEncrypted from 'archiver-zip-encrypted';
+
+// Register the encrypted zip format
+archiver.registerFormat('zip-encrypted', archiverZipEncrypted);
 
 // ============================================================================
 // TYPAGES STRICTS - STANDARD HL7 FHIR (R4) - ZÉRO 'ANY' POLICY
@@ -119,7 +124,7 @@ export class FhirService {
 
     // A. Mapper le Patient
     try {
-      const patientResource = {
+      const patientResource: z.infer<typeof FhirPatientSchema> = {
         resourceType: 'Patient',
         id: patient.id,
         name: [{
@@ -257,6 +262,45 @@ export class FhirService {
 
     this.logger.log(`[FHIR Export] Succès. Bundle FHIR R4 généré avec ${validationResult.data.entry.length} entrées.`);
     return validationResult.data;
+  }
+
+  /**
+   * Crée un stream ZIP chiffré contenant le Bundle FHIR R4
+   *
+   * @param patientId L'UUID du patient
+   * @param password Mot de passe pour chiffrer l'archive
+   * @returns Un stream Archiver prêt à être envoyé au client
+   */
+  async exportPatientToZipStream(patientId: string, password?: string): Promise<archiver.Archiver> {
+    const fhirBundle = await this.exportPatientToFhir(patientId);
+
+    // Convert to JSON string
+    const fhirJson = JSON.stringify(fhirBundle, null, 2);
+
+    let archive: archiver.Archiver;
+
+    if (password) {
+      archive = archiver.create('zip-encrypted', {
+        zlib: { level: 8 },
+        encryptionMethod: 'aes256',
+        password: password
+      } as archiver.ArchiverOptions);
+    } else {
+      archive = archiver.create('zip', {
+        zlib: { level: 8 }
+      });
+    }
+
+    archive.on('error', (err) => {
+      this.logger.error(`[FHIR Export] Erreur lors de la création du ZIP: ${err.message}`, err.stack);
+    });
+
+    archive.append(fhirJson, { name: 'patient-record.json' });
+
+    // Important: Finalize the archive, telling archiver we are done appending data
+    archive.finalize();
+
+    return archive;
   }
 
   /**
