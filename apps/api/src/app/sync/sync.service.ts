@@ -97,91 +97,115 @@ export class SyncService {
     }
   }
 
-  async pullChanges(lastPulledAt: number) {
+  async pullChanges(lastPulledAt: number, limit: number = 500) {
     const lastPulledDate = new Date(lastPulledAt);
 
-    // PATIENTS
+    // 1. Fetch up to `limit` records from each table individually
     const rawPatients = await this.prisma.patient.findMany({
-      where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
+      take: limit,
+      orderBy: { updatedAt: 'asc' }
     });
+
+    const rawVisits = await this.prisma.visit.findMany({
+       where: { updatedAt: { gt: lastPulledDate } },
+       take: limit,
+       orderBy: { updatedAt: 'asc' }
+    });
+
+    // 2. Combine and sort globally by updatedAt ascending
+    const combined = [
+      ...rawPatients.map(p => ({ type: 'patient' as const, data: p, updatedAt: p.updatedAt.getTime() })),
+      ...rawVisits.map(v => ({ type: 'visit' as const, data: v, updatedAt: v.updatedAt.getTime() }))
+    ];
+
+    combined.sort((a, b) => a.updatedAt - b.updatedAt);
+
+    // 3. Slice to exactly `limit` records
+    const sliced = combined.slice(0, limit);
 
     const createdPatients = [];
     const updatedPatients = [];
     const deletedPatients = [];
 
-    for (const p of rawPatients) {
-      if (p.deletedAt) {
-        deletedPatients.push(p.id);
-      } else if (p.createdAt.getTime() > lastPulledDate.getTime()) {
-        createdPatients.push({
-          id: p.id,
-          first_name: p.firstName,
-          last_name: p.lastName,
-          date_of_birth: p.dateOfBirth.getTime(),
-          _status: p.status,
-          deleted_at: null
-        });
-      } else {
-        updatedPatients.push({
-          id: p.id,
-          first_name: p.firstName,
-          last_name: p.lastName,
-          date_of_birth: p.dateOfBirth.getTime(),
-          _status: p.status,
-          deleted_at: null
-        });
-      }
-    }
-
-    // VISITS (With Yjs Sync payload)
-    const rawVisits = await this.prisma.visit.findMany({
-       where: { updatedAt: { gt: lastPulledDate } }
-    });
-
     const createdVisits = [];
     const updatedVisits = [];
     const deletedVisits = [];
 
-    for (const v of rawVisits) {
-      // Encode Yjs buffer to Base64 to transmit over JSON
-      const notesBase64 = v.notes ? v.notes.toString('base64') : '';
+    let highestTimestamp = lastPulledAt;
 
-      if (v.deletedAt) {
-        deletedVisits.push(v.id);
-      } else if (v.createdAt.getTime() > lastPulledDate.getTime()) {
-         createdVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
-      } else {
-         updatedVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+    for (const item of sliced) {
+      if (item.updatedAt > highestTimestamp) {
+        highestTimestamp = item.updatedAt;
+      }
+
+      if (item.type === 'patient') {
+        const p = item.data;
+        if (p.deletedAt) {
+          deletedPatients.push(p.id);
+        } else if (p.createdAt.getTime() > lastPulledDate.getTime()) {
+          createdPatients.push({
+            id: p.id,
+            first_name: p.firstName,
+            last_name: p.lastName,
+            date_of_birth: p.dateOfBirth.getTime(),
+            _status: p.status,
+            deleted_at: null
+          });
+        } else {
+          updatedPatients.push({
+            id: p.id,
+            first_name: p.firstName,
+            last_name: p.lastName,
+            date_of_birth: p.dateOfBirth.getTime(),
+            _status: p.status,
+            deleted_at: null
+          });
+        }
+      } else if (item.type === 'visit') {
+        const v = item.data;
+        const notesBase64 = v.notes ? v.notes.toString('base64') : '';
+
+        if (v.deletedAt) {
+          deletedVisits.push(v.id);
+        } else if (v.createdAt.getTime() > lastPulledDate.getTime()) {
+           createdVisits.push({
+             id: v.id,
+             patient_id: v.patientId,
+             date: v.date.getTime(),
+             notes: notesBase64,
+             _status: v.status,
+             deleted_at: null
+           });
+        } else {
+           updatedVisits.push({
+             id: v.id,
+             patient_id: v.patientId,
+             date: v.date.getTime(),
+             notes: notesBase64,
+             _status: v.status,
+             deleted_at: null
+           });
+        }
       }
     }
 
     return {
-      patients: {
-        created: createdPatients,
-        updated: updatedPatients,
-        deleted: deletedPatients
+      changes: {
+        patients: {
+          created: createdPatients,
+          updated: updatedPatients,
+          deleted: deletedPatients
+        },
+        visits: {
+          created: createdVisits,
+          updated: updatedVisits,
+          deleted: deletedVisits
+        },
+        vitals: { created: [], updated: [], deleted: [] },
+        prescriptions: { created: [], updated: [], deleted: [] },
       },
-      visits: {
-        created: createdVisits,
-        updated: updatedVisits,
-        deleted: deletedVisits
-      },
-      vitals: { created: [], updated: [], deleted: [] },
-      prescriptions: { created: [], updated: [], deleted: [] },
+      timestamp: highestTimestamp
     };
   }
 }
