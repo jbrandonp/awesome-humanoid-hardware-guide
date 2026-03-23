@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/mobile"
+    "eas-build-post-install": "cd ../../ && node tools/scripts/eas-build-post-install.mjs . apps/mobile",
+    "postinstall": "npx patch-package"
   },
   "dependencies": {
     "@expo/metro-config": "*",
@@ -13,11 +14,16 @@
     "expo": "*",
     "expo-background-fetch": "~14.0.9",
     "expo-battery": "~10.0.8",
+    "expo-crypto": "^55.0.10",
+    "expo-file-system": "^55.0.11",
+    "expo-local-authentication": "^55.0.9",
+    "expo-secure-store": "^55.0.9",
     "expo-splash-screen": "*",
     "expo-status-bar": "*",
     "expo-system-ui": "*",
     "expo-task-manager": "~14.0.9",
     "fuse.js": "^7.1.0",
+    "jail-monkey": "^2.8.5",
     "jest-expo": "*",
     "metro-config": "*",
     "metro-resolver": "*",
@@ -27,5 +33,9 @@
     "react-native-svg-transformer": "*",
     "react-native-web": "*",
     "yjs": "^13.6.30"
+  },
+  "devDependencies": {
+    "@expo/config-plugins": "^55.0.7",
+    "patch-package": "^8.0.1"
   }
 }

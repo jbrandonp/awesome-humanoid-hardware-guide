@@ -1,0 +1,147 @@
+diff --git a/node_modules/@nozbe/watermelondb/WatermelonDB.podspec b/node_modules/@nozbe/watermelondb/WatermelonDB.podspec
+index c9d8b09..03ca8b9 100644
+--- a/node_modules/@nozbe/watermelondb/WatermelonDB.podspec
++++ b/node_modules/@nozbe/watermelondb/WatermelonDB.podspec
+@@ -32,7 +32,7 @@ Pod::Spec.new do |s|
+
+   s.dependency "React"
+
+-  s.libraries = 'sqlite3'
++  s.dependency "SQLCipher", "~> 4.5.5"
+
+   # NOTE: This dependency doesn't seem to be needed anymore (tested on RN 0.66, 0.71), file an issue
+   # if this causes issues for you
+diff --git a/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java b/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java
+index 2f170e0..020efce 100644
+--- a/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java
++++ b/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabase.java
+@@ -2,8 +2,9 @@ package com.nozbe.watermelondb;
+
+ import android.content.Context;
+ import android.database.Cursor;
+-import android.database.sqlite.SQLiteCursor;
+-import android.database.sqlite.SQLiteDatabase;
++import net.zetetic.database.sqlcipher.SQLiteCursor;
++import net.zetetic.database.sqlcipher.SQLiteDatabase;
++import net.zetetic.database.sqlcipher.SQLiteQuery;
+
+ import java.io.File;
+ import java.util.ArrayList;
+@@ -20,6 +21,9 @@ public class WMDatabase {
+
+     public static Map<String, WMDatabase> INSTANCES = new HashMap<>();
+
++    // Encryption key is static as a hacky way to pass it down without full driver rewrite
++    public static String encryptionKey = "";
++
+     public static WMDatabase getInstance(String name, Context context) {
+         return getInstance(name, context, SQLiteDatabase.CREATE_IF_NECESSARY | SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING);
+     }
+@@ -43,6 +47,7 @@ public class WMDatabase {
+     }
+
+     private static SQLiteDatabase createSQLiteDatabase(String name, Context context, int openFlags) {
++        SQLiteDatabase.loadLibs(context);
+         String path;
+         if (name.equals(":memory:") || name.contains("mode=memory")) {
+             context.getCacheDir().delete();
+@@ -51,7 +56,7 @@ public class WMDatabase {
+             // On some systems there is some kind of lock on `/databases` folder ¯\_(ツ)_/¯
+             path = context.getDatabasePath("" + name + ".db").getPath().replace("/databases", "");
+         }
+-        return SQLiteDatabase.openDatabase(path, null, openFlags);
++        return SQLiteDatabase.openDatabase(path, encryptionKey, null, openFlags, null, null);
+     }
+
+     public void setUserVersion(int version) {
+diff --git a/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseBridge.java b/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseBridge.java
+index 4f13512..31f3342 100644
+--- a/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseBridge.java
++++ b/node_modules/@nozbe/watermelondb/native/android/src/main/java/com/nozbe/watermelondb/WMDatabaseBridge.java
+@@ -47,9 +47,17 @@ public class WMDatabaseBridge extends ReactContextBaseJavaModule {
+         if (connections.containsKey(tag)) {
+             throw new IllegalStateException("A driver with tag " + tag + " already set up");
+         }
++        String dbName = databaseName;
++        // Extract the key dynamically instead of just static (but keeping it for backwards/legacy compatibility)
++        if (dbName != null && dbName.contains("?key=")) {
++            String[] parts = dbName.split("\\?key=");
++            dbName = parts[0];
++            WMDatabase.encryptionKey = parts[1];
++        }
++
+         final WritableMap promiseMap = Arguments.createMap();
+         try {
+-            connections.put(tag, new Connection.Connected(new WMDatabaseDriver((Context) reactContext, databaseName, schemaVersion, unsafeNativeReuse)));
++            connections.put(tag, new Connection.Connected(new WMDatabaseDriver((Context) reactContext, dbName, schemaVersion, unsafeNativeReuse)));
+             promiseMap.putString("code", "ok");
+             promise.resolve(promiseMap);
+         } catch (SchemaNeededError e) {
+diff --git a/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/FMDB/src/fmdb/FMDatabase.m b/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/FMDB/src/fmdb/FMDatabase.m
+index 84d8d68..a018a33 100644
+--- a/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/FMDB/src/fmdb/FMDatabase.m
++++ b/node_modules/@nozbe/watermelondb/native/ios/WatermelonDB/FMDB/src/fmdb/FMDatabase.m
+@@ -1,12 +1,10 @@
++#define SQLITE_HAS_CODEC 1
++
+ #import "FMDatabase.h"
+ #import <unistd.h>
+ #import <objc/runtime.h>
+
+-#if FMDB_SQLITE_STANDALONE
+-#import <sqlite3/sqlite3.h>
+-#else
+-#import <sqlite3.h>
+-#endif
++#import <SQLCipher/sqlite3.h>
+
+ @interface FMDatabase () {
+     void*               _db;
+@@ -179,6 +177,11 @@ NS_ASSUME_NONNULL_END
+         return NO;
+     }
+
++    // [WMDB-HACK] Inject encryption key for SQLCipher dynamically if provided via url or simply hardcoded as requested by the architecture.
++    // In a real production setup we would retrieve `encryptionKey` securely from the React Native JS Bridge options here.
++    // For this demonstration and patch based on standard WatermelonDB, we expect the app to inject it here or call `setKey`
++    // after `openWithFlags`
++
+     if (_maxBusyRetryTimeInterval > 0.0) {
+         // set the handler
+         [self setMaxBusyRetryTimeInterval:_maxBusyRetryTimeInterval];
+@@ -206,13 +209,34 @@ NS_ASSUME_NONNULL_END
+     }
+
+     // now open database
++    NSString *sqlitePath = [NSString stringWithUTF8String:[self sqlitePath]];
++    NSString *encryptionKey = nil;
++
++    // Check if key is passed via path query param
++    NSRange range = [sqlitePath rangeOfString:@"?key="];
++    if (range.location != NSNotFound) {
++        NSString *keyPart = [sqlitePath substringFromIndex:range.location + range.length];
++        // WatermelonDB might append .db to the key query param
++        if ([keyPart hasSuffix:@".db"]) {
++            encryptionKey = [keyPart substringToIndex:[keyPart length] - 3];
++            sqlitePath = [[sqlitePath substringToIndex:range.location] stringByAppendingString:@".db"];
++        } else {
++            encryptionKey = keyPart;
++            sqlitePath = [sqlitePath substringToIndex:range.location];
++        }
++    }
+
+-    int err = sqlite3_open_v2([self sqlitePath], (sqlite3**)&_db, flags, [vfsName UTF8String]);
++    int err = sqlite3_open_v2([sqlitePath UTF8String], (sqlite3**)&_db, flags, [vfsName UTF8String]);
+     if(err != SQLITE_OK) {
+         NSLog(@"error opening!: %d", err);
+         return NO;
+     }
+
++    if (encryptionKey != nil && [encryptionKey length] > 0) {
++        const char *key = [encryptionKey UTF8String];
++        sqlite3_key(_db, key, (int)strlen(key));
++    }
++
+     if (_maxBusyRetryTimeInterval > 0.0) {
+         // set the handler
+         [self setMaxBusyRetryTimeInterval:_maxBusyRetryTimeInterval];
