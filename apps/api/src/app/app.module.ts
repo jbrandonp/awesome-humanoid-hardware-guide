@@ -20,6 +20,9 @@ import { TickerModule } from './ticker/ticker.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { BullModule } from '@nestjs/bullmq';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { SoftDeleteFilter } from './filters/soft-delete.filter';
+import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
 
 @Module({
   imports: [
@@ -34,7 +37,17 @@ import { BullModule } from '@nestjs/bullmq';
     SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SoftDeleteFilter,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
+    },
+  ],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {

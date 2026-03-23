@@ -25,6 +25,7 @@ model User {
   backupCodes      String[] @map("backup_codes") // Array of hashed backup codes
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  deletedAt        DateTime? @map("deleted_at")
 
   auditLogs    AuditLog[]
   dpdpaConsent DpdpaConsent[]
@@ -107,6 +108,7 @@ model AuditLog {
   metadata  Json     @default("{}") // jsonb
   ipAddress String?  @map("ip_address") // Traçabilité complète
   timestamp DateTime @default(now())
+  deletedAt DateTime? @map("deleted_at")
 
   user    User    @relation(fields: [userId], references: [id])
   patient Patient @relation(fields: [patientId], references: [id])
@@ -124,6 +126,7 @@ model DpdpaConsent {
   grantedAt DateTime @default(now())
   expiresAt DateTime
   purpose   String
+  deletedAt DateTime? @map("deleted_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -142,6 +145,7 @@ model Invoice {
   status          String   @default("UNPAID") // UNPAID, PAID, CANCELLED
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? @map("deleted_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -154,6 +158,7 @@ model InventoryItem {
   quantity      Int      @default(0)
   unitPriceCents Int     @map("unit_price_cents") // Prix de vente unitaire
   updatedAt     DateTime @updatedAt
+  deletedAt     DateTime? @map("deleted_at")
 
   @@map("inventory_items")
 }
@@ -168,6 +173,7 @@ model NotificationStatus {
   failCount       Int      @default(0) @map("fail_count")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? @map("deleted_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 
