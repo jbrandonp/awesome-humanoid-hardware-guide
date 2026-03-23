@@ -1,0 +1,310 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
+import {
+  ClinicalProtocolManager,
+  Medication,
+  ClinicalProtocol,
+} from '../services/clinical-protocol-manager.service';
+
+export const PrescriptionForm: React.FC = () => {
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [medName, setMedName] = useState('');
+  const [medDosage, setMedDosage] = useState('');
+  const [medInstructions, setMedInstructions] = useState('');
+  const [protocolName, setProtocolName] = useState('');
+
+  const [protocols, setProtocols] = useState(ClinicalProtocolManager.getAvailableProtocols());
+
+  const handleAddMedication = () => {
+    if (!medName || !medDosage) {
+      // Instead of alert(), we use standard console log or a modal (Zéro alert policy)
+      console.warn('Le nom et le dosage du médicament sont requis.');
+      return;
+    }
+
+    const newMed: Medication = {
+      id: `custom-${Date.now()}`,
+      name: medName,
+      dosage: medDosage,
+      instructions: medInstructions,
+    };
+
+    setMedications((prev) => [...prev, newMed]);
+    setMedName('');
+    setMedDosage('');
+    setMedInstructions('');
+  };
+
+  const handleApplyProtocol = (protocol: ClinicalProtocol) => {
+    const merged = ClinicalProtocolManager.mergeProtocol(medications, protocol);
+    setMedications(merged);
+
+    // Simulate P2P sharing log for Zero Cloud Logs Policy
+    ClinicalProtocolManager.shareProtocol(protocol);
+  };
+
+  const handleRemoveMedication = (id: string) => {
+    setMedications((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const handleCreateProtocol = () => {
+    if (!protocolName) {
+      console.warn('Veuillez donner un nom au protocole.');
+      return;
+    }
+    if (medications.length === 0) {
+      console.warn('Le protocole doit contenir au moins un médicament.');
+      return;
+    }
+
+    const newProtocol = ClinicalProtocolManager.createProtocol(protocolName, medications);
+
+    // Update local state to show the new protocol badge
+    setProtocols([...ClinicalProtocolManager.getAvailableProtocols()]);
+    setProtocolName('');
+
+    // Share immediately
+    ClinicalProtocolManager.shareProtocol(newProtocol);
+  };
+
+  const renderMedicationItem = ({ item }: { item: Medication }) => (
+    <View style={styles.medicationCard}>
+      <View style={styles.medicationInfo}>
+        <Text style={styles.medicationName}>{item.name}</Text>
+        <Text style={styles.medicationDetails}>Dosage: {item.dosage}</Text>
+        {item.instructions ? (
+          <Text style={styles.medicationDetails}>
+            Instructions: {item.instructions}
+          </Text>
+        ) : null}
+      </View>
+      <TouchableOpacity
+        style={styles.removeButton}
+        onPress={() => handleRemoveMedication(item.id)}
+      >
+        <Text style={styles.removeButtonText}>Supprimer</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      <Text style={styles.title}>Prescription Rapide</Text>
+
+      {/* Protocols Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Protocoles Cliniques Rapides</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {protocols.map((protocol) => (
+            <TouchableOpacity
+              key={protocol.id}
+              style={styles.protocolBadge}
+              onPress={() => handleApplyProtocol(protocol)}
+            >
+              <Text style={styles.protocolBadgeText}>{protocol.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Manual Input Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Ajout Manuel</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Nom du médicament"
+          value={medName}
+          onChangeText={setMedName}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Dosage (ex: 500mg)"
+          value={medDosage}
+          onChangeText={setMedDosage}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Instructions (Optionnel)"
+          value={medInstructions}
+          onChangeText={setMedInstructions}
+        />
+        <TouchableOpacity style={styles.addButton} onPress={handleAddMedication}>
+          <Text style={styles.addButtonText}>Ajouter Médicament</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Prescription List */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Médicaments Prescrits</Text>
+        {medications.length === 0 ? (
+          <Text style={styles.emptyText}>Aucun médicament ajouté.</Text>
+        ) : (
+          <FlatList
+            data={medications}
+            keyExtractor={(item) => item.id}
+            renderItem={renderMedicationItem}
+            scrollEnabled={false}
+          />
+        )}
+      </View>
+
+      {/* Create Protocol Section */}
+      {medications.length > 0 && (
+        <View style={styles.createProtocolSection}>
+          <Text style={styles.sectionTitle}>Sauvegarder en tant que Protocole</Text>
+          <View style={styles.createProtocolRow}>
+            <TextInput
+              style={[styles.input, styles.createProtocolInput]}
+              placeholder="Nom du nouveau protocole"
+              value={protocolName}
+              onChangeText={setProtocolName}
+            />
+            <TouchableOpacity
+              style={styles.createProtocolButton}
+              onPress={handleCreateProtocol}
+            >
+              <Text style={styles.createProtocolButtonText}>Sauvegarder</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f8fafc', // slate-50
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#0f172a', // slate-900 for Medical Dark Mode contrast
+    marginBottom: 20,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#334155', // slate-700
+    marginBottom: 12,
+  },
+  protocolBadge: {
+    backgroundColor: '#3b82f6', // blue-500
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+    elevation: 2,
+  },
+  protocolBadgeText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  input: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#cbd5e1', // slate-300
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+    fontSize: 16,
+    color: '#0f172a', // slate-900
+  },
+  addButton: {
+    backgroundColor: '#10b981', // emerald-500
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  medicationCard: {
+    backgroundColor: '#ffffff',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0', // slate-200
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  medicationInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  medicationName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0f172a', // slate-900
+    marginBottom: 4,
+  },
+  medicationDetails: {
+    fontSize: 14,
+    color: '#475569', // slate-600
+  },
+  removeButton: {
+    padding: 8,
+  },
+  removeButtonText: {
+    color: '#ef4444', // red-500
+    fontWeight: '600',
+  },
+  emptyText: {
+    color: '#94a3b8', // slate-400
+    fontStyle: 'italic',
+  },
+  createProtocolSection: {
+    marginTop: 10,
+    marginBottom: 40, // Add bottom padding for scroll view
+    padding: 16,
+    backgroundColor: '#f1f5f9', // slate-100
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0', // slate-200
+  },
+  createProtocolRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  createProtocolInput: {
+    flex: 1,
+    marginBottom: 0,
+    marginRight: 12,
+  },
+  createProtocolButton: {
+    backgroundColor: '#8b5cf6', // violet-500
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  createProtocolButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+});

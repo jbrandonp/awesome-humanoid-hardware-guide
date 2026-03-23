@@ -10,6 +10,7 @@ import {
   Linking,
 } from 'react-native';
 import { Omnibox } from '../components/Omnibox';
+import { PrescriptionForm } from '../components/PrescriptionForm';
 import { usePowerManagement } from '../hooks/usePowerManagement';
 
 // Zéro Cloud Logs: Assurez-vous qu'aucun service tiers n'est importé/activé ici pour les PHI.
@@ -29,7 +30,7 @@ export const App = () => {
          </View>
       )}
       <View style={{ flex: 1, marginTop: powerState.isLowPowerMode ? 10 : 50 }}>
-        <Omnibox />
+        <PrescriptionForm />
       </View>
     </View>
   );
