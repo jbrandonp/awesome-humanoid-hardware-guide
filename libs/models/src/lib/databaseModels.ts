@@ -39,6 +39,21 @@ export class Vital extends Model {
   @date('deleted_at') deletedAt!: Date | null
 }
 
+export class CatalogMedication extends Model {
+  static override table = 'catalog_medications'
+
+  @field('name') name!: string
+  @field('default_dosage') defaultDosage!: string | null
+  @field('category') category!: string
+}
+
+export class CatalogDiagnostic extends Model {
+  static override table = 'catalog_diagnostics'
+
+  @field('code') code!: string
+  @field('name') name!: string
+}
+
 export class Prescription extends Model {
   static override table = 'prescriptions'
 
