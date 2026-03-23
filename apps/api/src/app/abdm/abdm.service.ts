@@ -1,4 +1,10 @@
-import { Injectable, Logger, HttpException, HttpStatus, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  HttpException,
+  HttpStatus,
+  OnModuleInit,
+} from '@nestjs/common';
 import * as crypto from 'crypto';
 
 // ============================================================================
@@ -76,8 +82,12 @@ export class AbdmService implements OnModuleInit {
    * M1 - CRÉATION ABHA (Ayushman Bharat Health Account)
    * Protégé contre les Timeouts de l'API NHA.
    */
-  async createAbha(request: AbhaRegistrationRequest): Promise<AbhaRegistrationResult> {
-    this.logger.log(`[ABDM M1] Tentative de création ABHA pour Aadhar: ${request.aadharNumber.substring(0, 4)}XXXX...`);
+  async createAbha(
+    request: AbhaRegistrationRequest,
+  ): Promise<AbhaRegistrationResult> {
+    this.logger.log(
+      `[ABDM M1] Tentative de création ABHA pour Aadhar: ${request.aadharNumber.substring(0, 4)}XXXX...`,
+    );
 
     try {
       // MOCK : Appel Axios réel vers l'API ABDM Sandbox (https://healthidsbx.abdm.gov.in/api)
@@ -92,20 +102,23 @@ export class AbdmService implements OnModuleInit {
         return {
           success: true,
           abhaAddress: `patient_${Date.now()}@ndhm`,
-          abhaNumber: '14-1234-5678-9012'
+          abhaNumber: '14-1234-5678-9012',
         };
       }
 
       return { success: false, errorMessage: 'OTP Invalide ou expiré.' };
-
     } catch (networkError: unknown) {
-      this.logger.error(`[CRITICAL ABDM ERROR] Le serveur d'identité gouvernemental est hors-ligne.`, networkError);
+      this.logger.error(
+        `[CRITICAL ABDM ERROR] Le serveur d'identité gouvernemental est hors-ligne.`,
+        networkError,
+      );
 
       // Fallback local: On ne crashe pas, l'UI affichera qu'on est passé en mode "Local Only".
       return {
-         success: false,
-         isOfflineFallback: true,
-         errorMessage: 'Serveur national injoignable. Le dossier patient a été créé localement (Hors-ligne). La liaison ABHA se fera au retour du réseau.'
+        success: false,
+        isOfflineFallback: true,
+        errorMessage:
+          'Serveur national injoignable. Le dossier patient a été créé localement (Hors-ligne). La liaison ABHA se fera au retour du réseau.',
       };
     }
   }
@@ -115,52 +128,71 @@ export class AbdmService implements OnModuleInit {
    * Chiffrement Asymétrique des Consent Artefacts avant envoi sur le réseau.
    */
   async shareHealthRecords(request: HipShareRequest): Promise<AbdmApiResponse> {
-    this.logger.log(`[ABDM HIP] Préparation du partage (Consent Artefact: ${request.consentArtefactId}) pour ${request.patientAbhaAddress}...`);
+    this.logger.log(
+      `[ABDM HIP] Préparation du partage (Consent Artefact: ${request.consentArtefactId}) pour ${request.patientAbhaAddress}...`,
+    );
 
     try {
-       // 1. CHIFFREMENT ASYMÉTRIQUE STRICT (Standard ABDM / DPDPA)
-       // L'expéditeur (Nous/HIP) utilise sa clé privée + la clé publique du destinataire (HIU)
-       // pour générer un secret partagé (Shared Secret ECDH)
-       const hiuPublicKey = Buffer.from(request.requesterPublicKeyBase64, 'base64');
-       const sharedSecret = this.ecdh.computeSecret(hiuPublicKey);
+      // 1. CHIFFREMENT ASYMÉTRIQUE STRICT (Standard ABDM / DPDPA)
+      // L'expéditeur (Nous/HIP) utilise sa clé privée + la clé publique du destinataire (HIU)
+      // pour générer un secret partagé (Shared Secret ECDH)
+      const hiuPublicKey = Buffer.from(
+        request.requesterPublicKeyBase64,
+        'base64',
+      );
+      const sharedSecret = this.ecdh.computeSecret(hiuPublicKey);
 
-       // 2. Chiffrement AES-256-GCM du payload FHIR R4 en utilisant le Shared Secret
-       const iv = crypto.randomBytes(12);
-       const cipher = crypto.createCipheriv('aes-256-gcm', sharedSecret.subarray(0, 32), iv);
+      // 2. Chiffrement AES-256-GCM du payload FHIR R4 en utilisant le Shared Secret
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv(
+        'aes-256-gcm',
+        sharedSecret.subarray(0, 32),
+        iv,
+      );
 
-       let encryptedData = cipher.update(request.rawClinicalData, 'utf8', 'base64');
-       encryptedData += cipher.final('base64');
-       const authTag = cipher.getAuthTag().toString('base64');
+      let encryptedData = cipher.update(
+        request.rawClinicalData,
+        'utf8',
+        'base64',
+      );
+      encryptedData += cipher.final('base64');
+      const authTag = cipher.getAuthTag().toString('base64');
 
-       const securePayload = {
-          iv: iv.toString('base64'),
-          encryptedData,
-          authTag,
-          hipPublicKey: this.ecdh.getPublicKey('base64')
-       };
+      const securePayload = {
+        iv: iv.toString('base64'),
+        encryptedData,
+        authTag,
+        hipPublicKey: this.ecdh.getPublicKey('base64'),
+      };
 
-       this.logger.log(`[ABDM HIP] Chiffrement ECDH+AES256 réussi. Poussée réseau en cours...`);
+      this.logger.log(
+        `[ABDM HIP] Chiffrement ECDH+AES256 réussi. Poussée réseau en cours...`,
+      );
 
-       // 3. ENVOI RÉSEAU AVEC GESTION DES TIMEOUTS
-       // MOCK : Axios POST vers https://dev.abdm.gov.in/gateway/v0.5/health-information/notify
-       await new Promise((resolve, reject) => {
-         if (Math.random() < 0.3) return reject(new Error('Gateway Timeout 504')); // 30% de chance d'échec
-         setTimeout(resolve, 500);
-       });
+      // 3. ENVOI RÉSEAU AVEC GESTION DES TIMEOUTS
+      // MOCK : Axios POST vers https://dev.abdm.gov.in/gateway/v0.5/health-information/notify
+      await new Promise((resolve, reject) => {
+        if (Math.random() < 0.3)
+          return reject(new Error('Gateway Timeout 504')); // 30% de chance d'échec
+        setTimeout(resolve, 500);
+      });
 
-       return { status: 'SENT', transactionId: `TXN_${Date.now()}` };
-
+      return { status: 'SENT', transactionId: `TXN_${Date.now()}` };
     } catch (encryptionOrNetworkError: unknown) {
-       this.logger.error(`[FATAL ABDM] Échec de l'envoi chiffré. Le dossier est sécurisé en file d'attente locale (WatermelonDB/RAM).`, encryptionOrNetworkError);
+      this.logger.error(
+        `[FATAL ABDM] Échec de l'envoi chiffré. Le dossier est sécurisé en file d'attente locale (WatermelonDB/RAM).`,
+        encryptionOrNetworkError,
+      );
 
-       // FALLBACK : Résilience "Offline-First"
-       // La donnée vitale n'est pas perdue. Elle attend le retour de l'internet.
-       this.offlineQueue.push(request);
+      // FALLBACK : Résilience "Offline-First"
+      // La donnée vitale n'est pas perdue. Elle attend le retour de l'internet.
+      this.offlineQueue.push(request);
 
-       return {
-         status: 'QUEUED_OFFLINE',
-         errorMessage: 'Réseau clinique indisponible ou instable. Le transfert chiffré est en attente (Retry asynchrone).'
-       };
+      return {
+        status: 'QUEUED_OFFLINE',
+        errorMessage:
+          'Réseau clinique indisponible ou instable. Le transfert chiffré est en attente (Retry asynchrone).',
+      };
     }
   }
 
@@ -168,17 +200,22 @@ export class AbdmService implements OnModuleInit {
    * Health Information User (HIU) - DEMANDE DE DOSSIER (Request Data)
    */
   async requestHealthRecords(request: HiuRequest): Promise<AbdmApiResponse> {
-     this.logger.log(`[ABDM HIU] Demande d'historique pour ${request.patientAbhaAddress} (Motif: ${request.purposeOfRequest})`);
+    this.logger.log(
+      `[ABDM HIU] Demande d'historique pour ${request.patientAbhaAddress} (Motif: ${request.purposeOfRequest})`,
+    );
 
-     try {
-        // Envoi au Consent Manager gouvernemental
-        // MOCK Axios POST
-        await new Promise(resolve => setTimeout(resolve, 400));
+    try {
+      // Envoi au Consent Manager gouvernemental
+      // MOCK Axios POST
+      await new Promise((resolve) => setTimeout(resolve, 400));
 
-        return { status: 'SENT', transactionId: `REQ_${Date.now()}` };
-     } catch (e) {
-        throw new HttpException('Passerelle ABDM injoignable', HttpStatus.SERVICE_UNAVAILABLE);
-     }
+      return { status: 'SENT', transactionId: `REQ_${Date.now()}` };
+    } catch (e) {
+      throw new HttpException(
+        'Passerelle ABDM injoignable',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
   }
 
   /**
@@ -187,26 +224,31 @@ export class AbdmService implements OnModuleInit {
    * s'empilent dans `offlineQueue`. Cette fonction vide la queue discrètement dès que le ping revient.
    */
   private async processOfflineQueue() {
-     if (this.isProcessingQueue || this.offlineQueue.length === 0) return;
-     this.isProcessingQueue = true;
+    if (this.isProcessingQueue || this.offlineQueue.length === 0) return;
+    this.isProcessingQueue = true;
 
-     this.logger.log(`[WATCHDOG ABDM] Relance de l'envoi de ${this.offlineQueue.length} dossiers médicaux en attente...`);
+    this.logger.log(
+      `[WATCHDOG ABDM] Relance de l'envoi de ${this.offlineQueue.length} dossiers médicaux en attente...`,
+    );
 
-     const itemsToRetry = [...this.offlineQueue];
-     this.offlineQueue.length = 0; // Clear the queue temporarily
+    const itemsToRetry = [...this.offlineQueue];
+    this.offlineQueue.length = 0; // Clear the queue temporarily
 
-     for (const request of itemsToRetry) {
-        try {
-           const result = await this.shareHealthRecords(request);
-           if (result.status === 'QUEUED_OFFLINE') {
-              // Si ça a encore échoué (réseau toujours down), on le remet dans la file principale
-              this.offlineQueue.push(request);
-           }
-        } catch (fatalError) {
-           this.logger.error(`[WATCHDOG ABDM] Abandon définitif d'un paquet corrompu.`, fatalError);
+    for (const request of itemsToRetry) {
+      try {
+        const result = await this.shareHealthRecords(request);
+        if (result.status === 'QUEUED_OFFLINE') {
+          // Si ça a encore échoué (réseau toujours down), on le remet dans la file principale
+          this.offlineQueue.push(request);
         }
-     }
+      } catch (fatalError) {
+        this.logger.error(
+          `[WATCHDOG ABDM] Abandon définitif d'un paquet corrompu.`,
+          fatalError,
+        );
+      }
+    }
 
-     this.isProcessingQueue = false;
+    this.isProcessingQueue = false;
   }
 }

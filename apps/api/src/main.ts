@@ -5,7 +5,10 @@
 
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { AppModule } from './app/app.module';
 // @ts-ignore
 import dnssd from 'node-dns-sd';
@@ -18,7 +21,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    fastifyAdapter
+    fastifyAdapter,
   );
 
   // Enable Cross-Origin Resource Sharing for Desktop (Tauri Webview) & Mobile (Expo)
@@ -33,14 +36,16 @@ async function bootstrap() {
   const port = process.env.PORT || 3000;
   // Listen on all network interfaces for local network access
   await app.listen(port, '0.0.0.0');
-  Logger.log(`🚀 Application is running on: http://localhost:${port}/${globalPrefix}`);
+  Logger.log(
+    `🚀 Application is running on: http://localhost:${port}/${globalPrefix}`,
+  );
 
   // Start mDNS advertisement
   try {
     await dnssd.publish({
       name: 'systeme-sante-api',
       type: '_medical-api._tcp',
-      port: Number(port)
+      port: Number(port),
     });
     Logger.log(`📢 Service mDNS publié: _medical-api._tcp sur le port ${port}`);
   } catch (error) {

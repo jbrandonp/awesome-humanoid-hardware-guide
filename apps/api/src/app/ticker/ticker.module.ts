@@ -5,6 +5,6 @@ import { TickerController } from './ticker.controller';
 @Module({
   providers: [EpiTickerService],
   controllers: [TickerController],
-  exports: [EpiTickerService]
+  exports: [EpiTickerService],
 })
 export class TickerModule {}

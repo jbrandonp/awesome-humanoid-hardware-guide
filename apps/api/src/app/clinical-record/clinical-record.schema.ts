@@ -24,4 +24,5 @@ export class ClinicalRecord {
   deletedAt: Date; // Tombstone Model
 }
 
-export const ClinicalRecordSchema = SchemaFactory.createForClass(ClinicalRecord);
+export const ClinicalRecordSchema =
+  SchemaFactory.createForClass(ClinicalRecord);

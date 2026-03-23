@@ -22,7 +22,7 @@ export function App() {
     if (window.__TAURI_INTERNALS__) {
       discoverApi();
     } else {
-      setApiUrl("http://localhost:3000"); // Dev fallback
+      setApiUrl('http://localhost:3000'); // Dev fallback
     }
   }, []);
 
@@ -44,7 +44,9 @@ export function App() {
           <button onClick={() => setApiUrl(manualIp)}>Se Connecter</button>
         </div>
         <div style={{ marginTop: '1rem' }}>
-          <button onClick={() => setApiUrl('https://cloud.systemesante.com')}>Bascule sur le Cloud (Fallback)</button>
+          <button onClick={() => setApiUrl('https://cloud.systemesante.com')}>
+            Bascule sur le Cloud (Fallback)
+          </button>
         </div>
       </div>
     );
@@ -59,9 +61,7 @@ export function App() {
     );
   }
 
-  return (
-    <ZenConsultationLayout />
-  );
+  return <ZenConsultationLayout />;
 }
 
 export default App;

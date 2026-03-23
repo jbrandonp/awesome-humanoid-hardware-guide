@@ -16,7 +16,7 @@ export class SyncService {
             lastName: patient.last_name,
             dateOfBirth: new Date(patient.date_of_birth),
             status: 'synced',
-          }
+          },
         });
       }
       for (const patient of changes.patients.updated) {
@@ -27,13 +27,13 @@ export class SyncService {
             lastName: patient.last_name,
             dateOfBirth: new Date(patient.date_of_birth),
             status: 'synced',
-          }
+          },
         });
       }
       for (const id of changes.patients.deleted) {
         await this.prisma.patient.update({
           where: { id },
-          data: { deletedAt: new Date(), status: 'deleted' }
+          data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
     }
@@ -41,20 +41,24 @@ export class SyncService {
     if (changes.visits) {
       for (const visit of changes.visits.created) {
         // Base64 to Uint8Array for new note initialization
-        const initialNoteBuffer = visit.notes ? Buffer.from(visit.notes, 'base64') : null;
+        const initialNoteBuffer = visit.notes
+          ? Buffer.from(visit.notes, 'base64')
+          : null;
         await this.prisma.visit.create({
           data: {
             id: visit.id,
             patientId: visit.patient_id,
             date: new Date(visit.date),
             notes: initialNoteBuffer,
-            status: 'synced'
-          }
+            status: 'synced',
+          },
         });
       }
 
       for (const visit of changes.visits.updated) {
-        const existingVisit = await this.prisma.visit.findUnique({ where: { id: visit.id }});
+        const existingVisit = await this.prisma.visit.findUnique({
+          where: { id: visit.id },
+        });
 
         let mergedNotesBuffer = existingVisit?.notes;
 
@@ -73,8 +77,11 @@ export class SyncService {
             Y.applyUpdate(serverDoc, clientUpdate);
             // Save the merged binary state
             mergedNotesBuffer = Buffer.from(Y.encodeStateAsUpdate(serverDoc));
-          } catch(e) {
-            console.error(`Conflict resolving Yjs document for visit ${visit.id}`, e);
+          } catch (e) {
+            console.error(
+              `Conflict resolving Yjs document for visit ${visit.id}`,
+              e,
+            );
           }
         }
 
@@ -83,15 +90,15 @@ export class SyncService {
           data: {
             date: new Date(visit.date),
             notes: mergedNotesBuffer,
-            status: 'synced'
-          }
+            status: 'synced',
+          },
         });
       }
 
       for (const id of changes.visits.deleted) {
         await this.prisma.visit.update({
           where: { id },
-          data: { deletedAt: new Date(), status: 'deleted' }
+          data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
     }
@@ -102,7 +109,7 @@ export class SyncService {
 
     // PATIENTS
     const rawPatients = await this.prisma.patient.findMany({
-      where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdPatients = [];
@@ -119,7 +126,7 @@ export class SyncService {
           last_name: p.lastName,
           date_of_birth: p.dateOfBirth.getTime(),
           _status: p.status,
-          deleted_at: null
+          deleted_at: null,
         });
       } else {
         updatedPatients.push({
@@ -128,14 +135,14 @@ export class SyncService {
           last_name: p.lastName,
           date_of_birth: p.dateOfBirth.getTime(),
           _status: p.status,
-          deleted_at: null
+          deleted_at: null,
         });
       }
     }
 
     // VISITS (With Yjs Sync payload)
     const rawVisits = await this.prisma.visit.findMany({
-       where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdVisits = [];
@@ -149,23 +156,23 @@ export class SyncService {
       if (v.deletedAt) {
         deletedVisits.push(v.id);
       } else if (v.createdAt.getTime() > lastPulledDate.getTime()) {
-         createdVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+        createdVisits.push({
+          id: v.id,
+          patient_id: v.patientId,
+          date: v.date.getTime(),
+          notes: notesBase64,
+          _status: v.status,
+          deleted_at: null,
+        });
       } else {
-         updatedVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+        updatedVisits.push({
+          id: v.id,
+          patient_id: v.patientId,
+          date: v.date.getTime(),
+          notes: notesBase64,
+          _status: v.status,
+          deleted_at: null,
+        });
       }
     }
 
@@ -173,12 +180,12 @@ export class SyncService {
       patients: {
         created: createdPatients,
         updated: updatedPatients,
-        deleted: deletedPatients
+        deleted: deletedPatients,
       },
       visits: {
         created: createdVisits,
         updated: updatedVisits,
-        deleted: deletedVisits
+        deleted: deletedVisits,
       },
       vitals: { created: [], updated: [], deleted: [] },
       prescriptions: { created: [], updated: [], deleted: [] },

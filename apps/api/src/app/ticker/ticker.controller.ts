@@ -27,11 +27,11 @@ export class TickerController {
   @Sse('stream')
   sse(): Observable<MessageEvent> {
     return this.tickerService.getTickerStream().pipe(
-      map(payload => ({
+      map((payload) => ({
         id: payload.id,
         type: 'message',
-        data: payload
-      }))
+        data: payload,
+      })),
     );
   }
 }

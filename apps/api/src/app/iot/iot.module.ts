@@ -4,6 +4,6 @@ import { BioSensorService } from './biosensor.service';
 
 @Module({
   providers: [IotMedicalService, BioSensorService],
-  exports: [IotMedicalService, BioSensorService]
+  exports: [IotMedicalService, BioSensorService],
 })
 export class IotModule {}

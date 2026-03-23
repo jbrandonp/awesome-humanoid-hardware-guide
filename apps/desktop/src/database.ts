@@ -1,8 +1,13 @@
-import { Database } from '@nozbe/watermelondb'
-import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs'
+import { Database } from '@nozbe/watermelondb';
+import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
 
-import schema from '@systeme-sante/models/src/lib/schema'
-import { Patient, Visit, Vital, Prescription } from '@systeme-sante/models/src/lib/databaseModels'
+import schema from '@systeme-sante/models/src/lib/schema';
+import {
+  Patient,
+  Visit,
+  Vital,
+  Prescription,
+} from '@systeme-sante/models/src/lib/databaseModels';
 
 const adapter = new LokiJSAdapter({
   schema,
@@ -17,14 +22,9 @@ const adapter = new LokiJSAdapter({
   onSetUpError: (error) => {
     // Database failed to load
   },
-})
+});
 
 export const database = new Database({
   adapter,
-  modelClasses: [
-    Patient,
-    Visit,
-    Vital,
-    Prescription,
-  ],
-})
+  modelClasses: [Patient, Visit, Vital, Prescription],
+});

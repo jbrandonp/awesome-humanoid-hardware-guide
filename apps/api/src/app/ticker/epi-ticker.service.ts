@@ -54,11 +54,17 @@ export class EpiTickerService {
    */
   @Cron(CronExpression.EVERY_HOUR)
   async analyzeLocalEpidemiology(): Promise<void> {
-    this.logger.log('[Epi-Ticker] Lancement de l\'analyse statistique épidémiologique...');
+    this.logger.log(
+      "[Epi-Ticker] Lancement de l'analyse statistique épidémiologique...",
+    );
 
     try {
       const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayStart = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
 
       const fourteenDaysAgo = new Date(todayStart);
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
@@ -75,22 +81,22 @@ export class EpiTickerService {
         by: ['medicationName'], // Simule un groupement par pathologie/traitement
         where: {
           prescribedAt: { gte: fourteenDaysAgo, lt: todayStart },
-          status: { not: 'deleted' }
+          status: { not: 'deleted' },
         },
         _count: {
-          _all: true
-        }
+          _all: true,
+        },
       });
 
       const todayData = await this.prisma.prescription.groupBy({
         by: ['medicationName'],
         where: {
           prescribedAt: { gte: todayStart },
-          status: { not: 'deleted' }
+          status: { not: 'deleted' },
         },
         _count: {
-          _all: true
-        }
+          _all: true,
+        },
       });
 
       // ========================================================================
@@ -105,32 +111,36 @@ export class EpiTickerService {
         // On ignore le bruit de fond statistique (faux positifs)
         if (casesToday < this.MIN_CASES_REQUIRED_FOR_ALERT) continue;
 
-        const historyRecord = last14DaysData.find(h => h.medicationName === pathologyId);
+        const historyRecord = last14DaysData.find(
+          (h) => h.medicationName === pathologyId,
+        );
 
         // Moyenne Mobile (Moving Average) quotidienne sur 14 jours
-        const averageCasesLast14Days = historyRecord ? (historyRecord._count._all / 14) : 0;
+        const averageCasesLast14Days = historyRecord
+          ? historyRecord._count._all / 14
+          : 0;
 
         let isAnomalous = false;
 
         if (averageCasesLast14Days === 0) {
-           // Nouvelle pathologie soudaine (Apparition subite de 5+ cas dans la journée)
-           isAnomalous = true;
+          // Nouvelle pathologie soudaine (Apparition subite de 5+ cas dans la journée)
+          isAnomalous = true;
         } else {
-           // Si les cas d'aujourd'hui représentent x3 la moyenne habituelle
-           const multiplier = casesToday / averageCasesLast14Days;
-           if (multiplier >= this.EPIDEMIC_MULTIPLIER_THRESHOLD) {
-              isAnomalous = true;
-           }
+          // Si les cas d'aujourd'hui représentent x3 la moyenne habituelle
+          const multiplier = casesToday / averageCasesLast14Days;
+          if (multiplier >= this.EPIDEMIC_MULTIPLIER_THRESHOLD) {
+            isAnomalous = true;
+          }
         }
 
         if (isAnomalous) {
-           statsResult.push({
-              icd10Code: pathologyId,
-              casesToday,
-              averageCasesLast14Days,
-              zScore: 0, // Ignoré dans cette heuristique, implémenter Standard Deviation pour vrai Z-Score
-              isAnomalous
-           });
+          statsResult.push({
+            icd10Code: pathologyId,
+            casesToday,
+            averageCasesLast14Days,
+            zScore: 0, // Ignoré dans cette heuristique, implémenter Standard Deviation pour vrai Z-Score
+            isAnomalous,
+          });
         }
       }
 
@@ -142,7 +152,7 @@ export class EpiTickerService {
           id: `EPI-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           type: 'EPIDEMIOLOGY',
           message: `🚨 ALERTE SANITAIRE : Pic épidémique suspect de '${anomaly.icd10Code}'. ${anomaly.casesToday} cas enregistrés aujourd'hui (Moy. normale: ${anomaly.averageCasesLast14Days.toFixed(1)}/jour).`,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
 
         this.logger.warn(`[Epi-Ticker] ${alert.message}`);
@@ -152,14 +162,18 @@ export class EpiTickerService {
       }
 
       if (statsResult.length === 0) {
-         this.logger.log('[Epi-Ticker] Analyse terminée. Aucune anomalie épidémique détectée.');
+        this.logger.log(
+          '[Epi-Ticker] Analyse terminée. Aucune anomalie épidémique détectée.',
+        );
       }
-
     } catch (dbError: unknown) {
       // 4. GESTION DES ERREURS EXTRÊMES
       // Le CRON ne doit JAMAIS faire crasher le service Node.js s'il perd la connexion
       // au moteur Postgres ou s'il rencontre un timeout de lecture.
-      this.logger.error(`[CRITICAL] Échec du Data Mining Épidémiologique. Le moteur de base de données est peut-être surchargé.`, dbError);
+      this.logger.error(
+        `[CRITICAL] Échec du Data Mining Épidémiologique. Le moteur de base de données est peut-être surchargé.`,
+        dbError,
+      );
     }
   }
 
@@ -167,6 +181,6 @@ export class EpiTickerService {
    * Passerelle pour injecter des alertes externes (ex: Predictive Inventory)
    */
   broadcastAlert(alert: TickerAlert): void {
-     this.tickerStream.next(alert);
+    this.tickerStream.next(alert);
   }
 }

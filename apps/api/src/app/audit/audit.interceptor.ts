@@ -1,4 +1,9 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -13,7 +18,10 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const action = this.reflector.get<string>(AUDIT_LOG_KEY, context.getHandler());
+    const action = this.reflector.get<string>(
+      AUDIT_LOG_KEY,
+      context.getHandler(),
+    );
 
     if (!action) {
       return next.handle();
@@ -21,7 +29,11 @@ export class AuditInterceptor implements NestInterceptor {
 
     const req = context.switchToHttp().getRequest();
     const user = req.user;
-    const patientId = req.params.patientId || req.body.patientId || req.query.patientId || "SYSTEM"; // Fallback to SYSTEM if missing for now
+    const patientId =
+      req.params.patientId ||
+      req.body.patientId ||
+      req.query.patientId ||
+      'SYSTEM'; // Fallback to SYSTEM if missing for now
 
     return next.handle().pipe(
       tap(async () => {
@@ -36,16 +48,18 @@ export class AuditInterceptor implements NestInterceptor {
                 metadata: {
                   method: req.method,
                   url: req.url,
-                  userAgent: req.headers['user-agent']
-                }
-              }
+                  userAgent: req.headers['user-agent'],
+                },
+              },
             });
-            console.log(`[AuditLog Partitioned] Action '${action}' par user ${user.userId}`);
+            console.log(
+              `[AuditLog Partitioned] Action '${action}' par user ${user.userId}`,
+            );
           } catch (e) {
             console.error(`[AuditLog] Erreur Prisma lors du log`, e);
           }
         }
-      })
+      }),
     );
   }
 }

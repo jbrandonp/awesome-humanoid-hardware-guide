@@ -5,9 +5,11 @@ import { ClinicalRecordService } from './clinical-record.service';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: ClinicalRecord.name, schema: ClinicalRecordSchema }]),
+    MongooseModule.forFeature([
+      { name: ClinicalRecord.name, schema: ClinicalRecordSchema },
+    ]),
   ],
   providers: [ClinicalRecordService],
-  exports: [ClinicalRecordService]
+  exports: [ClinicalRecordService],
 })
 export class ClinicalRecordModule {}

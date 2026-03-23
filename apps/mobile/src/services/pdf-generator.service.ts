@@ -30,7 +30,8 @@ export class PdfGeneratorService {
 
   // Mock d'un logo clinique encodé en Base64 pour garantir l'affichage 100% hors-ligne.
   // Une vraie clinique aurait son logo défini dans le fichier de config au format Base64.
-  private static readonly CLINIC_LOGO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==";
+  private static readonly CLINIC_LOGO_BASE64 =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
 
   /**
    * MOTEUR DE GÉNÉRATION DE PDF HORS-LIGNE (Deep Dive)
@@ -49,16 +50,17 @@ export class PdfGeneratorService {
     patientName: string,
     date: string,
     items: PrescriptionItem[],
-    patientLanguage: SupportedLanguage = 'en'
+    patientLanguage: SupportedLanguage = 'en',
   ): Promise<PdfGenerationResult> {
-
     // 1. LIMITE MÉMOIRE (OOM Prevention)
     if (items.length > this.MAX_PRESCRIPTION_ITEMS) {
-       console.error(`[PDF Engine] Refus de génération. L'ordonnance contient ${items.length} médicaments, dépassant la limite mémoire autorisée de ${this.MAX_PRESCRIPTION_ITEMS}.`);
-       return {
-         status: 'FAILED_MEMORY_LIMIT',
-         errorMessage: `L'ordonnance est trop volumineuse pour être imprimée d'un seul coup. Veuillez la diviser en plusieurs documents (Maximum ${this.MAX_PRESCRIPTION_ITEMS} lignes).`
-       };
+      console.error(
+        `[PDF Engine] Refus de génération. L'ordonnance contient ${items.length} médicaments, dépassant la limite mémoire autorisée de ${this.MAX_PRESCRIPTION_ITEMS}.`,
+      );
+      return {
+        status: 'FAILED_MEMORY_LIMIT',
+        errorMessage: `L'ordonnance est trop volumineuse pour être imprimée d'un seul coup. Veuillez la diviser en plusieurs documents (Maximum ${this.MAX_PRESCRIPTION_ITEMS} lignes).`,
+      };
     }
 
     try {
@@ -70,31 +72,45 @@ export class PdfGeneratorService {
       // On encadre la génération du QR dans un catch local, bien que très rare que QRCode.toDataURL plante.
       let qrCodeBase64 = '';
       try {
-         qrCodeBase64 = await QRCode.toDataURL(qrData, { margin: 1, width: 150 });
+        qrCodeBase64 = await QRCode.toDataURL(qrData, {
+          margin: 1,
+          width: 150,
+        });
       } catch (qrError: unknown) {
-         console.error("[PDF Engine] Échec de la génération du QR Code local.", qrError);
-         // Fallback transparent (un carré vide) pour ne pas bloquer l'impression
-         qrCodeBase64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        console.error(
+          '[PDF Engine] Échec de la génération du QR Code local.',
+          qrError,
+        );
+        // Fallback transparent (un carré vide) pour ne pas bloquer l'impression
+        qrCodeBase64 =
+          'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
       }
 
       // 3. TRADUCTION MULTILINGUE SIMULTANÉE (Posologie)
-      const itemsHtml = items.map(item => {
-        const originalDosageText = item.dosage || 'Follow medical prescription';
-        let translatedDosageText = '';
+      const itemsHtml = items
+        .map((item) => {
+          const originalDosageText =
+            item.dosage || 'Follow medical prescription';
+          let translatedDosageText = '';
 
-        // Si le patient demande une autre langue que l'anglais/français par défaut
-        if (patientLanguage !== 'en' && patientLanguage !== 'fr' && item.dosage) {
-           const dictKey = item.dosage as keyof typeof medicalDict;
-           if (medicalDict[dictKey]) {
+          // Si le patient demande une autre langue que l'anglais/français par défaut
+          if (
+            patientLanguage !== 'en' &&
+            patientLanguage !== 'fr' &&
+            item.dosage
+          ) {
+            const dictKey = item.dosage as keyof typeof medicalDict;
+            if (medicalDict[dictKey]) {
               const translations = medicalDict[dictKey];
               // On caste manuellement car TypeScript ne peut pas garantir que patientLanguage existe dans le dict.
-              translatedDosageText = (translations as Record<string, string>)[patientLanguage] || '';
-           }
-        }
+              translatedDosageText =
+                (translations as Record<string, string>)[patientLanguage] || '';
+            }
+          }
 
-        // L'HTML généré contient TOUJOURS la langue de référence du docteur (Anglais ou Français)
-        // ET la traduction régionale en dessous pour le patient, évitant toute erreur médicamenteuse.
-        return `
+          // L'HTML généré contient TOUJOURS la langue de référence du docteur (Anglais ou Français)
+          // ET la traduction régionale en dessous pour le patient, évitant toute erreur médicamenteuse.
+          return `
         <tr class="item-row">
           <td class="med-name">${item.name}</td>
           <td class="med-dosage">
@@ -102,7 +118,9 @@ export class PdfGeneratorService {
              ${translatedDosageText ? `<div class="dosage-patient" dir="auto">${translatedDosageText}</div>` : ''}
           </td>
         </tr>
-      `}).join('');
+      `;
+        })
+        .join('');
 
       // 4. TEMPLATE HTML / CSS (Design Clinique Imprimable)
       // Pas de polices externes complexes (Google Fonts) qui feraient un appel réseau ou ralentiraient le rendu PDF.
@@ -239,20 +257,25 @@ export class PdfGeneratorService {
 
       const file = await RNHTMLtoPDF.convert(options);
 
-      console.log(`[PDF Engine] Ordonnance générée avec succès : ${file.filePath}`);
+      console.log(
+        `[PDF Engine] Ordonnance générée avec succès : ${file.filePath}`,
+      );
 
       return {
-         status: 'SUCCESS',
-         filePath: file.filePath || ''
+        status: 'SUCCESS',
+        filePath: file.filePath || '',
       };
-
     } catch (renderError: unknown) {
       // 6. GESTION DES ERREURS EXTRÊMES
       // Le moteur WebView natif iOS/Android peut planter (Memory leak, HTML mal formé)
-      console.error('[FATAL PDF RENDER] Le moteur natif n\'a pas pu générer le fichier PDF.', renderError);
+      console.error(
+        "[FATAL PDF RENDER] Le moteur natif n'a pas pu générer le fichier PDF.",
+        renderError,
+      );
       return {
-         status: 'FAILED_RENDER',
-         errorMessage: "Échec de l'impression PDF. Le système d'exploitation de la tablette a manqué de mémoire ou a refusé l'accès au disque. Réessayez."
+        status: 'FAILED_RENDER',
+        errorMessage:
+          "Échec de l'impression PDF. Le système d'exploitation de la tablette a manqué de mémoire ou a refusé l'accès au disque. Réessayez.",
       };
     }
   }

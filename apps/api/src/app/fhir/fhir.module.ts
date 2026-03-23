@@ -5,6 +5,6 @@ import { FhirController } from './fhir.controller';
 @Module({
   providers: [FhirService],
   controllers: [FhirController],
-  exports: [FhirService]
+  exports: [FhirService],
 })
 export class FhirModule {}

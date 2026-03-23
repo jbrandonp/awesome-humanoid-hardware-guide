@@ -22,11 +22,14 @@ export const App = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       {powerState.isLowPowerMode && (
-         <View style={{ backgroundColor: 'red', padding: 10, marginTop: 40 }}>
-            <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
-               ⚠️ Mode Survie (Batterie Faible). Sync = {powerState.syncIntervalMs / 1000}s
-            </Text>
-         </View>
+        <View style={{ backgroundColor: 'red', padding: 10, marginTop: 40 }}>
+          <Text
+            style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}
+          >
+            ⚠️ Mode Survie (Batterie Faible). Sync ={' '}
+            {powerState.syncIntervalMs / 1000}s
+          </Text>
+        </View>
       )}
       <View style={{ flex: 1, marginTop: powerState.isLowPowerMode ? 10 : 50 }}>
         <Omnibox />

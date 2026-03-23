@@ -6,7 +6,6 @@ import { Role } from '@prisma/client';
 
 @Controller('auth')
 export class AuthController {
-
   /**
    * Endpoint de gestion protégé par RBAC (Role-Based Access Control)
    * Seuls les administrateurs peuvent enregistrer un nouveau praticien ou employé.
@@ -19,7 +18,7 @@ export class AuthController {
     // Dans une DB réelle, on chiffrerait le mot de passe avec bcrypt ici.
     return {
       message: 'Utilisateur administratif ou praticien créé avec succès.',
-      data: userData
+      data: userData,
     };
   }
 
@@ -30,6 +29,6 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.DOCTOR, Role.NURSE)
   async getDashboardStats() {
-     return { patientsSeen: 12, pendingConsults: 4 };
+    return { patientsSeen: 12, pendingConsults: 4 };
   }
 }

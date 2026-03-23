@@ -23,15 +23,33 @@ import { BullModule } from '@nestjs/bullmq';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin'),
+    MongooseModule.forRoot(
+      process.env.MONGO_URL ||
+        'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin',
+    ),
     ScheduleModule.forRoot(),
     BullModule.forRoot({
-       connection: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379', 10)
-       }
+      connection: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      },
     }),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule
+    SyncModule,
+    AuthModule,
+    PrismaModule,
+    AuditModule,
+    DpdpaModule,
+    WhisperModule,
+    AbdmModule,
+    OcrModule,
+    FhirModule,
+    ClinicalRecordModule,
+    BillingModule,
+    IotModule,
+    PeerConsultModule,
+    TickerModule,
+    IntelligenceModule,
+    EngagementModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -12,7 +12,7 @@ export class SyncController {
   @AuditLog('SYNC_PULL_PUSH')
   async synchronize(
     @Query('lastPulledAt') lastPulledAt: string,
-    @Body('changes') changes: any
+    @Body('changes') changes: any,
   ) {
     const timestamp = parseInt(lastPulledAt, 10) || 0;
 
@@ -26,7 +26,7 @@ export class SyncController {
 
     return {
       changes: pullChanges,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     };
   }
 }

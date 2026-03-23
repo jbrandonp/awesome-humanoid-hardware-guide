@@ -1,4 +1,11 @@
-import { Controller, Get, Param, UseGuards, Res, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  UseGuards,
+  Res,
+  HttpStatus,
+} from '@nestjs/common';
 import { FhirService } from './fhir.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditLog } from '../audit/audit.decorator';
@@ -27,17 +34,20 @@ export class FhirController {
   @AuditLog('FHIR_PHARMACY_ACCESS_PRESCRIPTIONS')
   async pharmacyAccess(
     @Param('patientId') patientId: string,
-    @Res() res: FastifyReply
+    @Res() res: FastifyReply,
   ) {
     // 1. Simule la vérification du consentement via le partenaire (ex: via un token dans l'URL)
     const hasConsent = true;
 
     if (!hasConsent) {
-      return res.status(HttpStatus.FORBIDDEN).send({ error: 'Consentement requis ou expiré' });
+      return res
+        .status(HttpStatus.FORBIDDEN)
+        .send({ error: 'Consentement requis ou expiré' });
     }
 
     // 2. Renvoie UNIQUEMENT les ordonnances
-    const fhirPrescriptions = await this.fhirService.getActivePrescriptionsForPharmacy(patientId);
+    const fhirPrescriptions =
+      await this.fhirService.getActivePrescriptionsForPharmacy(patientId);
     return res.status(HttpStatus.OK).send(fhirPrescriptions);
   }
 }
