@@ -25,7 +25,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-
+      "./plugins/withSqlcipher",
       [
         "expo-splash-screen",
         {
