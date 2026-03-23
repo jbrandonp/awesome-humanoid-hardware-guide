@@ -1,108 +1,64 @@
-# SystemeSante
+# 🏥 Système de Santé Résilient V3.0 (Offline-First)
 
-<a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
+Bienvenue sur le monorepo **Système de Santé Résilient**, une plateforme EMR/EHR (Dossier Médical Électronique) pensée pour survivre aux pires environnements : ordinateurs obsolètes (Windows 7, 4 Go RAM), réseaux instables, et pannes électriques.
 
-✨ Your new, shiny [Nx workspace](https://nx.dev) is ready ✨.
+## 🚀 Démarrage Rapide (Quick Start)
 
-[Learn more about this workspace setup and its capabilities](https://nx.dev/getting-started/tutorials/npm-workspaces-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects) or run `npx nx graph` to visually explore what was created. Now, let's get you up to speed!
+L'application est conçue pour être déployée localement sur le réseau LAN de la clinique (zéro dépendance au Cloud public).
 
-## Run tasks
+### Prérequis
+- `Node.js` v18+
+- `Docker` et `Docker Compose`
+- `Rust` (Pour la compilation du client Desktop Tauri)
 
-To run tasks with Nx use:
+### 1. Installation
+```bash
+# 1. Cloner le projet
+npm install
 
-```sh
-npx nx <target> <project-name>
+# 2. Démarrer l'infrastructure des bases de données (PostgreSQL, MongoDB, MinIO)
+npm run docker:up
+
+# 3. Déployer le schéma de la base de données relationnelle
+npm run db:push
 ```
 
-For example:
-
-```sh
-npx nx build myproject
+### 2. Démarrage de l'Environnement de Développement
+```bash
+# Démarre l'API, le backend, le client Web et l'expo bundler simultanément
+npm run start:all
 ```
 
-These targets are either [inferred automatically](https://nx.dev/concepts/inferred-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) or defined in the `project.json` or `package.json` files.
-
-[More about running tasks in the docs &raquo;](https://nx.dev/features/run-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Versioning and releasing
-
-To version and release the library use
-
-```
-npx nx release
+Pour compiler le client natif de bureau (Tauri / Windows) :
+```bash
+cd apps/desktop/src-tauri
+cargo build --release
 ```
 
-Pass `--dry-run` to see what would happen without actually releasing the library.
+---
 
-[Learn more about Nx release &raquo;](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+## 🏗️ Architecture du Projet
 
-## Add new projects
+Le code est géré par **Nx**, et divisé en 4 espaces de travail :
 
-While you could add new projects to your workspace manually, you might want to leverage [Nx plugins](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) and their [code generation](https://nx.dev/features/generate-code?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) feature.
+* **`apps/api` (NestJS + Fastify)** : Le cerveau du système. Il embarque la gestion des rôles (RBAC), le moteur d'intelligence artificielle locale (via *Whisper.cpp*), et l'exportation *HL7/FHIR R4*.
+* **`apps/desktop` (React + Tauri)** : Application de bureau native optimisée pour Windows 7. Elle incorpore le mode `FixedRuntime` de WebView2, un "Zéro-Menu" *ZenConsultationLayout* et un moteur d'impression thermique direct en Rust via la crate `serialport`.
+* **`apps/mobile` (React Native + Expo)** : Le terminal mobile pour les visites en brousse ou l'acquisition de signaux vitaux. Économe en batterie via le *PowerManagementService*.
+* **`libs/models` (Zod + Types)** : Le contrat de données partagé.
 
-To install a new plugin you can use the `nx add` command. Here's an example of adding the React plugin:
-```sh
-npx nx add @nx/react
-```
+## 🛡️ Sécurité & Conformité DPDPA / HIPAA
 
-Use the plugin's generator to create new projects. For example, to create a new React app or library:
+Ce projet s'engage à une politique de **Zéro Trust & Zéro Cloud Logs**.
+1. **Consent Manager** : Avant la consultation ou l'exportation vers un spécialiste, le consentement du patient est validé (`DpdpaConsent`). En cas de révocation, les données sont immédiatement purgées localement (Tombstone).
+2. **Audit Log Inaltérable** : Chaque action est stockée via l'`AuditInterceptor` dans PostgreSQL avec IP et estampille temporelle.
+3. **Anonymisation (Zero-PHI)** : Le partage vers un réseau de confrères génère un clone de `ClinicalRecord` sans PII (remplacé par un UUID généré aléatoirement).
 
-```sh
-# Generate an app
-npx nx g @nx/react:app demo
+## 🧬 Innovation Clinique
 
-# Generate a library
-npx nx g @nx/react:lib some-lib
-```
+- **Moteur d'Ordonnance Éclair (Omnibox)** : Prescrivez en 15 secondes via une recherche floue `fuse.js`, sans lever les mains du clavier (`useKeyboardShortcuts`).
+- **Détection des Interactions** : Un système local avertit le médecin en temps réel des interactions dangereuses (ex: Artemether + antibiotiques incompatibles).
+- **Synchronisation Infaillible (CRDT)** : Les notes médicales ne s'écrasent jamais. Elles sont fusionnées mathématiquement par `Yjs` (côté client et serveur).
+- **Epi-Ticker & SSE** : Un bandeau visuel prévient les praticiens de tout pic d'épidémie local et de pénurie de médicaments en temps réel via un Server-Sent Event ultra léger.
 
-You can use `npx nx list` to get a list of installed plugins. Then, run `npx nx list <plugin-name>` to learn about more specific capabilities of a particular plugin. Alternatively, [install Nx Console](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) to browse plugins and generators in your IDE.
-
-[Learn more about Nx plugins &raquo;](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) | [Browse the plugin registry &raquo;](https://nx.dev/plugin-registry?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Set up CI!
-
-### Step 1
-
-To connect to Nx Cloud, run the following command:
-
-```sh
-npx nx connect
-```
-
-Connecting to Nx Cloud ensures a [fast and scalable CI](https://nx.dev/ci/intro/why-nx-cloud?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects) pipeline. It includes features such as:
-
-- [Remote caching](https://nx.dev/ci/features/remote-cache?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task distribution across multiple machines](https://nx.dev/ci/features/distribute-task-execution?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Automated e2e test splitting](https://nx.dev/ci/features/split-e2e-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Task flakiness detection and rerunning](https://nx.dev/ci/features/flaky-tasks?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-### Step 2
-
-Use the following command to configure a CI workflow for your workspace:
-
-```sh
-npx nx g ci-workflow
-```
-
-[Learn more about Nx on CI](https://nx.dev/ci/intro/ci-with-nx#ready-get-started-with-your-provider?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Install Nx Console
-
-Nx Console is an editor extension that enriches your developer experience. It lets you run tasks, generate code, and improves code autocompletion in your IDE. It is available for VSCode and IntelliJ.
-
-[Install Nx Console &raquo;](https://nx.dev/getting-started/editor-setup?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-## Useful links
-
-Learn more:
-
-- [Learn more about this workspace setup](https://nx.dev/getting-started/tutorials/npm-workspaces-tutorial?utm_source=nx_project&amp;utm_medium=readme&amp;utm_campaign=nx_projects)
-- [Learn about Nx on CI](https://nx.dev/ci/intro/ci-with-nx?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [Releasing Packages with Nx release](https://nx.dev/features/manage-releases?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-- [What are Nx plugins?](https://nx.dev/concepts/nx-plugins?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
-
-And join the Nx community:
-- [Discord](https://go.nx.dev/community)
-- [Follow us on X](https://twitter.com/nxdevtools) or [LinkedIn](https://www.linkedin.com/company/nrwl)
-- [Our Youtube channel](https://www.youtube.com/@nxdevtools)
-- [Our blog](https://nx.dev/blog?utm_source=nx_project&utm_medium=readme&utm_campaign=nx_projects)
+---
+*Ce projet est sous licence MIT.*
