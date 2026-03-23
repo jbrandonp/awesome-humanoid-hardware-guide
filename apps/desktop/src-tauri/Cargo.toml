@@ -28,3 +28,7 @@ tokio = { version = "1", features = ["rt", "macros", "time"] }
 sysinfo = "0.36.1"
 keyring = "3.6.3"
 serialport = "4.9.0"
+tracing-subscriber = { version = "0.3.23", features = ["json", "env-filter"] }
+tracing-appender = "0.2.4"
+regex = "1.12.3"
+tracing = "0.1.44"

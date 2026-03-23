@@ -6,6 +6,8 @@ use keyring::Entry;
 
 mod thermal_printer;
 mod hardware_diag;
+mod telemetry;
+
 
 #[derive(Debug, Serialize)]
 pub struct DiscoveryResult {
@@ -37,7 +39,7 @@ fn get_token() -> Result<String, String> {
 #[tauri::command]
 fn delete_token() -> Result<(), String> {
     let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
-    entry.delete_password().map_err(|e| e.to_string())?;
+    entry.delete_credential().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -105,6 +107,8 @@ async fn discover_medical_api() -> Result<DiscoveryResult, DiscoveryError> {
     }
 }
 
+use tauri::Manager;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -118,13 +122,8 @@ pub fn run() {
       hardware_diag::check_hardware_health
     ])
     .setup(|app| {
-      if cfg!(debug_assertions) {
-        app.handle().plugin(
-          tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
-            .build(),
-        )?;
-      }
+      let guard = telemetry::init_telemetry(app.handle()).expect("Failed to initialize telemetry");
+      app.manage(guard);
       Ok(())
     })
     .run(tauri::generate_context!())
