@@ -2,6 +2,7 @@ import { Injectable, Logger, HttpException, HttpStatus, OnModuleInit } from '@ne
 import { PrismaService } from '../prisma/prisma.service';
 import { DpdpaConsentService } from '../audit/dpdpa-consent.service';
 import { z } from 'zod';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 // ============================================================================
 // TYPAGES STRICTS & VALIDATION DE SCHÉMAS ZOD (PRODUCTION-READY)
@@ -69,7 +70,8 @@ export class IotMedicalService implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly consentManager: DpdpaConsentService
+    private readonly consentManager: DpdpaConsentService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   onModuleInit() {
@@ -160,6 +162,9 @@ export class IotMedicalService implements OnModuleInit {
          warningMsg = `Le tensiomètre Bluetooth (${payload.deviceMetadata.manufacturerName}) a une batterie critique (<15%).`;
          this.logger.warn(warningMsg);
       }
+
+      // 5.b. DÉLÉGATION AU MOTEUR DE RÈGLES (Remote Patient Monitoring)
+      this.eventEmitter.emit('iot.vitals.received', payload);
 
       return {
          status: 'SUCCESS',

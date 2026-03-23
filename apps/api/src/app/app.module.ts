@@ -20,6 +20,8 @@ import { TickerModule } from './ticker/ticker.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { BullModule } from '@nestjs/bullmq';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { RemotePatientMonitoringModule } from './remote-patient-monitoring/remote-patient-monitoring.module';
 
 @Module({
   imports: [
@@ -31,7 +33,8 @@ import { BullModule } from '@nestjs/bullmq';
           port: parseInt(process.env.REDIS_PORT || '6379', 10)
        }
     }),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule
+    EventEmitterModule.forRoot(),
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule, RemotePatientMonitoringModule
   ],
   controllers: [AppController],
   providers: [AppService],
