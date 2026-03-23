@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Req, Res, HttpStatus } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { PrismaService } from '../prisma/prisma.service';
 import { Logger } from '@nestjs/common';
@@ -89,7 +89,7 @@ export class EngagementController {
   }
 
   // GET Endpoint de vérification (Meta Hub Challenge) requis lors de la config du Webhook
-  @Post('verify')
+  @Get('verify')
   verifyWebhook(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
      const mode = (req.query as any)['hub.mode'];
      const token = (req.query as any)['hub.verify_token'];
