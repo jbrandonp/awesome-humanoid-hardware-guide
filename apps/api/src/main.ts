@@ -22,8 +22,18 @@ async function bootstrap() {
   );
 
   // Enable Cross-Origin Resource Sharing for Desktop (Tauri Webview) & Mobile (Expo)
+  // Restricted origins for security (Zero-Trust policy)
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+    : [
+        'http://localhost:4200',
+        'tauri://localhost',
+        'http://tauri.localhost',
+        'http://localhost:8081',
+      ];
+
   app.enableCors({
-    origin: '*', // En production "Offline", on est sur le réseau LAN donc toutes les requêtes locales sont acceptées
+    origin: allowedOrigins,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
