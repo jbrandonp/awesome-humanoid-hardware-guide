@@ -1,11 +1,7 @@
 {
-  "$schema": "../gen/schemas/desktop-schema.json",
+  "$schema": "../../node_modules/@tauri-apps/cli/config.schema.json",
   "identifier": "default",
-  "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
-  "permissions": [
-    "core:default"
-  ]
+  "description": "Default capabilities allowing no network access other than required.",
+  "windows": ["*"],
+  "permissions": ["core:default"]
 }
