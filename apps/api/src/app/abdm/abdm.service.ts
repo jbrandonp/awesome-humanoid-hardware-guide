@@ -5,49 +5,58 @@ import * as crypto from 'crypto';
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (ABDM Specifications)
 // ============================================================================
 
-export interface AbhaRegistrationRequest {
-  aadharNumber: string;
-  otp: string;
-  mobileNumber?: string;
-  transactionId?: string; // Token de suivi de la session ABDM
-}
+import { z } from 'zod';
 
-export interface AbhaRegistrationResult {
-  success: boolean;
-  abhaAddress?: string;
-  abhaNumber?: string;
-  errorMessage?: string;
-  isOfflineFallback?: boolean; // Indicateur si le serveur NHA est injoignable
-}
+export const AbhaRegistrationRequestSchema = z.object({
+  aadharNumber: z.string().regex(/^[0-9]{12}$/, 'Format Aadhar invalide'),
+  otp: z.string().min(6).max(6),
+  mobileNumber: z.string().regex(/^[0-9]{10}$/, 'Format mobile invalide').optional(),
+  transactionId: z.string().optional()
+});
 
-export interface ConsentArtefact {
-  id: string;
-  patientAbhaAddress: string;
-  hiuId: string; // Health Information User (Demandeur)
-  hipId: string; // Health Information Provider (Fournisseur)
-  validFromIso: string;
-  validToIso: string;
-  signature: string; // Signature cryptographique du patient
-}
+export const AbhaRegistrationResultSchema = z.object({
+  success: z.boolean(),
+  abhaAddress: z.string().optional(),
+  abhaNumber: z.string().optional(),
+  errorMessage: z.string().optional(),
+  isOfflineFallback: z.boolean().optional()
+});
 
-export interface HipShareRequest {
-  consentArtefactId: string;
-  patientAbhaAddress: string;
-  rawClinicalData: string; // JSON FHIR R4 en clair à chiffrer
-  requesterPublicKeyBase64: string; // Clé publique Curve25519 (ECDH) du destinataire
-}
+export const ConsentArtefactSchema = z.object({
+  id: z.string(),
+  patientAbhaAddress: z.string(),
+  hiuId: z.string(),
+  hipId: z.string(),
+  validFromIso: z.string().datetime(),
+  validToIso: z.string().datetime(),
+  signature: z.string()
+});
 
-export interface HiuRequest {
-  patientAbhaAddress: string;
-  purposeOfRequest: 'CARE' | 'RESEARCH' | 'PUBLIC_HEALTH';
-  requestedHiTypes: string[]; // ex: ['Prescription', 'DiagnosticReport']
-}
+export const HipShareRequestSchema = z.object({
+  consentArtefactId: z.string(),
+  patientAbhaAddress: z.string(),
+  rawClinicalData: z.string(),
+  requesterPublicKeyBase64: z.string()
+});
 
-export interface AbdmApiResponse {
-  status: 'SENT' | 'QUEUED_OFFLINE' | 'FAILED';
-  transactionId?: string;
-  errorMessage?: string;
-}
+export const HiuRequestSchema = z.object({
+  patientAbhaAddress: z.string(),
+  purposeOfRequest: z.enum(['CARE', 'RESEARCH', 'PUBLIC_HEALTH']),
+  requestedHiTypes: z.array(z.string())
+});
+
+export const AbdmApiResponseSchema = z.object({
+  status: z.enum(['SENT', 'QUEUED_OFFLINE', 'FAILED']),
+  transactionId: z.string().optional(),
+  errorMessage: z.string().optional()
+});
+
+export type AbhaRegistrationRequest = z.infer<typeof AbhaRegistrationRequestSchema>;
+export type AbhaRegistrationResult = z.infer<typeof AbhaRegistrationResultSchema>;
+export type ConsentArtefact = z.infer<typeof ConsentArtefactSchema>;
+export type HipShareRequest = z.infer<typeof HipShareRequestSchema>;
+export type HiuRequest = z.infer<typeof HiuRequestSchema>;
+export type AbdmApiResponse = z.infer<typeof AbdmApiResponseSchema>;
 
 @Injectable()
 export class AbdmService implements OnModuleInit {
@@ -59,12 +68,14 @@ export class AbdmService implements OnModuleInit {
 
   // Cryptographie ABDM : Paires de clés locales (Elliptic Curve Diffie-Hellman - X25519)
   // L'application génère sa paire à chaque démarrage (Échange de clés éphémère - PFS)
-  private readonly ecdh: crypto.ECDH;
+  private readonly privateKey: crypto.KeyObject;
+  private readonly publicKey: crypto.KeyObject;
 
   constructor() {
     // Initialisation du moteur cryptographique officiel requis par ABDM (Curve25519)
-    this.ecdh = crypto.createECDH('prime256v1'); // Alternative à x25519 pour compatibilité NodeJS standard
-    this.ecdh.generateKeys();
+    const { privateKey, publicKey } = crypto.generateKeyPairSync('x25519');
+    this.privateKey = privateKey;
+    this.publicKey = publicKey;
   }
 
   onModuleInit() {
@@ -76,7 +87,8 @@ export class AbdmService implements OnModuleInit {
    * M1 - CRÉATION ABHA (Ayushman Bharat Health Account)
    * Protégé contre les Timeouts de l'API NHA.
    */
-  async createAbha(request: AbhaRegistrationRequest): Promise<AbhaRegistrationResult> {
+  async createAbha(rawRequest: unknown): Promise<AbhaRegistrationResult> {
+    const request = AbhaRegistrationRequestSchema.parse(rawRequest);
     this.logger.log(`[ABDM M1] Tentative de création ABHA pour Aadhar: ${request.aadharNumber.substring(0, 4)}XXXX...`);
 
     try {
@@ -114,15 +126,23 @@ export class AbdmService implements OnModuleInit {
    * M3 - Health Information Provider (HIP) - PARTAGE DE DONNÉES SÉCURISÉ (DPDPA)
    * Chiffrement Asymétrique des Consent Artefacts avant envoi sur le réseau.
    */
-  async shareHealthRecords(request: HipShareRequest): Promise<AbdmApiResponse> {
+  async shareHealthRecords(rawRequest: unknown): Promise<AbdmApiResponse> {
+    const request = HipShareRequestSchema.parse(rawRequest);
     this.logger.log(`[ABDM HIP] Préparation du partage (Consent Artefact: ${request.consentArtefactId}) pour ${request.patientAbhaAddress}...`);
 
     try {
        // 1. CHIFFREMENT ASYMÉTRIQUE STRICT (Standard ABDM / DPDPA)
        // L'expéditeur (Nous/HIP) utilise sa clé privée + la clé publique du destinataire (HIU)
        // pour générer un secret partagé (Shared Secret ECDH)
-       const hiuPublicKey = Buffer.from(request.requesterPublicKeyBase64, 'base64');
-       const sharedSecret = this.ecdh.computeSecret(hiuPublicKey);
+       const hiuPublicKey = crypto.createPublicKey({
+          key: Buffer.from(request.requesterPublicKeyBase64, 'base64'),
+          format: 'der',
+          type: 'spki'
+       });
+       const sharedSecret = crypto.diffieHellman({
+          privateKey: this.privateKey,
+          publicKey: hiuPublicKey
+       });
 
        // 2. Chiffrement AES-256-GCM du payload FHIR R4 en utilisant le Shared Secret
        const iv = crypto.randomBytes(12);
@@ -136,7 +156,7 @@ export class AbdmService implements OnModuleInit {
           iv: iv.toString('base64'),
           encryptedData,
           authTag,
-          hipPublicKey: this.ecdh.getPublicKey('base64')
+          hipPublicKey: this.publicKey.export({ type: 'spki', format: 'der' }).toString('base64')
        };
 
        this.logger.log(`[ABDM HIP] Chiffrement ECDH+AES256 réussi. Poussée réseau en cours...`);
@@ -167,7 +187,8 @@ export class AbdmService implements OnModuleInit {
   /**
    * Health Information User (HIU) - DEMANDE DE DOSSIER (Request Data)
    */
-  async requestHealthRecords(request: HiuRequest): Promise<AbdmApiResponse> {
+  async requestHealthRecords(rawRequest: unknown): Promise<AbdmApiResponse> {
+     const request = HiuRequestSchema.parse(rawRequest);
      this.logger.log(`[ABDM HIU] Demande d'historique pour ${request.patientAbhaAddress} (Motif: ${request.purposeOfRequest})`);
 
      try {
