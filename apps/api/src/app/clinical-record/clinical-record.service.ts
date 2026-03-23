@@ -34,4 +34,11 @@ export class ClinicalRecordService {
       status: 'deleted'
     });
   }
+
+  // DPDPA Hard Delete Cascade
+  async hardDeletePatientRecords(patientId: string): Promise<number> {
+    this.logger.warn(`[DPDPA] PURGE DÉFINITIVE de tous les dossiers dynamiques MongoDB pour le patient ${patientId}`);
+    const result = await this.recordModel.deleteMany({ patientId }).exec();
+    return result.deletedCount || 0;
+  }
 }

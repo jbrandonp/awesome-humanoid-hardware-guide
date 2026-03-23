@@ -11,10 +11,23 @@ import { AppModule } from './app/app.module';
 import dnssd from 'node-dns-sd';
 
 async function bootstrap() {
+  const fastifyAdapter = new FastifyAdapter({
+    // Support Yjs CRDT payloads, High-Res Images & Whisper audio (up to 50MB)
+    bodyLimit: 50 * 1024 * 1024,
+  });
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter()
+    fastifyAdapter
   );
+
+  // Enable Cross-Origin Resource Sharing for Desktop (Tauri Webview) & Mobile (Expo)
+  app.enableCors({
+    origin: '*', // En production "Offline", on est sur le réseau LAN donc toutes les requêtes locales sont acceptées
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
+
   const globalPrefix = 'api';
   app.setGlobalPrefix(globalPrefix);
   const port = process.env.PORT || 3000;

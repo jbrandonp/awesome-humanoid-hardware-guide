@@ -1,13 +1,14 @@
 {
   "expo": {
-    "name": "Mobile",
-    "slug": "@systeme-sante/mobile",
+    "name": "Système de Santé",
+    "slug": "systeme-sante",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "@systeme-sante/mobile",
+    "scheme": "systemesante",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "jsEngine": "hermes",
     "ios": {
       "supportsTablet": true
     },
@@ -16,7 +17,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.systemesante.mobile"
     },
     "web": {
       "bundler": "metro",

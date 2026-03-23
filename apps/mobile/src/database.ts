@@ -2,7 +2,7 @@ import { Database } from '@nozbe/watermelondb'
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
 
 import schema from '@systeme-sante/models/src/lib/schema'
-import { Patient, Visit, Vital, Prescription } from '@systeme-sante/models/src/lib/databaseModels'
+import { Patient, Visit, Vital, Prescription, DrugContraindication, CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models/src/lib/databaseModels'
 
 const adapter = new SQLiteAdapter({
   schema,
@@ -20,5 +20,8 @@ export const database = new Database({
     Visit,
     Vital,
     Prescription,
+    DrugContraindication,
+    CatalogMedication,
+    CatalogDiagnostic,
   ],
 })

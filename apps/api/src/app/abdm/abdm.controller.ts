@@ -11,27 +11,24 @@ export class AbdmController {
   @Post('auth/abha')
   @AuditLog('ABDM_CREATE_ABHA')
   async createAbhaAccount(
-    @Body('aadhar') aadhar: string,
-    @Body('otp') otp: string
+    @Body() request: import('./abdm.service').AbhaRegistrationRequest
   ) {
-    return this.abdmService.createAbha(aadhar, otp);
+    return this.abdmService.createAbha(request);
   }
 
   @Post('hip/share')
   @AuditLog('ABDM_HIP_SHARE_RECORDS')
   async shareRecords(
-    @Body('consentId') consentId: string,
-    @Body('encryptedData') encryptedData: string
+    @Body() request: import('./abdm.service').HipShareRequest
   ) {
-    return this.abdmService.shareHealthRecords(consentId, encryptedData);
+    return this.abdmService.shareHealthRecords(request);
   }
 
   @Post('hiu/request')
   @AuditLog('ABDM_HIU_REQUEST_RECORDS')
   async requestRecords(
-    @Body('patientAbha') patientAbha: string,
-    @Body('purpose') purpose: string
+    @Body() request: import('./abdm.service').HiuRequest
   ) {
-    return this.abdmService.requestHealthRecords(patientAbha, purpose);
+    return this.abdmService.requestHealthRecords(request);
   }
 }

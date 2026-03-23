@@ -2,7 +2,16 @@
   "name": "@systeme-sante/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "start": "nx serve",
+    "start:api": "nx serve api",
+    "start:desktop": "nx serve desktop",
+    "start:mobile": "nx serve mobile",
+    "start:all": "nx run-many --target=serve --all",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "db:push": "npx prisma generate && npx prisma db push"
+  },
   "private": true,
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.29.0",

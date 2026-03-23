@@ -48,5 +48,20 @@ export default appSchema({
         { name: 'deleted_at', type: 'number', isOptional: true },
       ]
     }),
+    tableSchema({
+      name: 'catalog_medications', // Base de référence (ex: Vidal, RxNorm) poussée par le serveur (Read-Only)
+      columns: [
+        { name: 'name', type: 'string', isIndexed: true }, // Index critique pour la recherche Omnibox
+        { name: 'default_dosage', type: 'string', isOptional: true },
+        { name: 'category', type: 'string' }
+      ]
+    }),
+    tableSchema({
+      name: 'catalog_diagnostics', // Base de référence (ex: ICD-10)
+      columns: [
+        { name: 'code', type: 'string', isIndexed: true }, // Index critique
+        { name: 'name', type: 'string', isIndexed: true }
+      ]
+    }),
   ]
 })
