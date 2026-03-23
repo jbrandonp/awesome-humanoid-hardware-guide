@@ -6,6 +6,7 @@ use keyring::Entry;
 
 mod thermal_printer;
 mod hardware_diag;
+mod pdf_generator;
 
 #[tauri::command]
 fn save_token(token: String) -> Result<(), String> {
@@ -24,7 +25,7 @@ fn get_token() -> Result<String, String> {
 #[tauri::command]
 fn delete_token() -> Result<(), String> {
     let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
-    entry.delete_password().map_err(|e| e.to_string())?;
+    entry.delete_credential().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -84,7 +85,8 @@ pub fn run() {
       get_token,
       delete_token,
       thermal_printer::print_thermal_receipt,
-      hardware_diag::check_hardware_health
+      hardware_diag::check_hardware_health,
+      pdf_generator::generate_pdf_prescription
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
