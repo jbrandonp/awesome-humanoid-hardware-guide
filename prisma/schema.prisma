@@ -13,6 +13,7 @@ enum Role {
   NURSE
   PHARMACIST
   LAB_TECH
+  RECEPTIONIST
 }
 
 enum ActionType {
