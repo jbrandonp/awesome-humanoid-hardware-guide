@@ -46,6 +46,7 @@ model Patient {
   visits       Visit[]
   vitals       Vital[]
   prescriptions Prescription[]
+  invoices     Invoice[]
 }
 
 model Visit {
@@ -127,4 +128,31 @@ model DpdpaConsent {
   user    User    @relation(fields: [userId], references: [id])
 
   @@map("dpdpa_consents")
+}
+
+model Invoice {
+  id              String   @id @default(uuid())
+  idempotencyKey  String   @unique @map("idempotency_key") // Essentiel pour éviter la double facturation
+  patientId       String   @map("patient_id")
+  currency        String   @default("INR") // INR, EUR, XOF
+  subtotalCents   Int      @map("subtotal_cents") // Toujours en entiers
+  taxCents        Int      @map("tax_cents")
+  totalCents      Int      @map("total_cents")
+  status          String   @default("UNPAID") // UNPAID, PAID, CANCELLED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@map("invoices")
+}
+
+model InventoryItem {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  quantity      Int      @default(0)
+  unitPriceCents Int     @map("unit_price_cents") // Prix de vente unitaire
+  updatedAt     DateTime @updatedAt
+
+  @@map("inventory_items")
 }
