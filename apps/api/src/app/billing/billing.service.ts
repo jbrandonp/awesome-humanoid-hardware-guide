@@ -84,8 +84,8 @@ export class BillingService {
                );
             }
 
-            // Calcul du prix unitaire (Toujours en ENTIERS / Cents pour éviter les bugs Float Javascript type 0.1+0.2=0.30004)
-            const lineTotalCents = inventoryItem.unitPriceCents * item.quantity;
+            // Calcul du total de la ligne (Toujours arrondi en ENTIERS / Cents pour éviter les bugs Float Javascript type 10.1 * 10 = 101.00000000000001)
+            const lineTotalCents = Math.round(inventoryItem.unitPriceCents * item.quantity);
             subtotalCents += lineTotalCents;
 
             // Déduction du stock (Gestion Logistique Sprint 4)
