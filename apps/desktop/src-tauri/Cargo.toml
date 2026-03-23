@@ -24,7 +24,14 @@ log = "0.4"
 tauri = { version = "2.10.3" }
 tauri-plugin-log = "2"
 mdns-sd = "0.18.2"
-tokio = { version = "1", features = ["rt", "macros", "time"] }
+tokio = { version = "1", features = ["rt", "macros", "time", "process", "fs"] }
 sysinfo = "0.36.1"
 keyring = "3.6.3"
 serialport = "4.9.0"
+reqwest = { version = "0.13.2", features = ["json", "stream"] }
+sha2 = { version = "0.10.9", features = ["oid"] }
+rsa = "0.9.10"
+base64 = "0.22.1"
+tempfile = "3.27.0"
+hex = "0.4.3"
+uuid = { version = "1.20.0", features = ["v4"] }
