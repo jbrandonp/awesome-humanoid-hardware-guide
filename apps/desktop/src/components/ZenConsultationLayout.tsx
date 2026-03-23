@@ -4,6 +4,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { ClinicalTicker } from './ClinicalTicker';
 import { DesktopOmnibox } from './DesktopOmnibox';
 import { HardwareStatusIndicator } from './HardwareStatusIndicator';
+import { SmartCardReader } from './SmartCardReader';
 
 export function ZenConsultationLayout() {
   useHardwareOptimization(); // Désactive les animations (Windows 7 / Low-Resource)
@@ -45,6 +46,7 @@ export function ZenConsultationLayout() {
 
          {/* Diagnostic Matériel (RAM / Imprimante) */}
          <HardwareStatusIndicator />
+         <SmartCardReader />
 
          <div className="flex gap-4">
            <button

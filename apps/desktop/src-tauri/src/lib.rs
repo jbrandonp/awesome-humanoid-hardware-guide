@@ -6,6 +6,7 @@ use keyring::Entry;
 
 mod thermal_printer;
 mod hardware_diag;
+mod smart_card;
 
 #[derive(Debug, Serialize)]
 pub struct DiscoveryResult {
@@ -37,7 +38,7 @@ fn get_token() -> Result<String, String> {
 #[tauri::command]
 fn delete_token() -> Result<(), String> {
     let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
-    entry.delete_password().map_err(|e| e.to_string())?;
+    entry.delete_credential().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -115,7 +116,8 @@ pub fn run() {
       get_token,
       delete_token,
       thermal_printer::print_thermal_receipt,
-      hardware_diag::check_hardware_health
+      hardware_diag::check_hardware_health,
+      smart_card::read_smart_card
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
