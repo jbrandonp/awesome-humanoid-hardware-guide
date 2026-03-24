@@ -188,3 +188,16 @@ model NotificationStatus {
 
   @@map("notification_statuses")
 }
+
+model SyncError {
+  id        String   @id @default(uuid())
+  deviceId  String   @map("device_id")
+  recordId  String   @map("record_id")
+  model     String
+  payload   Json
+  error     String
+  createdAt DateTime @default(now())
+
+  @@index([deviceId])
+  @@map("sync_errors")
+}
