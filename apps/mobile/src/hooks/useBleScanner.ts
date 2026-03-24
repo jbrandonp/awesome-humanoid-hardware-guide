@@ -127,7 +127,6 @@ export function useBleScanner(): BleScannerState & {
         const isDeviceConnected = await activeDevice.isConnected();
         if (isDeviceConnected) {
           await activeDevice.cancelConnection();
-          console.log(`[BLE] Déconnexion propre de ${activeDevice.id}`);
         }
       } catch (err: unknown) {
         console.error(`[BLE] Erreur lors de la déconnexion inattendue:`, err);
@@ -164,7 +163,6 @@ export function useBleScanner(): BleScannerState & {
 
     await stopScanAndDisconnect();
     setIsScanning(true);
-    console.log(`[BLE] Début du scan GATT pour les capteurs médicaux...`);
 
     try {
       manager.startDeviceScan(
@@ -180,7 +178,6 @@ export function useBleScanner(): BleScannerState & {
           }
 
           if (scannedDevice && scannedDevice.name) {
-            console.log(`[BLE] Matériel médical détecté : ${scannedDevice.name} (${scannedDevice.id})`);
             manager.stopDeviceScan();
             setIsScanning(false);
 
@@ -208,7 +205,6 @@ export function useBleScanner(): BleScannerState & {
    */
   const connectAndSubscribe = async (targetDevice: Device, manager: BleManager): Promise<void> => {
     try {
-      console.log(`[BLE] Connexion en cours vers ${targetDevice.id}...`);
       const connectedDevice = await targetDevice.connect({ timeout: 10000 }); // Timeout réseau local
       setActiveDevice(connectedDevice);
       setIsConnected(true);
@@ -382,11 +378,9 @@ export function useBleScanner(): BleScannerState & {
           }
         });
       });
-      console.log(`[DB] Donnée ${vitalData.type} sauvegardée hors-ligne avec succès.`);
     } catch (dbError: unknown) {
       // Gestion des pannes de base de données (ex: mémoire insuffisante, disque Windows 7 plein)
       // L'application NE CRASHE PAS. Le hook attrape l'erreur et affiche un message.
-      console.error("[CRITICAL DB ERROR] Crash d'écriture WatermelonDB.", dbError);
       setSystemError("Alerte: L'espace de stockage de la tablette est plein ou corrompu. La donnée lue n'a pas été sauvegardée.");
     }
   };

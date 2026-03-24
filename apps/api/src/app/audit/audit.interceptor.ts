@@ -1,4 +1,4 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -7,6 +7,8 @@ import { AUDIT_LOG_KEY } from './audit.decorator';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(
     private reflector: Reflector,
     private prisma: PrismaService,
@@ -40,9 +42,9 @@ export class AuditInterceptor implements NestInterceptor {
                 }
               }
             });
-            console.log(`[AuditLog Partitioned] Action '${action}' par user ${user.userId}`);
+            this.logger.log(`[AuditLog Partitioned] Action '${action}' par user ${user.userId}`);
           } catch (e) {
-            console.error(`[AuditLog] Erreur Prisma lors du log`, e);
+            this.logger.error(`[AuditLog] Erreur Prisma lors du log`, e);
           }
         }
       })
