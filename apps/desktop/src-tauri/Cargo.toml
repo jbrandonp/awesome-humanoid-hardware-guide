@@ -28,3 +28,6 @@ tokio = { version = "1", features = ["rt", "macros", "time"] }
 sysinfo = "0.36.1"
 keyring = "3.6.3"
 serialport = "4.9.0"
+printpdf = "0.9.1"
+tauri-plugin-dialog = "2.6.0"
+image = "0.25.6"
