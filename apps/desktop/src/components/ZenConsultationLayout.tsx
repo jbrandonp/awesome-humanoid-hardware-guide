@@ -4,6 +4,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { ClinicalTicker } from './ClinicalTicker';
 import { DesktopOmnibox } from './DesktopOmnibox';
 import { HardwareStatusIndicator } from './HardwareStatusIndicator';
+import { DicomViewer } from './DicomViewer';
 
 export function ZenConsultationLayout() {
   useHardwareOptimization(); // Désactive les animations (Windows 7 / Low-Resource)
@@ -38,6 +39,15 @@ export function ZenConsultationLayout() {
      onFocusOmnibox: () => omniboxRef.current?.focus()
   });
 
+  const [showDicomViewer, setShowDicomViewer] = useState(false);
+
+  // Example dummy image IDs representing WADO-RS URLs fetching from a local MinIO server
+  const dummyImageIds = [
+    'wadors:http://localhost:9000/dicom/wado-rs/studies/1/series/1/instances/1/frames/1',
+    'wadors:http://localhost:9000/dicom/wado-rs/studies/1/series/1/instances/2/frames/1',
+    'wadors:http://localhost:9000/dicom/wado-rs/studies/1/series/1/instances/3/frames/1',
+  ];
+
   return (
     <div className="min-h-screen flex flex-col p-8 transition-colors duration-150 ease-in-out">
        {/* Paramètres Accessibilité & Diagnostic Hardware */}
@@ -65,10 +75,23 @@ export function ZenConsultationLayout() {
        </div>
 
        {/* En-tête Patient "Zen" (Zéro menu latéral) */}
-       <header className="mb-10 text-center">
+       <header className="mb-10 text-center flex flex-col items-center">
           <h1 className="text-3xl font-bold tracking-tight">Dossier: Jean Dupont (34 ans)</h1>
           <p className="text-slate-400 mt-2">Dernier passage: 12 Mars 2026</p>
+          <button
+             onClick={() => setShowDicomViewer(!showDicomViewer)}
+             className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+             {showDicomViewer ? 'Fermer Viewer Scanner' : 'Ouvrir Viewer Scanner (CT)'}
+          </button>
        </header>
+
+       {/* Scanner Viewer */}
+       {showDicomViewer && (
+         <div className="w-full h-96 mb-8 border border-slate-600 rounded overflow-hidden">
+             <DicomViewer imageIds={dummyImageIds} />
+         </div>
+       )}
 
        {/* Élément Central: L'Omnibox (Focus initial) */}
        <main className="flex-1 max-w-4xl w-full mx-auto mt-8 mb-24 relative z-10">

@@ -59,6 +59,9 @@
     "libs/*"
   ],
   "dependencies": {
+    "@cornerstonejs/core": "^4.20.0",
+    "@cornerstonejs/dicom-image-loader": "^4.20.0",
+    "@cornerstonejs/tools": "^4.20.0",
     "@expo/metro-config": "~54.0.9",
     "@expo/metro-runtime": "~6.1.2",
     "@nestjs/common": "^11.0.0",
@@ -67,6 +70,10 @@
     "@nestjs/platform-fastify": "^11.1.17",
     "@prisma/client": "^5.22.0",
     "axios": "^1.6.0",
+    "cornerstone-math": "^0.1.10",
+    "cornerstone-wado-image-loader": "^4.13.2",
+    "dcmjs": "^0.50.1",
+    "dicom-parser": "^1.8.21",
     "expo": "~54.0.0",
     "expo-splash-screen": "~31.0.11",
     "expo-status-bar": "~3.0.8",
