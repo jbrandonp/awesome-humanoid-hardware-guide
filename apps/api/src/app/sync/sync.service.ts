@@ -1,10 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EpiTickerService } from '../ticker/epi-ticker.service';
 import * as Y from 'yjs';
 
 @Injectable()
 export class SyncService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(SyncService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly epiTickerService: EpiTickerService
+  ) {}
 
   async pushChanges(changes: any) {
     if (changes.patients) {
@@ -95,6 +101,115 @@ export class SyncService {
         });
       }
     }
+
+    if (changes.prescriptions) {
+      for (const prescription of changes.prescriptions.created) {
+        const initialBuffer = prescription.administrations ? Buffer.from(prescription.administrations, 'base64') : null;
+        await this.prisma.prescription.create({
+          data: {
+            id: prescription.id,
+            visitId: prescription.visit_id,
+            patientId: prescription.patient_id,
+            medicationName: prescription.medication_name,
+            dosage: prescription.dosage,
+            instructions: prescription.instructions,
+            prescribedAt: new Date(prescription.prescribed_at),
+            administrations: initialBuffer,
+            status: 'synced'
+          }
+        });
+      }
+
+      for (const prescription of changes.prescriptions.updated) {
+        const existingPrescription = await this.prisma.prescription.findUnique({ where: { id: prescription.id } });
+
+        let mergedAdministrationsBuffer = existingPrescription?.administrations;
+
+        if (prescription.administrations) {
+          const clientUpdate = Buffer.from(prescription.administrations, 'base64');
+          const serverDoc = new Y.Doc();
+
+          if (existingPrescription?.administrations) {
+            try {
+              Y.applyUpdate(serverDoc, existingPrescription.administrations);
+            } catch (e) {
+               this.logger.error(`Error loading existing Yjs state for prescription ${prescription.id}`, e);
+            }
+          }
+
+          try {
+            Y.applyUpdate(serverDoc, clientUpdate);
+            const serverArray = serverDoc.getArray('administrations');
+
+            // Overdose detection: Same administration event logged multiple times
+            // This happens if array length increased by more than 1 in an update and entries look duplicated,
+            // or simply if length > expected based on the prescription dosage. We'll simplify:
+            // For the sake of the eMAR conflict, if the client sends an update that pushes a new administration,
+            // and the server *also* had a new administration offline, the merged array might have 2 events
+            // for the same timestamp/dosage.
+            // If the merged array has duplicate entries (same timestamp +/- 5 mins), it's a conflict.
+
+            // To be thorough, we can check if length of merged array is greater than the sum of
+            // unique events, but an easier check for CRDT conflict overdose is just finding duplicates.
+            const events = serverArray.toArray() as { timestamp: string | number | Date }[];
+            let conflictDetected = false;
+            for (let i = 0; i < events.length; i++) {
+               for (let j = i + 1; j < events.length; j++) {
+                  const timeA = new Date(events[i].timestamp).getTime();
+                  const timeB = new Date(events[j].timestamp).getTime();
+                  if (Math.abs(timeA - timeB) < 300000) { // 5 minutes window
+                     conflictDetected = true;
+                     break;
+                  }
+               }
+               if (conflictDetected) break;
+            }
+
+            if (conflictDetected) {
+              this.logger.warn(`CRDT Conflict (eMAR): Potential overdose detected for prescription ${prescription.id}`);
+
+              await this.prisma.clinicalIncident.create({
+                data: {
+                  type: 'OVERDOSE',
+                  description: `Double administration detected for medication ${existingPrescription?.medicationName || prescription.medication_name} (Prescription ID: ${prescription.id}). Conflict resolved by CRDT retaining both events.`,
+                  timestamp: new Date()
+                }
+              });
+
+              this.epiTickerService.broadcastAlert({
+                id: `INCIDENT-${Date.now()}-${prescription.id}`,
+                type: 'INCIDENT',
+                message: `🚨 URGENCE : Double administration potentielle (surdosage) détectée hors-ligne pour ${existingPrescription?.medicationName || prescription.medication_name}.`,
+                timestamp: new Date()
+              });
+            }
+
+            mergedAdministrationsBuffer = Buffer.from(Y.encodeStateAsUpdate(serverDoc));
+          } catch(e) {
+            this.logger.error(`Conflict resolving Yjs document for prescription ${prescription.id}`, e);
+          }
+        }
+
+        await this.prisma.prescription.update({
+          where: { id: prescription.id },
+          data: {
+            medicationName: prescription.medication_name,
+            dosage: prescription.dosage,
+            instructions: prescription.instructions,
+            prescribedAt: new Date(prescription.prescribed_at),
+            administrations: mergedAdministrationsBuffer,
+            status: 'synced'
+          }
+        });
+      }
+
+      for (const id of changes.prescriptions.deleted) {
+        await this.prisma.prescription.update({
+          where: { id },
+          data: { deletedAt: new Date(), status: 'deleted' }
+        });
+      }
+    }
   }
 
   async pullChanges(lastPulledAt: number) {
@@ -169,6 +284,49 @@ export class SyncService {
       }
     }
 
+    // PRESCRIPTIONS (eMAR CRDT Sync payload)
+    const rawPrescriptions = await this.prisma.prescription.findMany({
+       where: { updatedAt: { gt: lastPulledDate } }
+    });
+
+    const createdPrescriptions = [];
+    const updatedPrescriptions = [];
+    const deletedPrescriptions = [];
+
+    for (const p of rawPrescriptions) {
+      const administrationsBase64 = p.administrations ? p.administrations.toString('base64') : '';
+
+      if (p.deletedAt) {
+        deletedPrescriptions.push(p.id);
+      } else if (p.createdAt.getTime() > lastPulledDate.getTime()) {
+         createdPrescriptions.push({
+           id: p.id,
+           visit_id: p.visitId,
+           patient_id: p.patientId,
+           medication_name: p.medicationName,
+           dosage: p.dosage,
+           instructions: p.instructions,
+           prescribed_at: p.prescribedAt.getTime(),
+           administrations: administrationsBase64,
+           _status: p.status,
+           deleted_at: null
+         });
+      } else {
+         updatedPrescriptions.push({
+           id: p.id,
+           visit_id: p.visitId,
+           patient_id: p.patientId,
+           medication_name: p.medicationName,
+           dosage: p.dosage,
+           instructions: p.instructions,
+           prescribed_at: p.prescribedAt.getTime(),
+           administrations: administrationsBase64,
+           _status: p.status,
+           deleted_at: null
+         });
+      }
+    }
+
     return {
       patients: {
         created: createdPatients,
@@ -181,7 +339,11 @@ export class SyncService {
         deleted: deletedVisits
       },
       vitals: { created: [], updated: [], deleted: [] },
-      prescriptions: { created: [], updated: [], deleted: [] },
+      prescriptions: {
+        created: createdPrescriptions,
+        updated: updatedPrescriptions,
+        deleted: deletedPrescriptions
+      },
     };
   }
 }

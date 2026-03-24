@@ -89,18 +89,19 @@ model Vital {
 }
 
 model Prescription {
-  id             String    @id @default(uuid())
-  visitId        String    @map("visit_id")
-  patientId      String    @map("patient_id")
-  medicationName String    @map("medication_name")
-  dosage         String
-  instructions   String?
-  prescribedAt   DateTime  @map("prescribed_at")
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  administrations Bytes? // Will store Yjs Binary Updates (Uint8Array) for eMAR
+  id              String    @id @default(uuid())
+  visitId         String    @map("visit_id")
+  patientId       String    @map("patient_id")
+  medicationName  String    @map("medication_name")
+  dosage          String
+  instructions    String?
+  prescribedAt    DateTime  @map("prescribed_at")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
   // Sync Status Fields
-  status         String    @default("created") @map("_status")
-  deletedAt      DateTime? @map("deleted_at")
+  status          String    @default("created") @map("_status")
+  deletedAt       DateTime? @map("deleted_at")
 
   visit   Visit   @relation(fields: [visitId], references: [id])
   patient Patient @relation(fields: [patientId], references: [id])
@@ -179,4 +180,13 @@ model NotificationStatus {
   patient Patient @relation(fields: [patientId], references: [id])
 
   @@map("notification_statuses")
+}
+
+model ClinicalIncident {
+  id          String   @id @default(uuid())
+  type        String // e.g., "OVERDOSE"
+  description String
+  timestamp   DateTime @default(now())
+
+  @@map("clinical_incidents")
 }

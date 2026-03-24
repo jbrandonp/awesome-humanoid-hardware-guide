@@ -4,6 +4,6 @@ module.exports = {
   rootDir: 'src',
   testMatch: ['**/*.spec.ts'],
   transform: {
-    '^.+\\.(t|j)s$': ['ts-jest', { isolatedModules: true }],
+    '^.+\\.(t|j)s$': ['ts-jest', { isolatedModules: true, tsconfig: 'apps/api/tsconfig.app.json' }],
   },
 };
