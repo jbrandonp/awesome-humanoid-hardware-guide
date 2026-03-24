@@ -1,6 +1,7 @@
 import { Injectable, ForbiddenException, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
+import * as crypto from 'crypto';
 
 // ============================================================================
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Production-Ready)
@@ -63,13 +64,27 @@ export class DpdpaConsentService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
-        // 1. Sauvegarde du consentement
+        // Rechercher un consentement existant pour incrémenter la version
+        const existingConsent = await tx.dpdpaConsent.findFirst({
+           where: { userId: payload.userId, patientId: payload.patientId },
+           orderBy: { version: 'desc' }
+        });
+
+        const newVersion = existingConsent ? existingConsent.version + 1 : 1;
+
+        // Calcul du Hash SHA-256 comme preuve cryptographique de l'état du consentement
+        const hashPayload = `${payload.userId}:${payload.patientId}:${payload.durationMinutes}:${payload.purpose}:${newVersion}`;
+        const consentHash = crypto.createHash('sha256').update(hashPayload).digest('hex');
+
+        // 1. Sauvegarde du consentement granulaire et versionné
         const consent = await tx.dpdpaConsent.create({
           data: {
             userId: payload.userId,
             patientId: payload.patientId,
             expiresAt,
-            purpose: payload.purpose
+            purpose: payload.purpose,
+            consentHash,
+            version: newVersion,
           }
         });
 
