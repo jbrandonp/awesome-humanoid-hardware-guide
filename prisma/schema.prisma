@@ -55,6 +55,7 @@ model Patient {
   prescriptions Prescription[]
   invoices      Invoice[]
   notifications NotificationStatus[]
+  dicomStudies  DicomStudy[]
 }
 
 model Visit {
@@ -179,4 +180,50 @@ model NotificationStatus {
   patient Patient @relation(fields: [patientId], references: [id])
 
   @@map("notification_statuses")
+}
+
+enum DicomStudyStatus {
+  MATCHED
+  ORPHANED
+}
+
+model DicomStudy {
+  id               String           @id @default(uuid())
+  studyInstanceUID String           @unique @map("study_instance_uid")
+  patientId        String?          @map("patient_id")
+  dicomPatientId   String?          @map("dicom_patient_id")
+  status           DicomStudyStatus @default(ORPHANED)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  patient Patient?      @relation(fields: [patientId], references: [id])
+  series  DicomSeries[]
+
+  @@map("dicom_studies")
+}
+
+model DicomSeries {
+  id                String   @id @default(uuid())
+  studyId           String   @map("study_id")
+  seriesInstanceUID String   @unique @map("series_instance_uid")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  study     DicomStudy      @relation(fields: [studyId], references: [id])
+  instances DicomInstance[]
+
+  @@map("dicom_series")
+}
+
+model DicomInstance {
+  id             String   @id @default(uuid())
+  seriesId       String   @map("series_id")
+  sopInstanceUID String   @unique @map("sop_instance_uid")
+  thumbnailUrl   String?  @map("thumbnail_url")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  series DicomSeries @relation(fields: [seriesId], references: [id])
+
+  @@map("dicom_instances")
 }
