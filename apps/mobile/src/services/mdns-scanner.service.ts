@@ -2,9 +2,9 @@ import axios from 'axios';
 import { useConnectionStore } from '../stores/connection.store';
 import Zeroconf from 'react-native-zeroconf'; // Utilisation d'une librairie native RN pour le mDNS
 
-// ============================================================================
+// ======
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (mDNS & Health Check)
-// ============================================================================
+// ======
 
 export interface MDNSDiscoveryResult {
   ip: string;
@@ -56,9 +56,8 @@ export class MDNSScannerService {
 
            const ip = service.addresses[0];
            const port = service.port;
-           const fullUrl = `http://${ip}:${port}`;
 
-           console.log(`[mDNS Scanner] Serveur découvert sur ${fullUrl}`);
+           const fullUrl = `http://${ip}:${port}`;
 
            resolve({
              ip,
@@ -99,7 +98,6 @@ export class MDNSScannerService {
       });
 
       if (response.data.status === 'ok' && response.data.databaseConnected) {
-         console.log(`[Health Check] Serveur opérationnel et DB connectée.`);
          store.setServerUrl(serverUrl); // Active l'application en mode "Connecté"
          return true;
       } else {
@@ -128,7 +126,6 @@ export class MDNSScannerService {
       }
     } catch (scanError) {
       // Timeout : Le serveur n'a pas été trouvé. Le store est déjà en MANAUL_FALLBACK ou OFFLINE.
-      console.log("[mDNS Bootstrap] Bascule sur Fallback ou Offline-First.");
     }
   }
 }

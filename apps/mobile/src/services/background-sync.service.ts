@@ -5,9 +5,9 @@ import axios from 'axios';
 // (Note: En environnement complet, on utiliserait le Sync de WatermelonDB ou une vraie DB SQLite,
 // mais AsyncStorage est adéquat pour une queue d'urgence/fallback simple structurée).
 
-// ============================================================================
+// ======
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Production-Ready Offline Sync)
-// ============================================================================
+// ======
 
 export type SyncPriorityLevel = 'CRITICAL' | 'HIGH' | 'LOW';
 
@@ -26,15 +26,13 @@ export const BACKGROUND_SYNC_TASK_NAME = 'MEDICAL_OFFLINE_SYNC_WORKER';
 // Clé de persistance pour ne jamais perdre une donnée même si l'app est tuée par l'OS
 const QUEUE_STORAGE_KEY = '@resilient_health_sync_queue';
 
-// ============================================================================
+// ======
 // GESTIONNAIRE DE TÂCHE NATIVE (TASK MANAGER)
 // Enregistré au niveau de l'OS. S'exécute même si l'application React Native
 // est "fermée" (Tuée par l'utilisateur ou par le gestionnaire de batterie).
-// ============================================================================
+// ======
 
 TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
-  console.log(`[OS Background Worker] Réveil de la tâche de synchronisation...`);
-
   try {
     const rawQueue = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
     if (!rawQueue) {
@@ -55,8 +53,6 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
        const pB = b.priority === 'CRITICAL' ? 3 : b.priority === 'HIGH' ? 2 : 1;
        return pB - pA;
     });
-
-    console.log(`[OS Background Worker] ${queue.length} paquets en attente. Début de la transmission...`);
 
     // 2. GESTION DE L'INTERRUPTION (BATTERIE / TIMEOUT OS)
     // iOS (Background App Refresh) limite généralement à 30 secondes d'exécution.
@@ -92,7 +88,6 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
          });
 
          processedCount++;
-         console.log(`[OS Background Worker] Transmission réussie: ${task.transactionId} (${task.priority})`);
 
        } catch (networkError: unknown) {
          // Le serveur NestJS est hors-ligne, ou le routeur Wi-Fi est hors de portée.
@@ -124,10 +119,10 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
 });
 
 
-// ============================================================================
+// ======
 // SERVICE UTILISATEUR (REACT NATIVE HOOKS / MODULE EXPORT)
 // Expose les fonctions pour s'enregistrer auprès de l'OS et ajouter des tâches.
-// ============================================================================
+// ======
 
 export class BackgroundSyncService {
 
@@ -140,7 +135,6 @@ export class BackgroundSyncService {
     try {
       const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_SYNC_TASK_NAME);
       if (isRegistered) {
-         console.log(`[Background Sync] Le Worker OS est déjà actif.`);
          return;
       }
 
@@ -149,8 +143,6 @@ export class BackgroundSyncService {
         stopOnTerminate: false, // Android uniquement : Continue même si l'app est swipée/tuée
         startOnBoot: true, // Android : Relance après redémarrage du téléphone
       });
-
-      console.log(`[Background Sync] Enregistrement OS réussi. Synchronisation silencieuse activée.`);
     } catch (err) {
       console.error(`[Background Sync] Échec de l'enregistrement OS (Permissions refusées ?).`, err);
     }
@@ -192,8 +184,6 @@ export class BackgroundSyncService {
 
       queue.push(newTask);
       await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
-
-      console.log(`[Background Sync] Tâche ${transactionId} (Urgence: ${priority}) sauvegardée hors-ligne.`);
 
       // Si le réseau est temporairement actif alors que l'app est au premier plan,
       // on peut optionnellement déclencher une synchro instantanée ici
