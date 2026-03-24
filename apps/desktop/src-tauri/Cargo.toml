@@ -33,3 +33,9 @@ serialport = "4.9.0"
 printpdf = "0.9.1"
 tauri-plugin-dialog = "2.6.0"
 image = "0.25.6"
+<<<<<<< HEAD
+printpdf = "0.7.0"
+chrono = "0.4"
+local-ip-address = "0.6.1"
+=======
+>>>>>>> origin/main

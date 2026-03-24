@@ -3,10 +3,6 @@ import { Controller, Sse, UseGuards, Post, Req, InternalServerErrorException, Fo
 =======
 import { Controller, Sse, UseGuards } from '@nestjs/common';
 >>>>>>> origin/main
-import { AuthGuard } from '@nestjs/passport';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { EpiTickerService } from './epi-ticker.service';
 <<<<<<< HEAD
 import { FastifyRequest } from 'fastify';
 import { AuditService } from '../audit/audit.service';
@@ -14,15 +10,6 @@ import { ActionType } from '@prisma/client';
 =======
 import { FastifyReply, FastifyRequest } from 'fastify';
 >>>>>>> origin/main
-
-export interface MessageEvent {
-  data: string | object;
-  id?: string;
-  type?: string;
-  retry?: number;
-}
-
-@Controller('ticker')
 <<<<<<< HEAD
 export class TickerController {
   constructor(
@@ -37,21 +24,6 @@ export class TickerController {
 export class TickerController {
   constructor(private readonly tickerService: EpiTickerService) {}
 >>>>>>> origin/main
-
-  /**
-   * Server-Sent Events endpoint pour le bandeau d'actualité en temps réel.
-   * Utilise très peu de RAM, idéal pour les vieux PC (contrairement à Socket.io).
-   */
-  @Sse('stream')
-  sse(): Observable<MessageEvent> {
-    return this.tickerService.getTickerStream().pipe(
-      map(payload => ({
-        id: payload.id,
-        type: 'message',
-        data: payload
-      }))
-    );
-  }
 <<<<<<< HEAD
 
   @Post('export/epidemiology')
@@ -78,4 +50,3 @@ export class TickerController {
   }
 =======
 >>>>>>> origin/main
-}

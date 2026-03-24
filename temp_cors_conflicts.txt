@@ -11,11 +11,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 >>>>>>> origin/main
-
-describe('CORS Configuration', () => {
-  let app: NestFastifyApplication;
-
-  beforeAll(async () => {
 <<<<<<< HEAD
     // We cannot easily test the main.ts bootstrap logic here,
     // but we can verify how NestJS handles the origins we've whitelisted.
@@ -61,19 +56,6 @@ describe('CORS Configuration', () => {
         }
       },
 >>>>>>> origin/main
-      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      credentials: true,
-    });
-
-    await app.init();
-    await app.getHttpAdapter().getInstance().ready();
-  });
-
-  afterAll(async () => {
-    await app.close();
-  });
-
-  it('should allow whitelisted origins', async () => {
 <<<<<<< HEAD
     const response = await app.inject({
       method: 'OPTIONS',
@@ -89,11 +71,6 @@ describe('CORS Configuration', () => {
       .set('Origin', 'http://localhost:4200')
       .expect(200);
 >>>>>>> origin/main
-
-    expect(response.headers['access-control-allow-origin']).toBe('http://localhost:4200');
-  });
-
-  it('should reject non-whitelisted origins', async () => {
 <<<<<<< HEAD
     const response = await app.inject({
       method: 'OPTIONS',
@@ -115,6 +92,3 @@ describe('CORS Configuration', () => {
     // Fastify/NestJS by default drops the headers or returns 500 when CORS cb fails
     expect(response.status).not.toBe(204);
 >>>>>>> origin/main
-    expect(response.headers['access-control-allow-origin']).toBeUndefined();
-  });
-});
