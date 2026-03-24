@@ -15,6 +15,25 @@ enum Role {
   LAB_TECH
 }
 
+enum RegisterStatus {
+  OPEN
+  PENDING_APPROVAL
+  CLOSED
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  PAY_IN
+  PAY_OUT
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+}
+
 enum ActionType {
   READ
   CREATE
@@ -35,6 +54,7 @@ model User {
 
   auditLogs    AuditLog[]
   dpdpaConsent DpdpaConsent[]
+  cashRegisterSessions CashRegisterSession[]
 }
 
 model Patient {
@@ -151,8 +171,46 @@ model Invoice {
   updatedAt      DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id])
+  financialTransactions FinancialTransaction[]
 
   @@map("invoices")
+}
+
+model CashRegisterSession {
+  id                     String         @id @default(uuid())
+  terminalId             String         @map("terminal_id")
+  cashierId              String         @map("cashier_id")
+  openingFloatCents      Int            @map("opening_float_cents")
+  expectedCloseAmountCents Int?           @map("expected_close_amount_cents")
+  actualCloseAmountCents Int?           @map("actual_close_amount_cents")
+  discrepancyCents       Int?           @map("discrepancy_cents")
+  status                 RegisterStatus @default(OPEN)
+  openedAt               DateTime       @default(now()) @map("opened_at")
+  closedAt               DateTime?      @map("closed_at")
+
+  cashier                User                   @relation(fields: [cashierId], references: [id])
+  financialTransactions  FinancialTransaction[]
+
+  @@map("cash_register_sessions")
+}
+
+model FinancialTransaction {
+  id             String          @id @default(uuid())
+  sessionId      String          @map("session_id")
+  invoiceId      String?         @map("invoice_id")
+  type           TransactionType
+  amountCents    Int             @map("amount_cents") // Can be negative for refunds/payouts
+  currency       String          @default("INR")
+  paymentMethod  PaymentMethod   @map("payment_method")
+  idempotencyKey String          @unique @map("idempotency_key")
+  metadata       Json?           // Pour fractionnement, détails d'annulation, coupures
+  createdAt      DateTime        @default(now()) @map("created_at")
+  supervisorId   String?         @map("supervisor_id")
+
+  session        CashRegisterSession @relation(fields: [sessionId], references: [id])
+  invoice        Invoice?            @relation(fields: [invoiceId], references: [id])
+
+  @@map("financial_transactions")
 }
 
 model InventoryItem {
