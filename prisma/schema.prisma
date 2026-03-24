@@ -156,11 +156,12 @@ model Invoice {
 }
 
 model InventoryItem {
-  id             String   @id @default(uuid())
-  name           String   @unique
-  quantity       Int      @default(0)
-  unitPriceCents Int      @map("unit_price_cents") // Prix de vente unitaire
-  updatedAt      DateTime @updatedAt
+  id                String   @id @default(uuid())
+  name              String   @unique
+  quantity          Int      @default(0)
+  criticalThreshold Int      @default(50) @map("critical_threshold")
+  unitPriceCents    Int      @map("unit_price_cents") // Prix de vente unitaire
+  updatedAt         DateTime @updatedAt
 
   @@map("inventory_items")
 }
