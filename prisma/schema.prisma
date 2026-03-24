@@ -180,3 +180,54 @@ model NotificationStatus {
 
   @@map("notification_statuses")
 }
+
+enum BedStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+}
+
+enum BedType {
+  STANDARD
+  ICU // Soins intensifs
+  PEDIATRIC // Pédiatrie
+  MATERNITY // Maternité
+}
+
+model Bed {
+  id         String    @id @default(uuid())
+  roomNumber String
+  status     BedStatus @default(AVAILABLE)
+  bedType    BedType   @default(STANDARD)
+
+  // Capacités médicales (ex: ["OXYGEN", "VENTILATOR", "ISOLATION"])
+  features String[]
+
+  // Optimistic Locking pour la synchro Offline
+  version Int @default(1)
+
+  // Relations
+  currentPatientId String?        @unique
+  encounters       BedEncounter[] // Historique complet d'occupation
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// L'entité critique pour la facturation et la traçabilité
+model BedEncounter {
+  id        String @id @default(uuid())
+  patientId String
+  bedId     String
+  bed       Bed    @relation(fields: [bedId], references: [id])
+
+  admittedAt   DateTime  @default(now())
+  dischargedAt DateTime? // Rempli lors de la sortie ou du transfert
+
+  // Raison du transfert ou de la sortie (ex: "Amélioration", "Transfert Réa", "Décès")
+  dischargeReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
