@@ -58,8 +58,6 @@ export class MDNSScannerService {
            const port = service.port;
            const fullUrl = `http://${ip}:${port}`;
 
-           console.log(`[mDNS Scanner] Serveur découvert sur ${fullUrl}`);
-
            resolve({
              ip,
              port,
@@ -99,7 +97,6 @@ export class MDNSScannerService {
       });
 
       if (response.data.status === 'ok' && response.data.databaseConnected) {
-         console.log(`[Health Check] Serveur opérationnel et DB connectée.`);
          store.setServerUrl(serverUrl); // Active l'application en mode "Connecté"
          return true;
       } else {
@@ -128,7 +125,6 @@ export class MDNSScannerService {
       }
     } catch (scanError) {
       // Timeout : Le serveur n'a pas été trouvé. Le store est déjà en MANAUL_FALLBACK ou OFFLINE.
-      console.log("[mDNS Bootstrap] Bascule sur Fallback ou Offline-First.");
     }
   }
 }

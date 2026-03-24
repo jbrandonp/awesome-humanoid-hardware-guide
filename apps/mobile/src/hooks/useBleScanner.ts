@@ -381,7 +381,6 @@ export function useBleScanner(): BleScannerState & {
     } catch (dbError: unknown) {
       // Gestion des pannes de base de données (ex: mémoire insuffisante, disque Windows 7 plein)
       // L'application NE CRASHE PAS. Le hook attrape l'erreur et affiche un message.
-      console.error("[CRITICAL DB ERROR] Crash d'écriture WatermelonDB.", dbError);
       setSystemError("Alerte: L'espace de stockage de la tablette est plein ou corrompu. La donnée lue n'a pas été sauvegardée.");
     }
   };
