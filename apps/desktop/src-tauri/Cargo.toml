@@ -28,3 +28,6 @@ tokio = { version = "1", features = ["rt", "macros", "time"] }
 sysinfo = "0.36.1"
 keyring = "3.6.3"
 serialport = "4.9.0"
+printpdf = "0.7.0"
+chrono = "0.4"
+local-ip-address = "0.6.1"

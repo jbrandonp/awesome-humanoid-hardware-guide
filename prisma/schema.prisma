@@ -16,6 +16,7 @@ enum Role {
 }
 
 enum ActionType {
+  EXPORT_REPORT
   READ
   CREATE
   UPDATE
