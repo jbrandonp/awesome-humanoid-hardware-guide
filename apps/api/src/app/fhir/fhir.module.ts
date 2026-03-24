@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { FhirService } from './fhir.service';
 import { FhirController } from './fhir.controller';
+import { FhirMapper } from './fhir.mapper';
+import { PrismaModule } from '../prisma/prisma.module';
+import { ClinicalRecordModule } from '../clinical-record/clinical-record.module';
 
 @Module({
-  providers: [FhirService],
+  imports: [PrismaModule, ClinicalRecordModule],
+  providers: [FhirService, FhirMapper],
   controllers: [FhirController],
   exports: [FhirService]
 })

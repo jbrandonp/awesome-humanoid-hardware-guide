@@ -1,34 +1,34 @@
-
 import { Test, TestingModule } from '@nestjs/testing';
-import { NestFastifyApplication, FastifyAdapter } from '@nestjs/platform-fastify';
-import { AppModule } from './app.module';
+import { INestApplication } from '@nestjs/common';
+import request from 'supertest';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 
 describe('CORS Configuration', () => {
   let app: NestFastifyApplication;
 
   beforeAll(async () => {
-    // We cannot easily test the main.ts bootstrap logic here,
-    // but we can verify how NestJS handles the origins we've whitelisted.
+    // 1. Simuler l'initialisation de l'application SANS dépendances externes bloquantes (Prisma/Mongo)
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
+      controllers: [AppController],
+      providers: [{ provide: AppService, useValue: { getData: () => ({ message: 'Hello API' }) } }],
     }).compile();
 
-    app = moduleFixture.createNestApplication<NestFastifyApplication>(
-      new FastifyAdapter()
-    );
+    app = moduleFixture.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
 
-    // Replicate the logic from main.ts
-    const allowedOrigins = process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-      : [
-          'http://localhost:4200',
-          'tauri://localhost',
-          'http://tauri.localhost',
-          'http://localhost:8081',
-        ];
+    // 2. Reproduire la logique CORS de `main.ts`
+    const allowedOriginsRaw = 'http://localhost:4200, tauri://localhost, http://tauri.localhost, http://localhost:8081';
+    const whitelistedOrigins = allowedOriginsRaw.split(',').map(o => o.trim());
 
     app.enableCors({
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin || whitelistedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          callback(new Error('Blocked by CORS'));
+        }
+      },
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true,
     });
@@ -42,31 +42,21 @@ describe('CORS Configuration', () => {
   });
 
   it('should allow whitelisted origins', async () => {
-    const response = await app.inject({
-      method: 'OPTIONS',
-      url: '/',
-      headers: {
-        'Origin': 'http://localhost:4200',
-        'Access-Control-Request-Method': 'GET',
-      },
-    });
+    const response = await request(app.getHttpServer())
+      .get('/')
+      .set('Origin', 'http://localhost:4200')
+      .expect(200);
 
     expect(response.headers['access-control-allow-origin']).toBe('http://localhost:4200');
   });
 
   it('should reject non-whitelisted origins', async () => {
-    const response = await app.inject({
-      method: 'OPTIONS',
-      url: '/',
-      headers: {
-        'Origin': 'http://malicious.com',
-        'Access-Control-Request-Method': 'GET',
-      },
-    });
+    const response = await request(app.getHttpServer())
+      .options('/')
+      .set('Origin', 'http://malicious.com');
 
-    // When the origin is not allowed, the Access-Control-Allow-Origin header is either missing
-    // or set to something else (depending on how the CORS middleware is configured).
-    // In NestJS/Fastify with an array of origins, it typically doesn't echo back the origin if not matched.
+    // Fastify/NestJS by default drops the headers or returns 500 when CORS cb fails
+    expect(response.status).not.toBe(204);
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
   });
 });

@@ -6,6 +6,7 @@ use keyring::Entry;
 
 mod thermal_printer;
 mod hardware_diag;
+mod report_generator;
 
 #[derive(Debug, Serialize)]
 pub struct DiscoveryResult {
@@ -108,6 +109,7 @@ async fn discover_medical_api() -> Result<DiscoveryResult, DiscoveryError> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
     .invoke_handler(tauri::generate_handler![
       discover_medical_api,
       get_os_info,
@@ -115,7 +117,8 @@ pub fn run() {
       get_token,
       delete_token,
       thermal_printer::print_thermal_receipt,
-      hardware_diag::check_hardware_health
+      hardware_diag::check_hardware_health,
+      report_generator::generate_official_pdf_report
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
