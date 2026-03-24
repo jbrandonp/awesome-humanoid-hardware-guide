@@ -16,11 +16,13 @@
         "width": 800,
         "height": 600,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "additionalBrowserArgs": "--renderer-process-limit=1 --js-flags=\"--max-old-space-size=500\" --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'none'; connect-src 'self' http://localhost:* ws://localhost:* https://*.abdm.gov.in; img-src 'self' data: http://localhost:*; style-src 'self' 'unsafe-inline'; script-src 'self';",
+      "capabilities": []
     }
   },
   "bundle": {
