@@ -1,13 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { useHardwareOptimization } from '../hooks/useHardwareOptimization';
+import { useState, useRef, useEffect } from 'react';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { ClinicalTicker } from './ClinicalTicker';
 import { DesktopOmnibox } from './DesktopOmnibox';
 import { HardwareStatusIndicator } from './HardwareStatusIndicator';
+import { EpidemiologyDashboard } from './dashboard/EpidemiologyDashboard';
 
 export function ZenConsultationLayout() {
-  useHardwareOptimization(); // Désactive les animations (Windows 7 / Low-Resource)
-
   // États du Thème
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isHighLegibility, setIsHighLegibility] = useState(false);
@@ -15,6 +13,7 @@ export function ZenConsultationLayout() {
   // Zéro-Menu / Interface Focus
   const [showHistory, setShowHistory] = useState(false); // Accordéon fluide
   const [showProtocols, setShowProtocols] = useState(false);
+  const [activeView, setActiveView] = useState<'consultation' | 'dashboard'>('consultation');
 
   const omniboxRef = useRef<HTMLInputElement>(null);
 
@@ -49,13 +48,20 @@ export function ZenConsultationLayout() {
          <div className="flex gap-4">
            <button
              tabIndex={1}
+             onClick={() => setActiveView(activeView === 'consultation' ? 'dashboard' : 'consultation')}
+             className="px-4 py-2 rounded bg-medical-primary text-white text-sm hover:bg-blue-600 focus:outline-none focus:ring-2"
+           >
+              {activeView === 'consultation' ? 'Ouvrir Dashboard Épidémiologique' : 'Retour Consultation'}
+           </button>
+           <button
+             tabIndex={2}
            onClick={() => setIsHighLegibility(!isHighLegibility)}
            className="px-4 py-2 rounded bg-medical-border text-sm hover:bg-slate-600 focus:outline-none focus:ring-2"
          >
             {isHighLegibility ? 'Texte Normal' : 'A+ Haute Lisibilité'}
          </button>
            <button
-             tabIndex={2}
+             tabIndex={3}
              onClick={() => setIsDarkMode(!isDarkMode)}
              className="px-4 py-2 rounded bg-medical-border text-sm hover:bg-slate-600 focus:outline-none focus:ring-2"
            >
@@ -64,43 +70,51 @@ export function ZenConsultationLayout() {
          </div>
        </div>
 
-       {/* En-tête Patient "Zen" (Zéro menu latéral) */}
-       <header className="mb-10 text-center">
-          <h1 className="text-3xl font-bold tracking-tight">Dossier: Jean Dupont (34 ans)</h1>
-          <p className="text-slate-400 mt-2">Dernier passage: 12 Mars 2026</p>
-       </header>
+       {activeView === 'consultation' ? (
+         <>
+           {/* En-tête Patient "Zen" (Zéro menu latéral) */}
+           <header className="mb-10 text-center">
+              <h1 className="text-3xl font-bold tracking-tight">Dossier: Jean Dupont (34 ans)</h1>
+              <p className="text-slate-400 mt-2">Dernier passage: 12 Mars 2026</p>
+           </header>
 
-       {/* Élément Central: L'Omnibox (Focus initial) */}
-       <main className="flex-1 max-w-4xl w-full mx-auto mt-8 mb-24 relative z-10">
-          <DesktopOmnibox ref={omniboxRef} />
+           {/* Élément Central: L'Omnibox (Focus initial) */}
+           <main className="flex-1 max-w-4xl w-full mx-auto mt-8 mb-24 relative z-10">
+              <DesktopOmnibox ref={omniboxRef} />
 
-          {/* Raccourcis visuels (Si Ctrl+P activé) */}
-          {showProtocols && (
-            <div className="mt-4 p-4 bg-medical-border rounded-lg flex gap-4">
-               <button tabIndex={4} className="bg-medical-primary text-white px-4 py-2 rounded-md font-medium">Paludisme Simple</button>
-               <button tabIndex={5} className="bg-medical-primary text-white px-4 py-2 rounded-md font-medium">Grippe A</button>
-            </div>
-          )}
+              {/* Raccourcis visuels (Si Ctrl+P activé) */}
+              {showProtocols && (
+                <div className="mt-4 p-4 bg-medical-border rounded-lg flex gap-4">
+                   <button tabIndex={4} className="bg-medical-primary text-white px-4 py-2 rounded-md font-medium">Paludisme Simple</button>
+                   <button tabIndex={5} className="bg-medical-primary text-white px-4 py-2 rounded-md font-medium">Grippe A</button>
+                </div>
+              )}
 
-          {/* Widgets Rétractables (Accordéons) */}
-          <div className="mt-12 space-y-4">
-             <button
-               tabIndex={6}
-               onClick={() => setShowHistory(!showHistory)}
-               className="w-full text-left bg-medical-surface p-4 rounded-lg flex justify-between items-center hover:bg-slate-700"
-             >
-                <span className="font-semibold">Historique Ancien & Allergies</span>
-                <span>{showHistory ? '▲' : '▼'}</span>
-             </button>
+              {/* Widgets Rétractables (Accordéons) */}
+              <div className="mt-12 space-y-4">
+                 <button
+                   tabIndex={6}
+                   onClick={() => setShowHistory(!showHistory)}
+                   className="w-full text-left bg-medical-surface p-4 rounded-lg flex justify-between items-center hover:bg-slate-700"
+                 >
+                    <span className="font-semibold">Historique Ancien & Allergies</span>
+                    <span>{showHistory ? '▲' : '▼'}</span>
+                 </button>
 
-             {showHistory && (
-               <div className="p-6 bg-slate-800 rounded-lg border-l-4 border-medical-danger">
-                  <h3 className="font-bold text-red-400 mb-2">! ALLERGIE GRAVE : Pénicilline</h3>
-                  <p className="text-slate-300">Choc anaphylactique rapporté en 2019.</p>
-               </div>
-             )}
-          </div>
-       </main>
+                 {showHistory && (
+                   <div className="p-6 bg-slate-800 rounded-lg border-l-4 border-medical-danger">
+                      <h3 className="font-bold text-red-400 mb-2">! ALLERGIE GRAVE : Pénicilline</h3>
+                      <p className="text-slate-300">Choc anaphylactique rapporté en 2019.</p>
+                   </div>
+                 )}
+              </div>
+           </main>
+         </>
+       ) : (
+         <main className="flex-1 w-full mt-4 mb-24 relative z-10" style={{ height: 'calc(100vh - 200px)' }}>
+            <EpidemiologyDashboard />
+         </main>
+       )}
 
        <ClinicalTicker />
     </div>
