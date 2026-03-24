@@ -1,11 +1,33 @@
 use mdns_sd::{ServiceDaemon, ServiceEvent};
 use std::time::Duration;
 use tokio::time::timeout;
-
+use serde::Serialize;
 use keyring::Entry;
 
 mod thermal_printer;
 mod hardware_diag;
+<<<<<<< HEAD
+<<<<<<< HEAD
+mod pdf_generator;
+=======
+mod report_generator;
+>>>>>>> origin/main
+=======
+mod report_generator;
+>>>>>>> origin/main
+
+#[derive(Debug, Serialize)]
+pub struct DiscoveryResult {
+    pub ip: String,
+    pub port: u16,
+    pub full_url: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DiscoveryError {
+    pub message: String,
+    pub code: String,
+}
 
 #[tauri::command]
 fn save_token(token: String) -> Result<(), String> {
@@ -24,7 +46,7 @@ fn get_token() -> Result<String, String> {
 #[tauri::command]
 fn delete_token() -> Result<(), String> {
     let entry = Entry::new("systeme_sante", "access_token").map_err(|e| e.to_string())?;
-    entry.delete_password().map_err(|e| e.to_string())?;
+    entry.delete_credential().map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -40,10 +62,18 @@ fn get_os_info() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn discover_medical_api() -> Result<String, String> {
-    let mdns = ServiceDaemon::new().map_err(|e| e.to_string())?;
+async fn discover_medical_api() -> Result<DiscoveryResult, DiscoveryError> {
+    let mdns = ServiceDaemon::new().map_err(|e| DiscoveryError {
+        message: e.to_string(),
+        code: "MDNS_DAEMON_ERROR".to_string(),
+    })?;
+
+    // On écoute le même nom de service défini dans `main.ts` par node-dns-sd (_medical-api._tcp.local.)
     let service_type = "_medical-api._tcp.local.";
-    let receiver = mdns.browse(service_type).map_err(|e| e.to_string())?;
+    let receiver = mdns.browse(service_type).map_err(|e| DiscoveryError {
+        message: e.to_string(),
+        code: "MDNS_BROWSE_ERROR".to_string(),
+    })?;
 
     let timeout_duration = Duration::from_secs(5);
 
@@ -54,13 +84,20 @@ async fn discover_medical_api() -> Result<String, String> {
                     let ips = info.get_addresses();
                     if let Some(ip) = ips.iter().next() {
                         let port = info.get_port();
-                        return Ok(format!("http://{}:{}", ip, port));
+                        return Ok(DiscoveryResult {
+                            ip: ip.to_string(),
+                            port,
+                            full_url: format!("http://{}:{}", ip, port),
+                        });
                     }
                 }
                 _ => continue,
             }
         }
-        Err("No service found".to_string())
+        Err(DiscoveryError {
+            message: "Aucun service trouvé sur le réseau local.".to_string(),
+            code: "MDNS_NOT_FOUND".to_string(),
+        })
     })
     .await;
 
@@ -68,15 +105,19 @@ async fn discover_medical_api() -> Result<String, String> {
     let _ = mdns.stop_browse(service_type);
 
     match result {
-        Ok(Ok(url)) => Ok(url),
+        Ok(Ok(discovery)) => Ok(discovery),
         Ok(Err(e)) => Err(e),
-        Err(_) => Err("Timeout reached without discovering API".to_string()),
+        Err(_) => Err(DiscoveryError {
+            message: "Timeout de 5 secondes atteint sans découvrir l'API".to_string(),
+            code: "MDNS_TIMEOUT".to_string(),
+        }),
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
     .invoke_handler(tauri::generate_handler![
       discover_medical_api,
       get_os_info,
@@ -84,7 +125,16 @@ pub fn run() {
       get_token,
       delete_token,
       thermal_printer::print_thermal_receipt,
-      hardware_diag::check_hardware_health
+      hardware_diag::check_hardware_health,
+<<<<<<< HEAD
+<<<<<<< HEAD
+      pdf_generator::generate_epidemiology_report_pdf
+=======
+      report_generator::generate_official_pdf_report
+>>>>>>> origin/main
+=======
+      report_generator::generate_official_pdf_report
+>>>>>>> origin/main
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

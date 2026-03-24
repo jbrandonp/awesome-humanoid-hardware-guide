@@ -11,7 +11,7 @@ export class AbdmController {
   @Post('auth/abha')
   @AuditLog('ABDM_CREATE_ABHA')
   async createAbhaAccount(
-    @Body() request: import('./abdm.service').AbhaRegistrationRequest
+    @Body() request: unknown
   ) {
     return this.abdmService.createAbha(request);
   }
@@ -19,7 +19,7 @@ export class AbdmController {
   @Post('hip/share')
   @AuditLog('ABDM_HIP_SHARE_RECORDS')
   async shareRecords(
-    @Body() request: import('./abdm.service').HipShareRequest
+    @Body() request: unknown
   ) {
     return this.abdmService.shareHealthRecords(request);
   }
@@ -27,7 +27,7 @@ export class AbdmController {
   @Post('hiu/request')
   @AuditLog('ABDM_HIU_REQUEST_RECORDS')
   async requestRecords(
-    @Body() request: import('./abdm.service').HiuRequest
+    @Body() request: unknown
   ) {
     return this.abdmService.requestHealthRecords(request);
   }

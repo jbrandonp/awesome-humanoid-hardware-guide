@@ -3,6 +3,7 @@ import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
 import { stat } from 'fs/promises';
+import { SemanticParser, SemanticExtractionResult } from './semantic-parser';
 
 // ============================================================================
 // TYPAGES STRICTS (ZERO 'ANY' POLICY)
@@ -15,6 +16,7 @@ export interface WhisperTask {
   filePath: string;
   status: WhisperTaskStatus;
   resultText?: string;
+  extractedData?: SemanticExtractionResult;
   errorMessage?: string;
   enqueuedAt: Date;
   startedAt?: Date;
@@ -132,7 +134,8 @@ export class WhisperService {
          // Succès
          task.status = 'COMPLETED';
          task.completedAt = new Date();
-         task.resultText = transcriptionResult;
+         task.resultText = transcriptionResult.text;
+         task.extractedData = transcriptionResult.extractedData;
 
          this.logger.log(`[Whisper] Transcription terminée (${task.id}).`);
 
@@ -159,7 +162,7 @@ export class WhisperService {
    * EXÉCUTION NATIVE DE L'IA LOCALE (child_process.spawn)
    * Gère les flux binaires (stdout/stderr) et les Timeouts (Kill Switch).
    */
-  private spawnWhisperProcess(audioFilePath: string): Promise<string> {
+  private spawnWhisperProcess(audioFilePath: string): Promise<{ text: string, extractedData: SemanticExtractionResult }> {
     return new Promise((resolve, reject) => {
 
       // 1. Vérification stricte des dépendances binaires avant exécution
@@ -254,28 +257,25 @@ export class WhisperService {
   }
 
   /**
-   * Post-traitement local : Surligne ou identifie des entités médicales clés
-   * dans la transcription brute de Whisper.cpp
+   * Post-traitement local : Extrait les entités médicales clés (Molécule, Dosage, etc.)
+   * depuis la transcription brute de Whisper.cpp, via le SemanticParser (Edge NLP).
    */
-  private applyBasicMedicalNer(rawText: string): string {
-     let result = rawText;
+  private applyBasicMedicalNer(rawText: string): { text: string, extractedData: SemanticExtractionResult } {
+     let resultText = rawText;
 
-     // Simulation simple de détection de médicaments dictés (Sert de suggestion pour l'Omnibox)
+     // 1. Appel au nouveau moteur NLP basé sur Regex
+     const extractedData = SemanticParser.extractPrescriptionData(rawText);
+
+     // 2. Formatage pour la présentation (compatibilité ascendante du texte brut)
      const detectedMeds: string[] = [];
-     const commonDrugs = ['paracetamol', 'amoxicillin', 'artemether', 'lumefantrine', 'ibuprofen'];
-
-     const textLower = rawText.toLowerCase();
-     commonDrugs.forEach(drug => {
-        if (textLower.includes(drug)) {
-           // Mettre une majuscule pour la présentation
-           detectedMeds.push(drug.charAt(0).toUpperCase() + drug.slice(1));
-        }
-     });
-
-     if (detectedMeds.length > 0) {
-        result += `\n\n[IA_SUGGESTIONS] Médicaments détectés dans la dictée : ${detectedMeds.join(', ')}`;
+     if (extractedData.molecule) {
+        detectedMeds.push(extractedData.molecule);
      }
 
-     return result;
+     if (detectedMeds.length > 0) {
+        resultText += `\n\n[IA_SUGGESTIONS] Médicaments détectés dans la dictée : ${detectedMeds.join(', ')}`;
+     }
+
+     return { text: resultText, extractedData };
   }
 }

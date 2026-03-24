@@ -10,8 +10,8 @@ export function App() {
   useEffect(() => {
     async function discoverApi() {
       try {
-        const url = await invoke<string>('discover_medical_api');
-        setApiUrl(url);
+        const result = await invoke<{ full_url: string }>('discover_medical_api');
+        setApiUrl(result.full_url);
       } catch (e) {
         setError(e as string);
       }

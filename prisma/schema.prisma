@@ -15,16 +15,27 @@ enum Role {
   LAB_TECH
 }
 
+enum ActionType {
+<<<<<<< HEAD
+  EXPORT_REPORT
+=======
+>>>>>>> origin/main
+  READ
+  CREATE
+  UPDATE
+  DELETE
+}
+
 model User {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  password         String
-  role             Role     @default(DOCTOR)
-  totpSecret       String?  @map("totp_secret") // Base32 encoded secret for offline MFA
-  mfaEnabled       Boolean  @default(false) @map("mfa_enabled")
-  backupCodes      String[] @map("backup_codes") // Array of hashed backup codes
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  role        Role     @default(DOCTOR)
+  totpSecret  String?  @map("totp_secret") // Base32 encoded secret for offline MFA
+  mfaEnabled  Boolean  @default(false) @map("mfa_enabled")
+  backupCodes String[] @map("backup_codes") // Array of hashed backup codes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   auditLogs    AuditLog[]
   dpdpaConsent DpdpaConsent[]
@@ -38,80 +49,80 @@ model Patient {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   // Sync Status Fields
-  status      String    @map("_status") @default("created") // synced, created, updated, deleted
+  status      String    @default("created") @map("_status") // synced, created, updated, deleted
   deletedAt   DateTime? @map("deleted_at")
 
-  auditLogs    AuditLog[]
-  dpdpaConsent DpdpaConsent[]
-  visits       Visit[]
-  vitals       Vital[]
+  auditLogs     AuditLog[]
+  dpdpaConsent  DpdpaConsent[]
+  visits        Visit[]
+  vitals        Vital[]
   prescriptions Prescription[]
-  invoices     Invoice[]
+  invoices      Invoice[]
   notifications NotificationStatus[]
 }
 
 model Visit {
-  id        String   @id @default(uuid())
-  patientId String   @map("patient_id")
+  id        String    @id @default(uuid())
+  patientId String    @map("patient_id")
   date      DateTime
-  notes     Bytes?   // Will store Yjs Binary Updates (Uint8Array)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  notes     Bytes? // Will store Yjs Binary Updates (Uint8Array)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   // Sync Status Fields
-  status      String    @map("_status") @default("created")
-  deletedAt   DateTime? @map("deleted_at")
+  status    String    @default("created") @map("_status")
+  deletedAt DateTime? @map("deleted_at")
 
-  patient      Patient       @relation(fields: [patientId], references: [id])
+  patient       Patient        @relation(fields: [patientId], references: [id])
   prescriptions Prescription[]
 }
 
 model Vital {
-  id            String   @id @default(uuid())
-  patientId     String   @map("patient_id")
-  bloodPressure String?  @map("blood_pressure")
-  heartRate     Int?     @map("heart_rate")
+  id            String    @id @default(uuid())
+  patientId     String    @map("patient_id")
+  bloodPressure String?   @map("blood_pressure")
+  heartRate     Int?      @map("heart_rate")
   temperature   Float?
-  recordedAt    DateTime @map("recorded_at")
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  recordedAt    DateTime  @map("recorded_at")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   // Sync Status Fields
-  status      String    @map("_status") @default("created")
-  deletedAt   DateTime? @map("deleted_at")
+  status        String    @default("created") @map("_status")
+  deletedAt     DateTime? @map("deleted_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
 }
 
 model Prescription {
-  id             String   @id @default(uuid())
-  visitId        String   @map("visit_id")
-  patientId      String   @map("patient_id")
-  medicationName String   @map("medication_name")
+  id             String    @id @default(uuid())
+  visitId        String    @map("visit_id")
+  patientId      String    @map("patient_id")
+  medicationName String    @map("medication_name")
   dosage         String
   instructions   String?
-  prescribedAt   DateTime @map("prescribed_at")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  prescribedAt   DateTime  @map("prescribed_at")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   // Sync Status Fields
-  status      String    @map("_status") @default("created")
-  deletedAt   DateTime? @map("deleted_at")
+  status         String    @default("created") @map("_status")
+  deletedAt      DateTime? @map("deleted_at")
 
   visit   Visit   @relation(fields: [visitId], references: [id])
   patient Patient @relation(fields: [patientId], references: [id])
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  patientId String   @map("patient_id")
-  action    String
-  metadata  Json     @default("{}") // jsonb
-  ipAddress String?  @map("ip_address") // Traçabilité complète
-  timestamp DateTime @default(now())
+  id              String     @id @default(uuid())
+  userId          String     @map("user_id")
+  actionType      ActionType @map("action_type")
+  resourceId      String     @map("resource_id")
+  phiDataAccessed Json       @map("phi_data_accessed")
+  ipAddress       String?    @map("ip_address")
+  timestamp       DateTime   @default(now())
 
-  user    User    @relation(fields: [userId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+  patient   Patient @relation(fields: [patientId], references: [id])
+  patientId String  @map("patient_id")
 
-  // Partitioned logically by timestamp or patient_id
   @@index([patientId, timestamp])
   @@index([userId, timestamp])
   @@map("audit_logs")
@@ -132,16 +143,16 @@ model DpdpaConsent {
 }
 
 model Invoice {
-  id              String   @id @default(uuid())
-  idempotencyKey  String   @unique @map("idempotency_key") // Essentiel pour éviter la double facturation
-  patientId       String   @map("patient_id")
-  currency        String   @default("INR") // INR, EUR, XOF
-  subtotalCents   Int      @map("subtotal_cents") // Toujours en entiers
-  taxCents        Int      @map("tax_cents")
-  totalCents      Int      @map("total_cents")
-  status          String   @default("UNPAID") // UNPAID, PAID, CANCELLED
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  idempotencyKey String   @unique @map("idempotency_key") // Essentiel pour éviter la double facturation
+  patientId      String   @map("patient_id")
+  currency       String   @default("INR") // INR, EUR, XOF
+  subtotalCents  Int      @map("subtotal_cents") // Toujours en entiers
+  taxCents       Int      @map("tax_cents")
+  totalCents     Int      @map("total_cents")
+  status         String   @default("UNPAID") // UNPAID, PAID, CANCELLED
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id])
 
@@ -149,25 +160,25 @@ model Invoice {
 }
 
 model InventoryItem {
-  id            String   @id @default(uuid())
-  name          String   @unique
-  quantity      Int      @default(0)
-  unitPriceCents Int     @map("unit_price_cents") // Prix de vente unitaire
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(uuid())
+  name           String   @unique
+  quantity       Int      @default(0)
+  unitPriceCents Int      @map("unit_price_cents") // Prix de vente unitaire
+  updatedAt      DateTime @updatedAt
 
   @@map("inventory_items")
 }
 
 model NotificationStatus {
-  id              String   @id @default(uuid())
-  patientId       String   @map("patient_id")
-  channel         String   @default("WHATSAPP") // WHATSAPP, SMS
-  status          String   @default("QUEUED") // QUEUED, SENT, DELIVERED, READ, FAILED
-  messagePayload  String   @map("message_payload") // Contenu textuel ou template
-  externalId      String?  @map("external_id") // ID renvoyé par l'API Meta/Twilio
-  failCount       Int      @default(0) @map("fail_count")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  patientId      String   @map("patient_id")
+  channel        String   @default("WHATSAPP") // WHATSAPP, SMS
+  status         String   @default("QUEUED") // QUEUED, SENT, DELIVERED, READ, FAILED
+  messagePayload String   @map("message_payload") // Contenu textuel ou template
+  externalId     String?  @map("external_id") // ID renvoyé par l'API Meta/Twilio
+  failCount      Int      @default(0) @map("fail_count")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id])
 

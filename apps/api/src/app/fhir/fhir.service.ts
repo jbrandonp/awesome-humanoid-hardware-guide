@@ -2,6 +2,7 @@ import { Injectable, Logger, NotFoundException, UnprocessableEntityException } f
 import { PrismaService } from '../prisma/prisma.service';
 import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
 import { z } from 'zod';
+<<<<<<< HEAD
 
 // ============================================================================
 // TYPAGES STRICTS - STANDARD HL7 FHIR (R4) - ZÉRO 'ANY' POLICY
@@ -64,6 +65,17 @@ export const FhirBundleSchema = z.object({
 });
 
 export type FhirBundle = z.infer<typeof FhirBundleSchema>;
+=======
+import {
+  FhirMapper,
+  FhirBundleSchema,
+  FhirBundle,
+  FhirPatientSchema,
+  FhirPatient,
+  FhirObservationSchema,
+  FhirObservation
+} from './fhir.mapper';
+>>>>>>> origin/main
 
 @Injectable()
 export class FhirService {
@@ -71,22 +83,33 @@ export class FhirService {
 
   constructor(
     private readonly prisma: PrismaService,
+<<<<<<< HEAD
     private readonly clinicalRecordService: ClinicalRecordService
+=======
+    private readonly clinicalRecordService: ClinicalRecordService,
+    private readonly fhirMapper: FhirMapper
+>>>>>>> origin/main
   ) {}
 
   /**
    * MOTEUR D'EXPORTATION HL7 FHIR R4 (Droit à la Portabilité DPDPA/RGPD)
+<<<<<<< HEAD
    *
    * Convertit l'intégralité d'un dossier patient hétérogène (PostgreSQL + MongoDB)
    * en un document JSON universel standardisé (FHIR Bundle).
    *
    * @param patientId L'UUID du patient
    * @returns Un objet JSON certifié FHIR R4
+=======
+>>>>>>> origin/main
    */
   async exportPatientToFhir(patientId: string): Promise<FhirBundle> {
     this.logger.log(`[FHIR Export] Extraction complète du dossier patient: ${patientId}`);
 
+<<<<<<< HEAD
     // 1. EXTRACTION DES DONNÉES SOURCES (Postgres & Mongo)
+=======
+>>>>>>> origin/main
     const patient = await this.prisma.patient.findUnique({
       where: { id: patientId },
       include: {
@@ -101,9 +124,12 @@ export class FhirService {
 
     const mongoRecords = await this.clinicalRecordService.getPatientRecords(patientId);
 
+<<<<<<< HEAD
     // 2. VÉRIFICATION DES DONNÉES CLINIQUES VITALES MANQUANTES
     // Un dossier patient vide ou sans constantes vitales n'a pas d'utilité médicale
     // pour un confrère. On lève une exception stricte.
+=======
+>>>>>>> origin/main
     if (patient.vitals.length === 0) {
        this.logger.warn(`[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune constante vitale enregistrée.`);
        throw new UnprocessableEntityException("Dossier incomplet : Impossible de générer un Bundle FHIR pour un patient sans aucune constante vitale (Vitals). Veuillez acquérir des données avant l'export.");
@@ -114,11 +140,15 @@ export class FhirService {
        throw new UnprocessableEntityException("Dossier incomplet : Le patient ne possède aucun historique de consultation.");
     }
 
+<<<<<<< HEAD
     // 3. SÉRIALISATION MAPPING STRICTE (Zéro 'any')
+=======
+>>>>>>> origin/main
     const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
 
     // A. Mapper le Patient
     try {
+<<<<<<< HEAD
       const patientResource = {
         resourceType: 'Patient',
         id: patient.id,
@@ -137,10 +167,19 @@ export class FhirService {
       });
     } catch (parseError: unknown) {
       throw new UnprocessableEntityException("Données d'identité du patient corrompues. Le nom ou la date de naissance sont manquants.");
+=======
+      entries.push({
+        fullUrl: `urn:uuid:${patient.id}`,
+        resource: this.fhirMapper.toFhirPatient(patient)
+      });
+    } catch (parseError: unknown) {
+      throw new UnprocessableEntityException("Données d'identité du patient corrompues.");
+>>>>>>> origin/main
     }
 
     // B. Mapper les Constantes Vitales (Observations IoT/BLE)
     for (const vital of patient.vitals) {
+<<<<<<< HEAD
       // Si la température existe (Mapping Température Corporelle)
       if (vital.temperature) {
         entries.push({
@@ -192,10 +231,31 @@ export class FhirService {
             },
             valueString: vital.bloodPressure // Simplification pour ce mock, un vrai FHIR BP est un composant à deux branches (Systolic/Diastolic)
           }
+=======
+      if (vital.temperature) {
+        entries.push({
+          fullUrl: `urn:uuid:${vital.id}-temp`,
+          resource: this.fhirMapper.toFhirObservation(vital, 'temperature')
+        });
+      }
+
+      if (vital.heartRate) {
+        entries.push({
+          fullUrl: `urn:uuid:${vital.id}-hr`,
+          resource: this.fhirMapper.toFhirObservation(vital, 'heartRate')
+        });
+      }
+
+      if (vital.bloodPressure) {
+        entries.push({
+          fullUrl: `urn:uuid:${vital.id}-bp`,
+          resource: this.fhirMapper.toFhirObservation(vital, 'bloodPressure')
+>>>>>>> origin/main
         });
       }
     }
 
+<<<<<<< HEAD
     // C. Mapper les Prescriptions (MedicationRequest)
     for (const visit of patient.visits) {
       for (const prescription of visit.prescriptions) {
@@ -214,12 +274,25 @@ export class FhirService {
               { text: prescription.instructions || 'Aucune instruction spécifique.' }
             ]
           }
+=======
+    // C. Mapper les Prescriptions (MedicationRequest) et Encounter (Visites)
+    for (const visit of patient.visits) {
+      entries.push({
+        fullUrl: `urn:uuid:${visit.id}`,
+        resource: this.fhirMapper.toFhirEncounter(visit)
+      });
+      for (const prescription of visit.prescriptions) {
+        entries.push({
+          fullUrl: `urn:uuid:${prescription.id}`,
+          resource: this.fhirMapper.toFhirMedicationRequest(prescription)
+>>>>>>> origin/main
         });
       }
     }
 
     // D. Mapper les Dossiers Cliniques Dynamiques (MongoDB -> FHIR Observations)
     for (const record of mongoRecords) {
+<<<<<<< HEAD
       // Exemple : Dossier Pédiatrique dynamique avec un Z-Score de croissance
       if (record.specialty === 'PEDIATRICS' && record.data?.headCircumference) {
          entries.push({
@@ -235,6 +308,13 @@ export class FhirService {
               },
               valueQuantity: { value: record.data.headCircumference, unit: 'cm', system: 'http://unitsofmeasure.org', code: 'cm' }
            }
+=======
+      const fhirRec = this.fhirMapper.toFhirClinicalRecord(record);
+      if (fhirRec) {
+         entries.push({
+           fullUrl: `urn:uuid:${record._id}`,
+           resource: fhirRec
+>>>>>>> origin/main
          });
       }
     }
@@ -245,6 +325,7 @@ export class FhirService {
       entry: entries
     };
 
+<<<<<<< HEAD
     // 4. VALIDATION FINALE SÉCURISÉE (ZOD PARSING)
     // Le mapper strict TypeScript a empêché l'utilisation de `any`.
     // Zod certifie que la structure est 100% conforme à HL7/FHIR R4 avant émission.
@@ -256,12 +337,121 @@ export class FhirService {
     }
 
     this.logger.log(`[FHIR Export] Succès. Bundle FHIR R4 généré avec ${validationResult.data.entry.length} entrées.`);
+=======
+    // VALIDATION FINALE SÉCURISÉE (ZOD PARSING)
+    const validationResult = FhirBundleSchema.safeParse(fhirBundle);
+
+    if (!validationResult.success) {
+      this.logger.error(`[FATAL FHIR ERROR] Le sérialiseur a généré un document invalide.`, validationResult.error.format());
+      throw new UnprocessableEntityException("Impossible de générer un dossier médical légal : données patient incomplètes ou formatées de manière incorrecte.");
+    }
+
+>>>>>>> origin/main
     return validationResult.data;
   }
 
   /**
+<<<<<<< HEAD
    * Portail Partenaire (Pharmacies locales)
    * Retourne UNIQUEMENT les ordonnances (MedicationRequest) actives sous format FHIR.
+=======
+   * GET /fhir/Patient/:id
+   */
+  async getPatient(id: string): Promise<FhirPatient> {
+    const patient = await this.prisma.patient.findUnique({
+      where: { id }
+    });
+
+    if (!patient) throw new NotFoundException(`Patient ${id} not found`);
+
+    const fhirPatient = this.fhirMapper.toFhirPatient(patient);
+    return FhirPatientSchema.parse(fhirPatient); // Strict output validation
+  }
+
+  /**
+   * POST /fhir/Patient
+   * Ingress: Crée un patient via un payload FHIR
+   */
+  async ingestPatient(fhirPayload: any): Promise<FhirPatient> {
+    const parsedData = FhirPatientSchema.parse(fhirPayload); // Lève une erreur Zod en cas d'échec
+
+    const dbPatientData = this.fhirMapper.fromFhirPatient(parsedData);
+    const createdPatient = await this.prisma.patient.create({
+      data: dbPatientData
+    });
+
+    return this.fhirMapper.toFhirPatient(createdPatient);
+  }
+
+  /**
+   * GET /fhir/Observation
+   */
+  async getObservations(patientId: string, skip: number = 0, take: number = 10): Promise<FhirBundle> {
+    const patientIdUuid = patientId.replace('Patient/', '');
+
+    const vitals = await this.prisma.vital.findMany({
+      where: { patientId: patientIdUuid },
+      skip,
+      take,
+      orderBy: { recordedAt: 'desc' }
+    });
+
+    const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
+
+    for (const vital of vitals) {
+      if (vital.temperature) {
+        entries.push({
+          fullUrl: `urn:uuid:${vital.id}-temp`,
+          resource: this.fhirMapper.toFhirObservation(vital, 'temperature')
+        });
+      }
+      if (vital.heartRate) {
+        entries.push({
+          fullUrl: `urn:uuid:${vital.id}-hr`,
+          resource: this.fhirMapper.toFhirObservation(vital, 'heartRate')
+        });
+      }
+      if (vital.bloodPressure) {
+        entries.push({
+          fullUrl: `urn:uuid:${vital.id}-bp`,
+          resource: this.fhirMapper.toFhirObservation(vital, 'bloodPressure')
+        });
+      }
+    }
+
+    const bundle: FhirBundle = {
+      resourceType: 'Bundle',
+      type: 'searchset',
+      entry: entries
+    };
+
+    return FhirBundleSchema.parse(bundle);
+  }
+
+  /**
+   * POST /fhir/Observation
+   * Ingress: Sauvegarde une Observation FHIR en base
+   */
+  async ingestObservation(fhirPayload: any): Promise<FhirObservation> {
+    const parsedData = FhirObservationSchema.parse(fhirPayload);
+
+    const dbVitalData = this.fhirMapper.fromFhirObservation(parsedData);
+
+    const createdVital = await this.prisma.vital.create({
+      data: dbVitalData
+    });
+
+    const code = parsedData.code?.coding?.[0]?.code;
+    let type: 'temperature' | 'heartRate' | 'bloodPressure' = 'temperature';
+    if (code === '8867-4') type = 'heartRate';
+    else if (code === '85354-9') type = 'bloodPressure';
+
+    return this.fhirMapper.toFhirObservation(createdVital, type);
+  }
+
+  /**
+   * Portail Partenaire (Pharmacies locales)
+>>>>>>> origin/main
    */
   async getActivePrescriptionsForPharmacy(patientId: string): Promise<FhirBundle> {
     const activePrescriptions = await this.prisma.prescription.findMany({
@@ -277,6 +467,7 @@ export class FhirService {
     for (const rx of activePrescriptions) {
        entries.push({
           fullUrl: `urn:uuid:${rx.id}`,
+<<<<<<< HEAD
           resource: {
             resourceType: 'MedicationRequest',
             id: rx.id,
@@ -290,6 +481,9 @@ export class FhirService {
               { text: rx.instructions || '' }
             ]
           }
+=======
+          resource: this.fhirMapper.toFhirMedicationRequest(rx)
+>>>>>>> origin/main
        });
     }
 
