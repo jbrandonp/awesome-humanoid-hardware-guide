@@ -56,7 +56,6 @@ export function SmartPenCanvas() {
 
     if (isConnected) {
       setHardwareError(null);
-      console.log("[SmartPen] Connexion au SDK matériel (Ex: WondrxSDK)...");
 
       // ============================================================================
       // INTÉGRATION VRAIE : ÉCOUTE DU FLUX BLUETOOTH NATIF
@@ -80,8 +79,6 @@ export function SmartPenCanvas() {
         setHardwareError("Le pilote matériel du stylo connecté a cessé de fonctionner.");
         setIsConnected(false);
       }
-    } else {
-      console.log("[SmartPen] Déconnexion du stylo.");
     }
 
     return () => {
