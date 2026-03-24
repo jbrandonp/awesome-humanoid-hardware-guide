@@ -55,6 +55,7 @@ model Patient {
   prescriptions Prescription[]
   invoices      Invoice[]
   notifications NotificationStatus[]
+  hl7Messages   Hl7DeadLetterQueue[]
 }
 
 model Visit {
@@ -179,4 +180,20 @@ model NotificationStatus {
   patient Patient @relation(fields: [patientId], references: [id])
 
   @@map("notification_statuses")
+}
+
+model Hl7DeadLetterQueue {
+  id               String   @id @default(uuid())
+  idempotencyKey   String   @unique @map("idempotency_key") // MSH-10 Message Control ID
+  status           String   @default("UNPROCESSED") // UNPROCESSED, PROCESSED, ERROR
+  rawMessage       String   @map("raw_message") // the raw HL7 message
+  parsedData       Json?    @map("parsed_data") // Successfully parsed data if applicable
+  patientId        String?  @map("patient_id")
+  rejectionReason  String?  @map("rejection_reason")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  patient Patient? @relation(fields: [patientId], references: [id])
+
+  @@map("hl7_dead_letter_queue")
 }

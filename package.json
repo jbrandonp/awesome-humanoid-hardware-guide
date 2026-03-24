@@ -63,6 +63,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
+    "@nestjs/event-emitter": "^3.0.1",
     "@nestjs/platform-express": "^11.0.0",
     "@nestjs/platform-fastify": "^11.1.17",
     "@prisma/client": "^5.22.0",
