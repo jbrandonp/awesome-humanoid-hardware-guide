@@ -4,10 +4,10 @@ import { BleManager, Device, BleError, State, Characteristic } from 'react-nativ
 import { Buffer } from 'buffer';
 import { database } from '../database';
 
-// ============================================================================
+// ======
 // INTERFACES TYPÉES STRICTES (ZÉRO 'ANY' POLICY)
 // Les données doivent être blindées avant de transiter vers l'AuditLog DPDPA
-// ============================================================================
+// ======
 
 export type VitalType = 'BLOOD_PRESSURE' | 'HEART_RATE' | 'GLUCOSE';
 
@@ -53,9 +53,9 @@ const ALL_MEDICAL_SERVICES = [
   GATT_PROFILES.GLUCOSE.service
 ];
 
-// ============================================================================
+// ======
 // LOGIQUE DE PRODUCTION : GESTION DES ERREURS EXTRÊMES & CONNEXION
-// ============================================================================
+// ======
 
 export function useBleScanner(): BleScannerState & {
   startScan: () => Promise<void>;
@@ -281,9 +281,9 @@ export function useBleScanner(): BleScannerState & {
     }
   };
 
-  // ============================================================================
+  // ======
   // ROUTAGE ET DÉCODAGE HEXADÉCIMAL STRICT (SANS 'ANY')
-  // ============================================================================
+  // ======
   const decodeGattPayload = (base64Payload: string, hardwareId: string, type: VitalType): MedicalVitalMeasurement => {
      switch (type) {
        case 'BLOOD_PRESSURE': return decodeBloodPressure(base64Payload, hardwareId);
@@ -355,9 +355,9 @@ export function useBleScanner(): BleScannerState & {
     };
   };
 
-  // ============================================================================
+  // ======
   // ÉCRITURE HORS-LIGNE & RÉSILIENCE BASE DE DONNÉES (WATERMELON DB)
-  // ============================================================================
+  // ======
   const saveVitalDataOfflineSecurely = async (vitalData: MedicalVitalMeasurement): Promise<void> => {
     try {
       await database.write(async () => {

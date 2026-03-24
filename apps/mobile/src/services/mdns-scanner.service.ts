@@ -2,9 +2,9 @@ import axios from 'axios';
 import { useConnectionStore } from '../stores/connection.store';
 import Zeroconf from 'react-native-zeroconf'; // Utilisation d'une librairie native RN pour le mDNS
 
-// ============================================================================
+// ======
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (mDNS & Health Check)
-// ============================================================================
+// ======
 
 export interface MDNSDiscoveryResult {
   ip: string;
@@ -56,6 +56,7 @@ export class MDNSScannerService {
 
            const ip = service.addresses[0];
            const port = service.port;
+
            const fullUrl = `http://${ip}:${port}`;
 
            resolve({
