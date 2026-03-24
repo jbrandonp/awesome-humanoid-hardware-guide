@@ -1,0 +1,41 @@
+<<<<<<< HEAD
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/schedule": "^6.1.1",
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+    "@nestjs/throttler": "^6.5.0",
+=======
+    "@nestjs/schematics": "^11.0.0",
+    "@nestjs/testing": "^11.0.0",
+>>>>>>> origin/main
+<<<<<<< HEAD
+    "ioredis": "^5.10.1",
+=======
+>>>>>>> origin/main
+<<<<<<< HEAD
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+=======
+>>>>>>> origin/main
+<<<<<<< HEAD
+    "@nestjs/mongoose": "^11.0.4",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.1.17",
+=======
+    "@nestjs/jwt": "^11.0.2",
+    "@nestjs/mongoose": "^11.0.4",
+    "@nestjs/platform-express": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.1.17",
+    "@nestjs/schedule": "^6.1.1",
+    "@nestjs/throttler": "^6.5.0",
+>>>>>>> origin/main
+<<<<<<< HEAD
+    "mongoose": "^9.3.2",
+    "node-dns-sd": "^1.0.1",
+=======
+    "ioredis": "^5.10.1",
+    "mongoose": "^9.3.2",
+    "node-dns-sd": "^1.0.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+>>>>>>> origin/main

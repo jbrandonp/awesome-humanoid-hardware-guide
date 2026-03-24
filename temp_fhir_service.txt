@@ -1,7 +1,3 @@
-import { Injectable, Logger, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
-import { z } from 'zod';
 <<<<<<< HEAD
 
 // ============================================================================
@@ -76,23 +72,12 @@ import {
   FhirObservation
 } from './fhir.mapper';
 >>>>>>> origin/main
-
-@Injectable()
-export class FhirService {
-  private readonly logger = new Logger(FhirService.name);
-
-  constructor(
-    private readonly prisma: PrismaService,
 <<<<<<< HEAD
     private readonly clinicalRecordService: ClinicalRecordService
 =======
     private readonly clinicalRecordService: ClinicalRecordService,
     private readonly fhirMapper: FhirMapper
 >>>>>>> origin/main
-  ) {}
-
-  /**
-   * MOTEUR D'EXPORTATION HL7 FHIR R4 (Droit à la Portabilité DPDPA/RGPD)
 <<<<<<< HEAD
    *
    * Convertit l'intégralité d'un dossier patient hétérogène (PostgreSQL + MongoDB)
@@ -102,52 +87,20 @@ export class FhirService {
    * @returns Un objet JSON certifié FHIR R4
 =======
 >>>>>>> origin/main
-   */
-  async exportPatientToFhir(patientId: string): Promise<FhirBundle> {
-    this.logger.log(`[FHIR Export] Extraction complète du dossier patient: ${patientId}`);
-
 <<<<<<< HEAD
     // 1. EXTRACTION DES DONNÉES SOURCES (Postgres & Mongo)
 =======
 >>>>>>> origin/main
-    const patient = await this.prisma.patient.findUnique({
-      where: { id: patientId },
-      include: {
-        visits: { include: { prescriptions: true } },
-        vitals: true
-      }
-    });
-
-    if (!patient) {
-      throw new NotFoundException(`Patient ${patientId} introuvable.`);
-    }
-
-    const mongoRecords = await this.clinicalRecordService.getPatientRecords(patientId);
-
 <<<<<<< HEAD
     // 2. VÉRIFICATION DES DONNÉES CLINIQUES VITALES MANQUANTES
     // Un dossier patient vide ou sans constantes vitales n'a pas d'utilité médicale
     // pour un confrère. On lève une exception stricte.
 =======
 >>>>>>> origin/main
-    if (patient.vitals.length === 0) {
-       this.logger.warn(`[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune constante vitale enregistrée.`);
-       throw new UnprocessableEntityException("Dossier incomplet : Impossible de générer un Bundle FHIR pour un patient sans aucune constante vitale (Vitals). Veuillez acquérir des données avant l'export.");
-    }
-
-    if (patient.visits.length === 0) {
-       this.logger.warn(`[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune visite/consultation.`);
-       throw new UnprocessableEntityException("Dossier incomplet : Le patient ne possède aucun historique de consultation.");
-    }
-
 <<<<<<< HEAD
     // 3. SÉRIALISATION MAPPING STRICTE (Zéro 'any')
 =======
 >>>>>>> origin/main
-    const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
-
-    // A. Mapper le Patient
-    try {
 <<<<<<< HEAD
       const patientResource = {
         resourceType: 'Patient',
@@ -175,10 +128,6 @@ export class FhirService {
     } catch (parseError: unknown) {
       throw new UnprocessableEntityException("Données d'identité du patient corrompues.");
 >>>>>>> origin/main
-    }
-
-    // B. Mapper les Constantes Vitales (Observations IoT/BLE)
-    for (const vital of patient.vitals) {
 <<<<<<< HEAD
       // Si la température existe (Mapping Température Corporelle)
       if (vital.temperature) {
@@ -251,10 +200,6 @@ export class FhirService {
           fullUrl: `urn:uuid:${vital.id}-bp`,
           resource: this.fhirMapper.toFhirObservation(vital, 'bloodPressure')
 >>>>>>> origin/main
-        });
-      }
-    }
-
 <<<<<<< HEAD
     // C. Mapper les Prescriptions (MedicationRequest)
     for (const visit of patient.visits) {
@@ -286,12 +231,6 @@ export class FhirService {
           fullUrl: `urn:uuid:${prescription.id}`,
           resource: this.fhirMapper.toFhirMedicationRequest(prescription)
 >>>>>>> origin/main
-        });
-      }
-    }
-
-    // D. Mapper les Dossiers Cliniques Dynamiques (MongoDB -> FHIR Observations)
-    for (const record of mongoRecords) {
 <<<<<<< HEAD
       // Exemple : Dossier Pédiatrique dynamique avec un Z-Score de croissance
       if (record.specialty === 'PEDIATRICS' && record.data?.headCircumference) {
@@ -315,16 +254,6 @@ export class FhirService {
            fullUrl: `urn:uuid:${record._id}`,
            resource: fhirRec
 >>>>>>> origin/main
-         });
-      }
-    }
-
-    const fhirBundle: FhirBundle = {
-      resourceType: 'Bundle',
-      type: 'document',
-      entry: entries
-    };
-
 <<<<<<< HEAD
     // 4. VALIDATION FINALE SÉCURISÉE (ZOD PARSING)
     // Le mapper strict TypeScript a empêché l'utilisation de `any`.
@@ -347,10 +276,6 @@ export class FhirService {
     }
 
 >>>>>>> origin/main
-    return validationResult.data;
-  }
-
-  /**
 <<<<<<< HEAD
    * Portail Partenaire (Pharmacies locales)
    * Retourne UNIQUEMENT les ordonnances (MedicationRequest) actives sous format FHIR.
@@ -452,21 +377,6 @@ export class FhirService {
   /**
    * Portail Partenaire (Pharmacies locales)
 >>>>>>> origin/main
-   */
-  async getActivePrescriptionsForPharmacy(patientId: string): Promise<FhirBundle> {
-    const activePrescriptions = await this.prisma.prescription.findMany({
-      where: {
-        patientId: patientId,
-        status: { not: 'deleted' },
-        deletedAt: null
-      }
-    });
-
-    const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
-
-    for (const rx of activePrescriptions) {
-       entries.push({
-          fullUrl: `urn:uuid:${rx.id}`,
 <<<<<<< HEAD
           resource: {
             resourceType: 'MedicationRequest',
@@ -484,21 +394,3 @@ export class FhirService {
 =======
           resource: this.fhirMapper.toFhirMedicationRequest(rx)
 >>>>>>> origin/main
-       });
-    }
-
-    const fhirBundle: FhirBundle = {
-      resourceType: 'Bundle',
-      type: 'searchset',
-      entry: entries
-    };
-
-    const validationResult = FhirBundleSchema.safeParse(fhirBundle);
-    if (!validationResult.success) {
-       this.logger.error("Erreur de formatage FHIR pour la pharmacie locale.", validationResult.error);
-       throw new UnprocessableEntityException("Formatage FHIR échoué.");
-    }
-
-    return validationResult.data;
-  }
-}

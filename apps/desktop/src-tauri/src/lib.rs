@@ -6,7 +6,15 @@ use keyring::Entry;
 
 mod thermal_printer;
 mod hardware_diag;
+<<<<<<< HEAD
+<<<<<<< HEAD
+mod pdf_generator;
+=======
 mod report_generator;
+>>>>>>> origin/main
+=======
+mod report_generator;
+>>>>>>> origin/main
 
 #[derive(Debug, Serialize)]
 pub struct DiscoveryResult {
@@ -118,7 +126,15 @@ pub fn run() {
       delete_token,
       thermal_printer::print_thermal_receipt,
       hardware_diag::check_hardware_health,
+<<<<<<< HEAD
+<<<<<<< HEAD
+      pdf_generator::generate_epidemiology_report_pdf
+=======
       report_generator::generate_official_pdf_report
+>>>>>>> origin/main
+=======
+      report_generator::generate_official_pdf_report
+>>>>>>> origin/main
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
