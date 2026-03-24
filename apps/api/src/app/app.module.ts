@@ -20,6 +20,7 @@ import { TickerModule } from './ticker/ticker.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { BullModule } from '@nestjs/bullmq';
+import { KioskModule } from './kiosk/kiosk.module';
 
 @Module({
   imports: [
@@ -31,7 +32,7 @@ import { BullModule } from '@nestjs/bullmq';
           port: parseInt(process.env.REDIS_PORT || '6379', 10)
        }
     }),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule, KioskModule
   ],
   controllers: [AppController],
   providers: [AppService],
