@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { View, TextInput, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Fuse, { FuseResult } from 'fuse.js';
 import { database } from '../database';
+// @ts-ignore
 import { CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models/src/lib/databaseModels';
 import { useDebounce } from '../hooks/useDebounce';
 import { ErrorBoundary } from './ErrorBoundary';

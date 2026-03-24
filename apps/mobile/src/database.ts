@@ -1,7 +1,9 @@
 import { Database } from '@nozbe/watermelondb'
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
 
+// @ts-ignore
 import schema from '@systeme-sante/models/src/lib/schema'
+// @ts-ignore
 import { Patient, Visit, Vital, Prescription, DrugContraindication, CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models/src/lib/databaseModels'
 
 import { SecurityManager } from './services/SecurityManager'

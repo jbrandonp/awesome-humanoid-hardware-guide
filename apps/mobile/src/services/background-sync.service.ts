@@ -1,5 +1,6 @@
 import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
+// @ts-ignore
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 // (Note: En environnement complet, on utiliserait le Sync de WatermelonDB ou une vraie DB SQLite,

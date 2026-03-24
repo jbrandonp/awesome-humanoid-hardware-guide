@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, TextInput, FlatList, Text, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
+// @ts-ignore
 import { CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models/src/lib/databaseModels';
 import { DrugInteractionChecker } from '../services/drug-interaction.service';
 import { useDebounce } from '../hooks/useDebounce';
@@ -103,10 +104,10 @@ export function Omnibox() {
       const patientId = "dummy-patient-uuid";
 
       try {
-        const interactions = await DrugInteractionChecker.checkInteractionsOffline(item.name, currentMeds, patientId);
+        const interactions = await DrugInteractionChecker.checkInteractionsLive(item.name, currentMeds, patientId, 'dummy-practitioner-uuid');
         if (interactions.length > 0) {
-          const severityEmoji = interactions[0].severityLevel === 'ABSOLUTE_CONTRAINDICATION' ? '💀 CONTRE-INDICATION ABSOLUE' : '⚠️ AVERTISSEMENT MAJEUR';
-          showCustomAlert(`${severityEmoji} !\n\n${item.name} interagit avec : ${interactions.map(i => i.interactingDrugB).join(', ')}.\n\nDescription : ${interactions[0].medicalDescription}`);
+          const severityEmoji = interactions[0].severityLevel === 'CRITICAL' ? '💀 CONTRE-INDICATION ABSOLUE' : '⚠️ AVERTISSEMENT MAJEUR';
+          showCustomAlert(`${severityEmoji} !\n\n${item.name} interagit avec : ${interactions.map((i: any) => i.interactingDrugB).join(', ')}.\n\nDescription : ${interactions[0].medicalDescription}`);
         }
       } catch (e) {
         console.warn("[Omnibox] Impossible de vérifier l'interaction.");

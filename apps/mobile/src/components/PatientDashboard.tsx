@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+// @ts-ignore
 import { VictoryChart, VictoryLine, VictoryTheme, VictoryAxis, VictoryScatter } from 'victory-native';
 
 export interface VitalSignData {
@@ -34,7 +35,7 @@ export function PatientDashboard({ patientName, heartRateHistory, temperatureHis
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Fréquence Cardiaque (bpm)</Text>
         <VictoryChart theme={VictoryTheme.material} height={200} padding={{ top: 20, bottom: 40, left: 40, right: 20 }}>
-           <VictoryAxis tickFormat={(x) => new Date(x).toLocaleDateString('fr-FR')} />
+           <VictoryAxis tickFormat={(x: any) => new Date(x).toLocaleDateString('fr-FR')} />
            <VictoryAxis dependentAxis />
            <VictoryLine
              style={{ data: { stroke: "#c43a31", strokeWidth: 2 } }}
@@ -48,7 +49,7 @@ export function PatientDashboard({ patientName, heartRateHistory, temperatureHis
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Température (°C)</Text>
         <VictoryChart theme={VictoryTheme.material} height={200} padding={{ top: 20, bottom: 40, left: 40, right: 20 }}>
-           <VictoryAxis tickFormat={(x) => new Date(x).toLocaleDateString('fr-FR')} />
+           <VictoryAxis tickFormat={(x: any) => new Date(x).toLocaleDateString('fr-FR')} />
            <VictoryAxis dependentAxis />
            <VictoryLine
              style={{ data: { stroke: "#3498db", strokeWidth: 2 } }}

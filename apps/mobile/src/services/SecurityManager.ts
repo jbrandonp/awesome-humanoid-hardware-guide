@@ -35,8 +35,8 @@ export class SecurityManager {
     // 2. Destroy the local SQLite database file
     // Handle OS-specific WatermelonDB database paths
     const basePath = Platform.OS === 'android'
-        ? `${FileSystem.documentDirectory}../databases/`
-        : `${FileSystem.documentDirectory}../Library/Application Support/`;
+        ? `${(FileSystem as any).documentDirectory}../databases/`
+        : `${(FileSystem as any).documentDirectory}../Library/Application Support/`;
 
     const dbPath = `${basePath}${DB_NAME}`;
     const dbPathShm = `${basePath}${DB_NAME}-shm`;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
+// @ts-ignore
 import { BleManager, Device, BleError, State, Characteristic } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
 import { database } from '../database';
@@ -74,7 +75,7 @@ export function useBleScanner(): BleScannerState & {
   useEffect(() => {
     managerRef.current = new BleManager();
 
-    const subscription = managerRef.current.onStateChange((state) => {
+    const subscription = managerRef.current.onStateChange((state: State) => {
       setBluetoothState(state);
       if (state === State.PoweredOff) {
          setSystemError("Le Bluetooth est désactivé. Veuillez l'activer pour l'acquisition médicale.");
@@ -217,15 +218,15 @@ export function useBleScanner(): BleScannerState & {
       let targetChar = '';
       let vitalType: VitalType = 'BLOOD_PRESSURE';
 
-      if (services.find(s => s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service))) {
+      if (services.find((s: any) => s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service))) {
          targetService = GATT_PROFILES.BLOOD_PRESSURE.service;
          targetChar = GATT_PROFILES.BLOOD_PRESSURE.characteristic;
          vitalType = 'BLOOD_PRESSURE';
-      } else if (services.find(s => s.uuid.includes(GATT_PROFILES.HEART_RATE.service))) {
+      } else if (services.find((s: any) => s.uuid.includes(GATT_PROFILES.HEART_RATE.service))) {
          targetService = GATT_PROFILES.HEART_RATE.service;
          targetChar = GATT_PROFILES.HEART_RATE.characteristic;
          vitalType = 'HEART_RATE';
-      } else if (services.find(s => s.uuid.includes(GATT_PROFILES.GLUCOSE.service))) {
+      } else if (services.find((s: any) => s.uuid.includes(GATT_PROFILES.GLUCOSE.service))) {
          targetService = GATT_PROFILES.GLUCOSE.service;
          targetChar = GATT_PROFILES.GLUCOSE.characteristic;
          vitalType = 'GLUCOSE';

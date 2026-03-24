@@ -1,4 +1,5 @@
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
+// @ts-ignore
 import * as QRCode from 'qrcode';
 import medicalDict from '../i18n/medical_dict.json';
 

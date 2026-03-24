@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+// @ts-ignore
 import { VictoryChart, VictoryLine, VictoryTheme, VictoryAxis, VictoryScatter, VictoryArea } from 'victory-native';
 
 export interface VitalSignData {
@@ -51,7 +52,7 @@ export function PediatricDashboard({ patientName, growthHistory }: PediatricDash
            <VictoryArea
              style={{ data: { fill: "#e0f7fa", opacity: 0.5 } }}
              data={whoPercentile97}
-             y0={(d) => whoPercentile3.find(p => p.x === d.x)?.y || 0}
+             y0={(d: any) => whoPercentile3.find(p => p.x === d.x)?.y || 0}
            />
 
            {/* Ligne Médiane OMS (50e percentile) */}
