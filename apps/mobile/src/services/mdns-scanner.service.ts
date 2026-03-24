@@ -56,12 +56,11 @@ export class MDNSScannerService {
 
            const ip = service.addresses[0];
            const port = service.port;
-           const fullUrl = `http://${ip}:${port}`;
 
            resolve({
              ip,
              port,
-             fullUrl
+             fullUrl: `http://${ip}:${port}`
            });
         }
       });
