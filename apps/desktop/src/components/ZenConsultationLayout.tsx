@@ -4,6 +4,7 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { ClinicalTicker } from './ClinicalTicker';
 import { DesktopOmnibox } from './DesktopOmnibox';
 import { HardwareStatusIndicator } from './HardwareStatusIndicator';
+import { PurchaseOrderQueue } from './PurchaseOrderQueue';
 
 export function ZenConsultationLayout() {
   useHardwareOptimization(); // Désactive les animations (Windows 7 / Low-Resource)
@@ -81,6 +82,9 @@ export function ZenConsultationLayout() {
                <button tabIndex={5} className="bg-medical-primary text-white px-4 py-2 rounded-md font-medium">Grippe A</button>
             </div>
           )}
+
+          {/* File d'attente d'approbation P2P */}
+          <PurchaseOrderQueue apiUrl="http://localhost:3000" />
 
           {/* Widgets Rétractables (Accordéons) */}
           <div className="mt-12 space-y-4">

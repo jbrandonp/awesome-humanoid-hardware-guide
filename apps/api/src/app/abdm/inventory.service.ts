@@ -128,11 +128,76 @@ export class InventoryService {
            });
 
            this.logger.warn(`[Alerte Inventaire] ${item.name} en rupture imminente. Seuil ajusté à ${reorderPoint}. Recommandation: commander ${recommendedOrder}.`);
+
+           if (recommendedOrder > 0) {
+             await this.generateDraftPurchaseOrder(item.id, recommendedOrder, tx);
+           }
         }
       }
     });
 
     this.logger.log(`[Predictive Inventory] Analyse terminée. ${alerts.length} alertes générées.`);
     return alerts;
+  }
+
+  /**
+   * P2P - Procure-to-Pay : Création automatique d'un Bon de Commande (Purchase Order) au statut DRAFT.
+   * Remplace l'ancienne génération PDF directe.
+   */
+  async generateDraftPurchaseOrder(itemId: string, requestedQuantity: number, tx: any) {
+    const item = await tx.inventoryItem.findUnique({
+      where: { id: itemId },
+      include: { supplier: true }
+    });
+
+    if (!item) return;
+
+    // Idempotency: Verify no DRAFT or PENDING_APPROVAL order already exists for this item
+    const existingOrder = await tx.purchaseOrderItem.findFirst({
+      where: {
+        inventoryItemId: itemId,
+        purchaseOrder: {
+          status: { in: ['DRAFT', 'PENDING_APPROVAL'] }
+        }
+      }
+    });
+
+    if (existingOrder) {
+      this.logger.log(`[P2P] Ignoré : Une commande (DRAFT/PENDING) existe déjà pour l'article ${item.name}.`);
+      return;
+    }
+
+    // Auto-select preferred supplier (from item.supplierId)
+    // If none, we could fetch the first available active supplier or leave it unassigned (but schema requires supplierId)
+    let supplierId = item.supplierId;
+    if (!supplierId) {
+      const defaultSupplier = await tx.supplier.findFirst({ where: { isActive: true } });
+      if (!defaultSupplier) {
+        this.logger.error(`[P2P] Aucun fournisseur actif trouvé pour commander ${item.name}. Action requise.`);
+        return;
+      }
+      supplierId = defaultSupplier.id;
+    }
+
+    // Apply Minimum Order Quantity (MOQ)
+    const finalQuantity = Math.max(requestedQuantity, item.moq);
+    const lineTotalCents = item.unitPriceCents * finalQuantity;
+
+    this.logger.log(`[P2P] Création du PurchaseOrder DRAFT pour ${item.name} (Qté: ${finalQuantity}, Fournisseur: ${supplierId})`);
+
+    await tx.purchaseOrder.create({
+      data: {
+        supplierId: supplierId,
+        status: 'DRAFT',
+        totalCents: lineTotalCents, // Simplified: 1 order = 1 item for auto-generated drafts
+        items: {
+          create: [{
+            inventoryItemId: item.id,
+            quantity: finalQuantity,
+            unitPriceCents: item.unitPriceCents // Assuming purchase price is roughly the unitPriceCents for this example
+          }]
+        }
+      }
+    });
   }
 }
