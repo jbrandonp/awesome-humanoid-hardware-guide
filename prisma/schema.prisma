@@ -30,6 +30,8 @@ model User {
   totpSecret  String?  @map("totp_secret") // Base32 encoded secret for offline MFA
   mfaEnabled  Boolean  @default(false) @map("mfa_enabled")
   backupCodes String[] @map("backup_codes") // Array of hashed backup codes
+  pin         String?  // Hashed PIN for secondary auth
+  badgeId     String?  @map("badge_id") // Optional hardware badge token
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
