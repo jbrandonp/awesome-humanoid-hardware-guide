@@ -22,6 +22,13 @@ enum ActionType {
   DELETE
 }
 
+enum MedicationAdministrationStatus {
+  ADMINISTERED
+  REFUSED
+  OMITTED
+  PARTIAL
+}
+
 model User {
   id          String   @id @default(uuid())
   email       String   @unique
@@ -33,8 +40,9 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  auditLogs    AuditLog[]
-  dpdpaConsent DpdpaConsent[]
+  auditLogs                 AuditLog[]
+  dpdpaConsent              DpdpaConsent[]
+  medicationAdministrations MedicationAdministration[]
 }
 
 model Patient {
@@ -102,8 +110,28 @@ model Prescription {
   status         String    @default("created") @map("_status")
   deletedAt      DateTime? @map("deleted_at")
 
-  visit   Visit   @relation(fields: [visitId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
+  visit           Visit                      @relation(fields: [visitId], references: [id])
+  patient         Patient                    @relation(fields: [patientId], references: [id])
+  administrations MedicationAdministration[]
+}
+
+model MedicationAdministration {
+  id                    String                         @id @default(uuid())
+  prescriptionId        String                         @map("prescription_id")
+  nurseId               String                         @map("nurse_id")
+  status                MedicationAdministrationStatus
+  dosageGiven           String                         @map("dosage_given")
+  route                 String
+  administeredAt        DateTime                       @map("administered_at")
+  isPrn                 Boolean                        @default(false) @map("is_prn")
+  clinicalJustification String?                        @map("clinical_justification")
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
+
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  nurse        User         @relation(fields: [nurseId], references: [id])
+
+  @@map("medication_administrations")
 }
 
 model AuditLog {
