@@ -239,8 +239,6 @@ export class PdfGeneratorService {
 
       const file = await RNHTMLtoPDF.convert(options);
 
-      console.log(`[PDF Engine] Ordonnance générée avec succès : ${file.filePath}`);
-
       return {
          status: 'SUCCESS',
          filePath: file.filePath || ''
