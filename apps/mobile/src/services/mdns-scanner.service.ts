@@ -99,7 +99,6 @@ export class MDNSScannerService {
       });
 
       if (response.data.status === 'ok' && response.data.databaseConnected) {
-         console.log(`[Health Check] Serveur opérationnel et DB connectée.`);
          store.setServerUrl(serverUrl); // Active l'application en mode "Connecté"
          return true;
       } else {
