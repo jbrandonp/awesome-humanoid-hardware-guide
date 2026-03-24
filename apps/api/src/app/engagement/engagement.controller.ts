@@ -21,6 +21,15 @@ export interface WhatsAppWebhookPayload {
           timestamp: string;
           recipient_id: string;
         }>;
+        messages?: Array<{
+          from: string;
+          id: string;
+          timestamp: string;
+          type: string;
+          text?: {
+            body: string;
+          };
+        }>;
       };
       field: string;
     }>;
@@ -73,6 +82,48 @@ export class EngagementController {
                     this.logger.warn(`[Webhook META] Échec final d'acheminement pour la notif ${existingNotif.id}. Lancement asynchrone du SMS de Fallback.`);
                     // En vrai production, on pousserait ici une nouvelle tâche dans une "sms-queue" Bull
                  }
+              }
+            }
+          }
+
+          // 3. Traiter les messages entrants (ex: réponses des patients)
+          if (change.value.messages) {
+            for (const message of change.value.messages) {
+              if (message.type === 'text' && message.text) {
+                const text = message.text.body.trim();
+                const phone = message.from; // Numéro du patient
+
+                this.logger.log(`[Webhook META] Message reçu de ${phone}: ${text}`);
+
+                if (text === '1' || text === '2') {
+                  await this.prisma.$transaction(async (tx) => {
+                    const patient = await tx.patient.findFirst({
+                      where: { phone },
+                    });
+
+                    if (patient) {
+                      // Trouver la dernière visite du patient
+                      const latestVisit = await tx.visit.findFirst({
+                        where: { patientId: patient.id },
+                        orderBy: { date: 'desc' },
+                      });
+
+                      if (latestVisit) {
+                        const newStatus = text === '1' ? 'confirmed' : 'cancelled';
+                        await tx.visit.update({
+                          where: { id: latestVisit.id },
+                          data: { status: newStatus },
+                        });
+
+                        this.logger.log(`[Webhook META] Visite ${latestVisit.id} mise à jour avec le statut: ${newStatus}`);
+                      } else {
+                        this.logger.warn(`[Webhook META] Aucune visite trouvée pour le patient: ${patient.id}`);
+                      }
+                    } else {
+                      this.logger.warn(`[Webhook META] Aucun patient trouvé avec le numéro: ${phone}`);
+                    }
+                  });
+                }
               }
             }
           }
