@@ -13,6 +13,7 @@ enum Role {
   NURSE
   PHARMACIST
   LAB_TECH
+  MINISTRY_LIAISON
 }
 
 enum ActionType {
@@ -45,6 +46,7 @@ model Patient {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   // Sync Status Fields
+  zipCode     String?   @map("zip_code")
   status      String    @default("created") @map("_status") // synced, created, updated, deleted
   deletedAt   DateTime? @map("deleted_at")
 
@@ -70,6 +72,7 @@ model Visit {
 
   patient       Patient        @relation(fields: [patientId], references: [id])
   prescriptions Prescription[]
+  diagnoses     Diagnosis[]
 }
 
 model Vital {
@@ -179,4 +182,34 @@ model NotificationStatus {
   patient Patient @relation(fields: [patientId], references: [id])
 
   @@map("notification_statuses")
+}
+
+model ZipPopulation {
+  zipCode    String @id @map("zip_code")
+  population Int
+
+  @@map("zip_populations")
+}
+
+model Diagnosis {
+  id        String   @id @default(uuid())
+  visitId   String   @map("visit_id")
+  icd10Code String   @map("icd10_code")
+  createdAt DateTime @default(now())
+
+  visit Visit @relation(fields: [visitId], references: [id])
+
+  @@map("diagnoses")
+}
+
+model EpiReportCache {
+  id        String   @id @default(uuid())
+  ageGroup  String   @map("age_group")
+  zipCode   String   @map("zip_code")
+  icd10Code String   @map("icd10_code")
+  count     Int      @default(0)
+  date      DateTime @db.Date
+
+  @@unique([ageGroup, zipCode, icd10Code, date])
+  @@map("epi_report_cache")
 }

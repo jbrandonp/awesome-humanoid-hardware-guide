@@ -19,6 +19,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TickerModule } from './ticker/ticker.module';
 import { IntelligenceModule } from './intelligence/intelligence.module';
 import { EngagementModule } from './engagement/engagement.module';
+import { EpidemiologyReportModule } from './epidemiology-report/epidemiology-report.module';
 import { BullModule } from '@nestjs/bullmq';
 
 @Module({
@@ -31,7 +32,7 @@ import { BullModule } from '@nestjs/bullmq';
           port: parseInt(process.env.REDIS_PORT || '6379', 10)
        }
     }),
-    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule
+    SyncModule, AuthModule, PrismaModule, AuditModule, DpdpaModule, WhisperModule, AbdmModule, OcrModule, FhirModule, ClinicalRecordModule, BillingModule, IotModule, PeerConsultModule, TickerModule, IntelligenceModule, EngagementModule, EpidemiologyReportModule
   ],
   controllers: [AppController],
   providers: [AppService],
