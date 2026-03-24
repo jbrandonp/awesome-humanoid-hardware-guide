@@ -20,15 +20,10 @@ import { AuditRepository } from './audit.repository';
 })
 export class AuditModule {}
 
-<<<<<<< HEAD
-@Module({
-  imports: [PrismaModule],
-=======
 import { ClinicalRecordModule } from '../clinical-record/clinical-record.module';
 
 @Module({
   imports: [PrismaModule, ClinicalRecordModule],
->>>>>>> origin/main
   providers: [DpdpaConsentService],
   exports: [DpdpaConsentService],
 })

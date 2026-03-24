@@ -3,7 +3,7 @@ import { TickerController } from './ticker.controller';
 import { EpiTickerService } from './epi-ticker.service';
 import { AuditService } from '../audit/audit.service';
 import { InternalServerErrorException, ForbiddenException } from '@nestjs/common';
-import { ActionType } from '@prisma/client';
+
 
 describe('TickerController', () => {
   let controller: TickerController;
@@ -42,7 +42,7 @@ describe('TickerController', () => {
       expect(mockAuditService.logAudit).toHaveBeenCalledWith({
         userId: 'admin-456',
         patientId: 'SYSTEM',
-        actionType: ActionType.EXPORT_REPORT,
+        actionType: 'EXPORT_REPORT',
         resourceId: 'Epidemiology_Monthly',
         phiDataAccessed: {},
         ipAddress: '127.0.0.1',
