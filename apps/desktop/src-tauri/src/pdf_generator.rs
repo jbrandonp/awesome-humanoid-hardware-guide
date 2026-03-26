@@ -23,12 +23,12 @@ pub fn generate_epidemiology_report_pdf(user_id: String, destination_path: Strin
         user_id, date_time_str, ip_addr_str
     );
 
-    let font = doc.add_builtin_font(BuiltinFont::Helvetica).map_err(|e| e.to_string())?;
+    let font = doc.add_builtin_font(BuiltinFont::Helvetica).map_err(|e: printpdf::Error| e.to_string())?;
 
     current_layer.use_text("Rapport Epidemiologique Mensuel", 24.0, Mm(20.0), Mm(270.0), &font);
     current_layer.use_text("Donnees anonymisees...", 12.0, Mm(20.0), Mm(250.0), &font);
 
-    let watermark_font = doc.add_builtin_font(BuiltinFont::HelveticaBold).map_err(|e| e.to_string())?;
+    let watermark_font = doc.add_builtin_font(BuiltinFont::HelveticaBold).map_err(|e: printpdf::Error| e.to_string())?;
     current_layer.save_graphics_state();
     current_layer.set_fill_color(Color::Rgb(Rgb::new(0.85, 0.85, 0.85, None)));
 
@@ -55,7 +55,7 @@ pub fn generate_epidemiology_report_pdf(user_id: String, destination_path: Strin
     let file = File::create(&path).map_err(|e| e.to_string())?;
     let mut writer = BufWriter::new(file);
 
-    doc.save(&mut writer).map_err(|e| e.to_string())?;
+    doc.save(&mut writer).map_err(|e: printpdf::Error| e.to_string())?;
 
     Ok(destination_path)
 }
