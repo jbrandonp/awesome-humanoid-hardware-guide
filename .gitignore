@@ -122,7 +122,3 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
-
-vite.config.*.timestamp*
-.claude/worktrees
-.claude/settings.local.json
