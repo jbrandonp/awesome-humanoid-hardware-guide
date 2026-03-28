@@ -1,4 +1,11 @@
-import { Controller, Post, Body, UseGuards, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { PeerConsultService } from './peer-consult.service';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -18,6 +25,12 @@ export class PeerConsultController {
     if (!doctorId || !patientId || !recordId || !specialtyTarget) {
       throw new HttpException('Données manquantes', HttpStatus.BAD_REQUEST);
     }
-    return this.peerConsultService.broadcastCase(doctorId, patientId, specialtyTarget, message, recordId);
+    return this.peerConsultService.broadcastCase(
+      doctorId,
+      patientId,
+      specialtyTarget,
+      message,
+      recordId,
+    );
   }
 }

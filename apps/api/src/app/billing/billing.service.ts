@@ -88,11 +88,21 @@ export class BillingService {
             const lineTotalCents = Math.round(inventoryItem.unitPriceCents * item.quantity);
             subtotalCents += lineTotalCents;
 
-            // Déduction du stock (Gestion Logistique Sprint 4)
-            await tx.inventoryItem.update({
-               where: { name: inventoryItem.name },
+            // Déduction atomique du stock (Empêche les stocks négatifs en cas de concurrence)
+            const updateResult = await tx.inventoryItem.updateMany({
+               where: { 
+                 name: inventoryItem.name,
+                 quantity: { gte: item.quantity } // Condition de garde atomique
+               },
                data: { quantity: { decrement: item.quantity } }
             });
+
+            if (updateResult.count === 0) {
+               throw new HttpException(
+                 `Rupture de stock concurrente pour ${item.inventoryItemName}. Facturation annulée pour protéger l'intégrité de l'inventaire.`,
+                 HttpStatus.CONFLICT
+               );
+            }
          }
 
          // B. Calcul des Taxes (Multiplication d'entiers puis arrondi)

@@ -28,7 +28,7 @@ export class PosologyTranslatorService {
   /**
    * Translates a given posology string into regional languages.
    * Performs a local fuzzy search against the medical dictionary.
-   *
+   * 
    * @param posology The structured prescription string (e.g., "1 comprimé matin et soir après le repas")
    * @returns An object containing the translations, or null if no confident match is found.
    */

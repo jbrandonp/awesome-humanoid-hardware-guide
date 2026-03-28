@@ -1,4 +1,3 @@
-
 /**
  * This script is used to patch the '@nx/expo' package to work with EAS Build.
  * It is run as a eas-build-post-install script in the 'package.json' of expo app.
@@ -16,9 +15,14 @@ if (existsSync(join(workspaceRoot, 'node_modules'))) {
   process.exit(0);
 }
 
-symlink(join(projectRoot, 'node_modules'), join(workspaceRoot, 'node_modules'), 'dir', (err) => {
-  if (err) console.log(err);
-  else {
-    console.log('Symlink created');
-  }
-});
+symlink(
+  join(projectRoot, 'node_modules'),
+  join(workspaceRoot, 'node_modules'),
+  'dir',
+  (err) => {
+    if (err) console.log(err);
+    else {
+      console.log('Symlink created');
+    }
+  },
+);

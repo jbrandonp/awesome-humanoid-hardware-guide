@@ -1,0 +1,50 @@
+﻿apps/mobile/src/components/ErrorBoundary.tsx(23,3): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+apps/mobile/src/components/ErrorBoundary.tsx(27,3): error TS4114: This member must have an 'override' modifier because it overrides a member in the base class 'Component<Props, State, any>'.
+apps/mobile/src/components/Omnibox.tsx(134,42): error TS2554: Expected 4 arguments, but got 3.
+apps/mobile/src/components/Omnibox.tsx(141,15): error TS2367: This comparison appears to be unintentional because the types '"CRITICAL" | "HIGH" | "MODERATE" | "LOW"' and '"ABSOLUTE_CONTRAINDICATION"' have no overlap.
+apps/mobile/src/components/PatientDashboard.tsx(59,26): error TS7006: Parameter 'x' implicitly has an 'any' type.
+apps/mobile/src/components/PatientDashboard.tsx(83,26): error TS7006: Parameter 'x' implicitly has an 'any' type.
+apps/mobile/src/components/PediatricDashboard.tsx(92,18): error TS7006: Parameter 'd' implicitly has an 'any' type.
+apps/mobile/src/hooks/useBleScanner.ts(77,60): error TS7006: Parameter 'state' implicitly has an 'any' type.
+apps/mobile/src/services/mdns-scanner.service.ts(48,37): error TS7006: Parameter 'service' implicitly has an 'any' type.
+apps/mobile/src/services/mdns-scanner.service.ts(70,34): error TS7006: Parameter 'err' implicitly has an 'any' type.
+apps/mobile/src/services/pdf-generator.service.ts(3,25): error TS6307: File 'C:/Users/brand/OneDrive/Documents/projet bizarre/Nouveau dossier/MedCore/apps/mobile/src/i18n/medical_dict.json' is not listed within the file list of project 'C:/Users/brand/OneDrive/Documents/projet bizarre/Nouveau dossier/MedCore/apps/mobile/tsconfig.app.json'. Projects must list all files or use an 'include' pattern.
+apps/mobile/src/services/SecurityManager.ts(4,10): error TS2305: Module '"expo-file-system"' has no exported member 'documentDirectory'.
+apps/mobile/src/stores/connection.store.ts(23,60): error TS7006: Parameter 'set' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(28,15): error TS7006: Parameter 'status' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(29,18): error TS7006: Parameter 'url' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(30,14): error TS7006: Parameter 'msg' implicitly has an 'any' type.
+libs/models/src/lib/databaseModels.ts(12,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(13,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(14,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(15,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(16,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(18,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(19,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(20,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(26,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(27,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(28,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(29,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(30,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(32,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(38,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(39,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(40,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(41,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(42,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(43,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(44,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(50,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(51,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(52,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(58,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(59,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(65,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(66,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(67,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(68,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(69,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(70,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(71,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.
+libs/models/src/lib/databaseModels.ts(72,4): error TS1240: Unable to resolve signature of property decorator when called as an expression.

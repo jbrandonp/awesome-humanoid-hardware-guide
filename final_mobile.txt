@@ -1,0 +1,6 @@
+﻿apps/mobile/src/services/SecurityManager.ts(38,25): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("C:/Users/brand/OneDrive/Documents/projet bizarre/Nouveau dossier/MedCore/node_modules/expo-file-system/build/index")'.
+apps/mobile/src/services/SecurityManager.ts(39,25): error TS2339: Property 'documentDirectory' does not exist on type 'typeof import("C:/Users/brand/OneDrive/Documents/projet bizarre/Nouveau dossier/MedCore/node_modules/expo-file-system/build/index")'.
+apps/mobile/src/stores/connection.store.ts(23,60): error TS7006: Parameter 'set' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(28,15): error TS7006: Parameter 'status' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(29,18): error TS7006: Parameter 'url' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(30,14): error TS7006: Parameter 'msg' implicitly has an 'any' type.

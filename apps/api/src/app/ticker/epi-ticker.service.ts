@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Production-Ready Data Mining)
 // ============================================================================
 
-export type TickerAlertType = 'EPIDEMIOLOGY' | 'INVENTORY' | 'SYSTEM';
+export type TickerAlertType = 'EPIDEMIOLOGY' | 'INVENTORY' | 'SYSTEM' | 'INCIDENT';
 
 export interface TickerAlert {
   id: string;

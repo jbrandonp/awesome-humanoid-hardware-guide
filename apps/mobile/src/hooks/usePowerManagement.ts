@@ -43,7 +43,9 @@ export function usePowerManagement(): PowerManagementState {
 
     if (level < 0.15) {
       // Survie extrême (< 15%)
-      console.warn("[PowerManagement] Batterie critique < 15%. Passage en mode Survie Extrême.");
+      console.warn(
+        '[PowerManagement] Batterie critique < 15%. Passage en mode Survie Extrême.',
+      );
       setPowerState({
         batteryLevel: level,
         syncIntervalMs: 60000, // Réduction drastique de la sync mDNS/CRDT à 60s
@@ -51,7 +53,7 @@ export function usePowerManagement(): PowerManagementState {
         disableHeavyAI: true,
         isLowPowerMode: true,
       });
-    } else if (level < 0.30) {
+    } else if (level < 0.3) {
       // Batterie faible (< 30%)
       setPowerState({
         batteryLevel: level,

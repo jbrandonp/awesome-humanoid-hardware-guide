@@ -2,9 +2,9 @@ import axios from 'axios';
 import { useConnectionStore } from '../stores/connection.store';
 import Zeroconf from 'react-native-zeroconf'; // Utilisation d'une librairie native RN pour le mDNS
 
-// ======
+// ============================================================================
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (mDNS & Health Check)
-// ======
+// ============================================================================
 
 export interface MDNSDiscoveryResult {
   ip: string;
@@ -45,7 +45,7 @@ export class MDNSScannerService {
       }, timeoutSecs * 1000);
 
       // Écoute de l'événement de résolution de service (IP + Port obtenus)
-      this.zeroconf.on('resolved', (service) => {
+      this.zeroconf.on('resolved', (service: { type: string; addresses: string[]; port: number }) => {
         if (isResolved) return;
 
         // On vérifie le type de service pour ignorer les imprimantes et les Apple TV
@@ -56,7 +56,6 @@ export class MDNSScannerService {
 
            const ip = service.addresses[0];
            const port = service.port;
-
            const fullUrl = `http://${ip}:${port}`;
 
            resolve({
@@ -68,7 +67,7 @@ export class MDNSScannerService {
       });
 
       // Erreurs natives (Permissions réseau manquantes sur iOS/Android)
-      this.zeroconf.on('error', (err) => {
+      this.zeroconf.on('error', (err: Error | string) => {
         if (!isResolved) {
            isResolved = true;
            clearTimeout(scanTimeout);

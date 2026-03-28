@@ -1,0 +1,5 @@
+﻿apps/mobile/src/services/SecurityManager.ts(4,10): error TS2305: Module '"expo-file-system"' has no exported member 'cacheDirectory'.
+apps/mobile/src/services/SecurityManager.ts(4,26): error TS2305: Module '"expo-file-system"' has no exported member 'documentDirectory'.
+apps/mobile/src/stores/connection.store.ts(28,15): error TS7006: Parameter 'status' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(29,18): error TS7006: Parameter 'url' implicitly has an 'any' type.
+apps/mobile/src/stores/connection.store.ts(30,14): error TS7006: Parameter 'msg' implicitly has an 'any' type.

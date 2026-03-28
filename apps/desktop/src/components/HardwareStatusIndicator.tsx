@@ -1,6 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { Cpu, Printer, ServerCrash, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  Cpu,
+  Printer,
+  ServerCrash,
+  CheckCircle2,
+  AlertTriangle,
+} from 'lucide-react';
 
 interface HardwareStatus {
   total_memory: number;
@@ -22,7 +28,7 @@ export function HardwareStatusIndicator() {
           setStatus(res);
         }
       } catch (e) {
-        console.error("Hardware check failed", e);
+        console.error('Hardware check failed', e);
       }
     };
 
@@ -38,18 +44,34 @@ export function HardwareStatusIndicator() {
 
   return (
     <div className="flex gap-4 items-center bg-medical-surface px-4 py-2 rounded-lg border border-medical-border text-xs">
-       <div className={`flex items-center gap-2 ${isRamCritical ? 'text-medical-danger font-bold' : 'text-emerald-400'}`}>
-          {isRamCritical ? <ServerCrash className="w-4 h-4" /> : <Cpu className="w-4 h-4" />}
-          <span>RAM Lib: {status.available_memory} Mo / {status.total_memory} Mo</span>
-       </div>
+      <div
+        className={`flex items-center gap-2 ${isRamCritical ? 'text-medical-danger font-bold' : 'text-emerald-400'}`}
+      >
+        {isRamCritical ? (
+          <ServerCrash className="w-4 h-4" />
+        ) : (
+          <Cpu className="w-4 h-4" />
+        )}
+        <span>
+          RAM Lib: {status.available_memory} Mo / {status.total_memory} Mo
+        </span>
+      </div>
 
-       <div className="w-px h-4 bg-medical-border" />
+      <div className="w-px h-4 bg-medical-border" />
 
-       <div className={`flex items-center gap-2 ${status.thermal_printers_found > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>
-          <Printer className="w-4 h-4" />
-          <span>ESC/POS: {status.thermal_printers_found > 0 ? 'Prêt' : 'Non détectée'}</span>
-          {status.thermal_printers_found > 0 ? <CheckCircle2 className="w-3 h-3 ml-1" /> : <AlertTriangle className="w-3 h-3 ml-1" />}
-       </div>
+      <div
+        className={`flex items-center gap-2 ${status.thermal_printers_found > 0 ? 'text-emerald-400' : 'text-slate-400'}`}
+      >
+        <Printer className="w-4 h-4" />
+        <span>
+          ESC/POS: {status.thermal_printers_found > 0 ? 'Prêt' : 'Non détectée'}
+        </span>
+        {status.thermal_printers_found > 0 ? (
+          <CheckCircle2 className="w-3 h-3 ml-1" />
+        ) : (
+          <AlertTriangle className="w-3 h-3 ml-1" />
+        )}
+      </div>
     </div>
   );
 }

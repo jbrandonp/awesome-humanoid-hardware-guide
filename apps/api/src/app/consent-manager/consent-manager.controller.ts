@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Req, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { ConsentManagerService } from './consent-manager.service';
-import { Request } from 'express';
+
 import { z } from 'zod';
 
 const RevokeConsentSchema = z.object({
@@ -15,13 +15,13 @@ export class ConsentManagerController {
   constructor(private readonly consentManagerService: ConsentManagerService) {}
 
   @Post('revoke-consent')
-  async revokeConsent(@Body() body: any, @Req() req: Request) {
+  async revokeConsent(@Body() body: any, @Req() req: any) {
     try {
       const { patientId, userId } = RevokeConsentSchema.parse(body);
-      const ipAddress = req.ip || req.connection.remoteAddress || 'unknown';
-
+      const ipAddress = req.ip || 'unknown';
+      
       this.logger.log(`[ConsentManager] Requête de révocation reçue pour le patient ${patientId}`);
-
+      
       const jobId = await this.consentManagerService.enqueueRevocationJob({
         patientId,
         userId,
@@ -35,7 +35,7 @@ export class ConsentManagerController {
       };
     } catch (error) {
       if (error instanceof z.ZodError) {
-        throw new HttpException({ message: 'Validation failed', errors: error.errors }, HttpStatus.BAD_REQUEST);
+        throw new HttpException({ message: 'Validation failed', errors: error.issues }, HttpStatus.BAD_REQUEST);
       }
       this.logger.error('[ConsentManager] Error processing revoke consent request', error);
       throw new HttpException('Erreur serveur lors de la révocation.', HttpStatus.INTERNAL_SERVER_ERROR);

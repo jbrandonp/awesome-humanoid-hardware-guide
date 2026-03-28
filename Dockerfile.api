@@ -1,5 +1,5 @@
 # Builder Stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package*.json ./
@@ -12,7 +12,7 @@ RUN npx prisma generate
 RUN npx nx build api --prod
 
 # Production Stage
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 # Variables d'environnements (surpassables au run)

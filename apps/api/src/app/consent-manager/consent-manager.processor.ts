@@ -19,7 +19,7 @@ export class ConsentManagerProcessor extends WorkerHost {
 
   async process(job: Job<RevokeConsentJobPayload, any, string>): Promise<any> {
     const { patientId, userId, ipAddress } = job.data;
-
+    
     this.logger.log(`[ConsentManager Worker] Démarrage de la révocation asynchrone pour le patient: ${patientId}`);
 
     try {
@@ -57,7 +57,7 @@ export class ConsentManagerProcessor extends WorkerHost {
         if (patient) {
           const shiftedDob = new Date(patient.dateOfBirth);
           shiftedDob.setDate(shiftedDob.getDate() + 10);
-
+          
           await tx.patient.update({
              where: { id: patientId },
              data: {

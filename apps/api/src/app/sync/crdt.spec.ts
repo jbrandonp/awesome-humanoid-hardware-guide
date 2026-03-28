@@ -18,7 +18,10 @@ describe('CRDT Merging Strategy (Yjs)', () => {
     const clientBText = clientBDoc.getText('notes');
 
     // Both doctors edit offline at the same time
-    clientAText.insert(clientAText.length, 'Doctor A: Prescribed Paracetamol.\n');
+    clientAText.insert(
+      clientAText.length,
+      'Doctor A: Prescribed Paracetamol.\n',
+    );
     clientBText.insert(clientBText.length, 'Doctor B: Ordered Blood Test.\n');
 
     // Syncing Phase: Server receives Client A's update

@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+:root {
+  --bg-color: #0f172a;
+  --text-color: #f8fafc;
+  --primary-color: #3b82f6;
+  --secondary-color: #1e293b;
+  --highlight-color: #22c55e;
+  --danger-color: #ef4444;
+  --overlay-bg: rgba(15, 23, 42, 0.9);
+}
+
+body, html {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.kiosk-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+.kiosk-header {
+  text-align: center;
+  padding: 2rem 0;
+  background-color: var(--secondary-color);
+  border-bottom: 4px solid var(--primary-color);
+}
+
+.kiosk-header h1 {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.kiosk-main {
+  flex: 1;
+  display: flex;
+  padding: 4rem;
+  gap: 4rem;
+}
+
+.current-patient-section {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.current-patient-section h2, .last-called-section h2 {
+  font-size: 2.5rem;
+  color: #94a3b8;
+  margin-top: 0;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  border-bottom: 2px solid #334155;
+  padding-bottom: 1rem;
+}
+
+.current-patient-card {
+  flex: 1;
+  background-color: var(--primary-color);
+  border-radius: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 4px solid #60a5fa;
+  padding: 2rem;
+  text-align: center;
+}
+
+.current-patient-card.empty {
+  background-color: var(--secondary-color);
+  border-color: #334155;
+  color: #64748b;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.current-patient-card .patient-name {
+  font-size: 8rem;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 2rem;
+  text-shadow: 0 4px 6px rgba(0,0,0,0.5);
+  word-break: break-word;
+}
+
+.current-patient-card .destination {
+  font-size: 4rem;
+  font-weight: 700;
+  background: var(--bg-color);
+  padding: 1rem 3rem;
+  border-radius: 1rem;
+  color: #cbd5e1;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .9;
+  }
+}
+
+.last-called-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--secondary-color);
+  padding: 2rem;
+  border-radius: 2rem;
+  border: 1px solid #334155;
+}
+
+.last-called-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  flex: 1;
+}
+
+.last-called-item {
+  background-color: #0f172a;
+  padding: 1.5rem 2rem;
+  border-radius: 1rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  border-left: 8px solid #64748b;
+  display: flex;
+  align-items: center;
+}
+
+.last-called-item.empty {
+  color: #475569;
+  border-left-color: #334155;
+  justify-content: center;
+  font-size: 2rem;
+}
+
+.kiosk-footer {
+  text-align: center;
+  padding: 1.5rem;
+  background-color: var(--secondary-color);
+  font-size: 1.5rem;
+  color: #94a3b8;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.kiosk-footer p {
+  margin: 0;
+  flex: 1;
+}
+
+.status-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.status-indicator.online {
+  background-color: var(--highlight-color);
+  box-shadow: 0 0 10px var(--highlight-color);
+}
+
+.status-indicator.offline {
+  background-color: var(--danger-color);
+  box-shadow: 0 0 10px var(--danger-color);
+}
+
+.connection-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--overlay-bg);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px);
+}
+
+.connection-overlay h2 {
+  font-size: 3rem;
+  color: var(--danger-color);
+  margin-top: 2rem;
+}
+
+.spinner {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid var(--primary-color);
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

@@ -40,7 +40,7 @@ export class IntelligenceService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly consentManager: DpdpaConsentService
+    private readonly consentManager: DpdpaConsentService,
   ) {}
 
   /**
@@ -54,8 +54,12 @@ export class IntelligenceService {
    * @param request La requête structurée et typée (Zéro 'any')
    * @returns DrugInteractionResult Le résultat détaillé des risques
    */
-  async checkDrugInteractions(request: DrugInteractionRequest): Promise<DrugInteractionResult> {
-    this.logger.log(`[Clinical Intelligence] Vérification d'interactions demandée par le praticien ${request.practitionerId} pour le patient ${request.patientId}`);
+  async checkDrugInteractions(
+    request: DrugInteractionRequest,
+  ): Promise<DrugInteractionResult> {
+    this.logger.log(
+      `[Clinical Intelligence] Vérification d'interactions demandée par le praticien ${request.practitionerId} pour le patient ${request.patientId}`,
+    );
 
     // ============================================================================
     // 1. VÉRIFICATION LÉGALE EXTRÊME (Consentement DPDPA 2023)
@@ -63,26 +67,38 @@ export class IntelligenceService {
     // ============================================================================
     let hasConsent = false;
     try {
-      hasConsent = await this.consentManager.checkConsent(request.practitionerId, request.patientId);
+      hasConsent = await this.consentManager.checkConsent(
+        request.practitionerId,
+        request.patientId,
+      );
     } catch (consentDbError: unknown) {
       // ERREUR EXTRÊME : Si la base de données ne répond pas (Timeout) ou RAM pleine.
-      this.logger.error(`[CRITICAL ERROR] Le Consent Manager est hors-ligne. Impossible de valider le DPDPA.`, consentError);
+      this.logger.error(
+        `[CRITICAL ERROR] Le Consent Manager est hors-ligne. Impossible de valider le DPDPA.`,
+        consentDbError,
+      );
 
       // Sécurité par défaut : En cas de doute, on coupe l'accès aux données sensibles.
       throw new HttpException(
-        'Le système de vérification des droits (DPDPA) est inaccessible (Base de données hors-ligne). L\'intelligence artificielle a été désactivée par sécurité.',
-        HttpStatus.SERVICE_UNAVAILABLE
+        "Le système de vérification des droits (DPDPA) est inaccessible (Base de données hors-ligne). L'intelligence artificielle a été désactivée par sécurité.",
+        HttpStatus.SERVICE_UNAVAILABLE,
       );
     }
 
     if (!hasConsent) {
       // Traçabilité de l'accès refusé (AuditLog)
-      this.logger.warn(`[SECURITY VIOLATION] Le praticien ${request.practitionerId} a tenté d'analyser l'historique du patient ${request.patientId} sans consentement valide.`);
-      await this.logSecurityEvent(request.practitionerId, request.patientId, 'AI_DRUG_CHECK_REJECTED_NO_CONSENT');
+      this.logger.warn(
+        `[SECURITY VIOLATION] Le praticien ${request.practitionerId} a tenté d'analyser l'historique du patient ${request.patientId} sans consentement valide.`,
+      );
+      await this.logSecurityEvent(
+        request.practitionerId,
+        request.patientId,
+        'AI_DRUG_CHECK_REJECTED_NO_CONSENT',
+      );
 
       throw new HttpException(
-        'Accès illégal : Le patient a révoqué son consentement. L\'IA ne peut pas analyser son historique pour les interactions.',
-        HttpStatus.FORBIDDEN
+        "Accès illégal : Le patient a révoqué son consentement. L'IA ne peut pas analyser son historique pour les interactions.",
+        HttpStatus.FORBIDDEN,
       );
     }
 
@@ -99,40 +115,52 @@ export class IntelligenceService {
       // (Pour vérifier que les "newMedications" n'interagissent pas avec ce qu'il prend déjà)
       const activePrescriptions = await this.prisma.prescription.findMany({
         where: {
-           patientId: request.patientId,
-           status: 'synced',
-           deletedAt: null
-        }
+          patientId: request.patientId,
+          status: 'synced',
+          deletedAt: null,
+        },
       });
 
-      const historicalMedNames = activePrescriptions.map(p => p.medicationName.toLowerCase());
-      const newMedNames = request.newMedications.map(m => m.medicationName.toLowerCase());
+      const historicalMedNames = activePrescriptions.map((p) =>
+        p.medicationName.toLowerCase(),
+      );
+      const newMedNames = request.newMedications.map((m) =>
+        m.medicationName.toLowerCase(),
+      );
 
       // Simulation d'une requête complexe à une table de référence `DrugContraindications`
       // Ex: SELECT * FROM DrugContraindications WHERE drug_a IN (...) AND drug_b IN (...)
 
       // Si "Artemether" (nouveau) et "Amoxicilline" (historique ou nouveau) se croisent :
-      if (newMedNames.some(n => n.includes('artemether')) &&
-         (historicalMedNames.some(h => h.includes('amoxicilline')) || newMedNames.some(n => n.includes('amoxicilline')))) {
-
-         foundRisks.push({
-            interactingDrugA: 'Artemether 20mg / Lumefantrine 120mg',
-            interactingDrugB: 'Amoxicilline 1g',
-            severityLevel: 'CRITICAL',
-            medicalDescription: 'Risque sévère d\'allongement de l\'intervalle QT conduisant à des arythmies cardiaques fatales (Torsades de pointes).',
-            recommendationAction: 'Remplacer l\'antibiotique macrolide par une alternative sécurisée ou surveiller sous ECG en milieu hospitalier.'
-         });
+      if (
+        newMedNames.some((n) => n.includes('artemether')) &&
+        (historicalMedNames.some((h) => h.includes('amoxicilline')) ||
+          newMedNames.some((n) => n.includes('amoxicilline')))
+      ) {
+        foundRisks.push({
+          interactingDrugA: 'Artemether 20mg / Lumefantrine 120mg',
+          interactingDrugB: 'Amoxicilline 1g',
+          severityLevel: 'CRITICAL',
+          medicalDescription:
+            "Risque sévère d'allongement de l'intervalle QT conduisant à des arythmies cardiaques fatales (Torsades de pointes).",
+          recommendationAction:
+            "Remplacer l'antibiotique macrolide par une alternative sécurisée ou surveiller sous ECG en milieu hospitalier.",
+        });
       }
 
       // Si "Ibuprofène" (nouveau) et "Aspirine" (historique) se croisent :
-      if (newMedNames.some(n => n.includes('ibuprofène')) && historicalMedNames.some(h => h.includes('aspirine'))) {
-         foundRisks.push({
-            interactingDrugA: 'Ibuprofène 400mg',
-            interactingDrugB: 'Aspirine',
-            severityLevel: 'HIGH',
-            medicalDescription: 'Risque hémorragique accru (Gastro-intestinal).',
-            recommendationAction: 'Éviter l\'association de multiples AINS. Utiliser du Paracétamol si possible.'
-         });
+      if (
+        newMedNames.some((n) => n.includes('ibuprofène')) &&
+        historicalMedNames.some((h) => h.includes('aspirine'))
+      ) {
+        foundRisks.push({
+          interactingDrugA: 'Ibuprofène 400mg',
+          interactingDrugB: 'Aspirine',
+          severityLevel: 'HIGH',
+          medicalDescription: 'Risque hémorragique accru (Gastro-intestinal).',
+          recommendationAction:
+            "Éviter l'association de multiples AINS. Utiliser du Paracétamol si possible.",
+        });
       }
 
       // ============================================================================
@@ -140,39 +168,45 @@ export class IntelligenceService {
       // On enregistre inaltérablement que l'IA a scanné le dossier et rendu son verdict.
       // ============================================================================
       await this.prisma.auditLog.create({
-         data: {
-            userId: request.practitionerId,
-            patientId: request.patientId,
-            action: 'AI_CLINICAL_INTERACTION_CHECK',
-            ipAddress: 'LOCAL_NETWORK_MDNS',
-            metadata: {
-               risksDetectedCount: foundRisks.length,
-               severityMax: foundRisks.length > 0 ? foundRisks[0].severityLevel : 'NONE',
-               checkedMedications: newMedNames.concat(historicalMedNames)
-            }
-         }
+        data: {
+          userId: request.practitionerId,
+          patientId: request.patientId,
+          action: 'AI_CLINICAL_INTERACTION_CHECK',
+          ipAddress: 'LOCAL_NETWORK_MDNS',
+          metadata: {
+            risksDetectedCount: foundRisks.length,
+            severityMax:
+              foundRisks.length > 0 ? foundRisks[0].severityLevel : 'NONE',
+            checkedMedications: newMedNames.concat(historicalMedNames),
+          },
+        },
       });
 
-      this.logger.log(`[Clinical Intelligence] Analyse terminée. Risques détectés: ${foundRisks.length}`);
+      this.logger.log(
+        `[Clinical Intelligence] Analyse terminée. Risques détectés: ${foundRisks.length}`,
+      );
 
       return {
-         status: foundRisks.length > 0 ? 'ERROR' : 'SAFE',
-         risksFound: foundRisks,
-         checkedAtIso: new Date().toISOString(),
-         message: foundRisks.length > 0
-           ? 'ALERTE CLINIQUE : Des interactions médicamenteuses sévères ont été détectées.'
-           : 'Analyse terminée : Aucune interaction majeure détectée.'
+        status: foundRisks.length > 0 ? 'ERROR' : 'SAFE',
+        risksFound: foundRisks,
+        checkedAtIso: new Date().toISOString(),
+        message:
+          foundRisks.length > 0
+            ? 'ALERTE CLINIQUE : Des interactions médicamenteuses sévères ont été détectées.'
+            : 'Analyse terminée : Aucune interaction majeure détectée.',
       };
-
     } catch (databaseCrashError: unknown) {
       // ERREUR EXTRÊME : La requête SQL a échoué (Disque corrompu, lock SQLite/Postgres, RAM Windows 7).
-      this.logger.error(`[FATAL ERROR] Le moteur d'intelligence clinique s'est effondré lors de la requête Prisma.`, databaseCrashError);
+      this.logger.error(
+        `[FATAL ERROR] Le moteur d'intelligence clinique s'est effondré lors de la requête Prisma.`,
+        databaseCrashError,
+      );
 
       // On ne fait PAS crasher le backend (NestJS). On renvoie une erreur gracieuse à l'Omnibox
       // pour que le médecin puisse tout de même continuer à prescrire manuellement sans l'aide de l'IA.
       throw new HttpException(
-        'Panne critique du serveur de données local. Le moteur d\'interactions médicamenteuses est temporairement inopérant. Continuez la prescription avec prudence.',
-        HttpStatus.INTERNAL_SERVER_ERROR
+        "Panne critique du serveur de données local. Le moteur d'interactions médicamenteuses est temporairement inopérant. Continuez la prescription avec prudence.",
+        HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
   }
@@ -181,13 +215,20 @@ export class IntelligenceService {
    * Utilitaire de création autonome de log de sécurité (Isolé).
    * Enveloppé dans un try/catch pour ne jamais bloquer l'exécution si le disque dur (Windows 7) est plein.
    */
-  private async logSecurityEvent(userId: string, patientId: string, action: string): Promise<void> {
-     try {
-       await this.prisma.auditLog.create({
-          data: { userId, patientId, action, ipAddress: 'LOCAL_NETWORK_MDNS' }
-       });
-     } catch (logCrash) {
-       this.logger.error(`[FATAL] Impossible d'écrire l'alerte de sécurité dans AuditLog (Disque plein ?).`, logCrash);
-     }
+  private async logSecurityEvent(
+    userId: string,
+    patientId: string,
+    action: string,
+  ): Promise<void> {
+    try {
+      await this.prisma.auditLog.create({
+        data: { userId, patientId, action, ipAddress: 'LOCAL_NETWORK_MDNS' },
+      });
+    } catch (logCrash) {
+      this.logger.error(
+        `[FATAL] Impossible d'écrire l'alerte de sécurité dans AuditLog (Disque plein ?).`,
+        logCrash,
+      );
+    }
   }
 }

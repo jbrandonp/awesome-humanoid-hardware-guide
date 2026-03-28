@@ -7,10 +7,7 @@ import { AUDIT_LOG_KEY } from './audit.decorator';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
-
-
   private readonly logger = new Logger(AuditInterceptor.name);
-
 
   constructor(
     private reflector: Reflector,
@@ -37,7 +34,7 @@ export class AuditInterceptor implements NestInterceptor {
                 userId: user.userId,
                 patientId: patientId,
                 action: action,
-                ipAddress: req.ip || req.connection.remoteAddress,
+                ipAddress: req.ip || 'unknown',
                 metadata: {
                   method: req.method,
                   url: req.url,
@@ -45,6 +42,7 @@ export class AuditInterceptor implements NestInterceptor {
                 }
               }
             });
+            this.logger.log(`[AuditLog Partitioned] Action '${action}' par user ${user.userId}`);
           } catch (e) {
             this.logger.error(`[AuditLog] Erreur Prisma lors du log`, e);
           }

@@ -12,6 +12,6 @@ import { EngagementController } from './engagement.controller';
   ],
   providers: [PatientEngagementService, EngagementProcessor],
   controllers: [EngagementController],
-  exports: [PatientEngagementService]
+  exports: [PatientEngagementService],
 })
 export class EngagementModule {}

@@ -29,8 +29,8 @@ describe('PosologyTranslatorService', () => {
     const result = service.translate('1 comprime matin et soir apres le repas');
     expect(result).not.toBeNull();
     expect(result?.en).toBe('1 tablet morning and evening after meals');
-
-    // "1 cp" abbreviation mapped to the 3 days rule
+    
+    // "1 cp" abbreviation mapped to the 3 days rule 
     const result2 = service.translate('1 cp matin et soir pendant 3 jours');
     expect(result2).not.toBeNull();
     expect(result2?.en).toBe('1 tablet morning and evening for 3 days');

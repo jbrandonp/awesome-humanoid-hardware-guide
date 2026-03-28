@@ -6,16 +6,14 @@
     "types": [
       "node"
     ],
-    "rootDir": "src",
     "moduleResolution": "nodenext",
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "target": "es2021",
-    "strict": true
+    "strict": true,
+    "rootDir": "../../"
   },
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": []
+  "include": ["src/**/*.ts", "../../libs/models/src/index.ts", "../../libs/models/src/lib/models.ts"],
+  "exclude": ["src/**/*.spec.ts", "jest.config.js"]
 }

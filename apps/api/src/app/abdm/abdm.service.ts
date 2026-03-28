@@ -159,6 +159,8 @@ export class AbdmService implements OnModuleInit {
           hipPublicKey: this.publicKey.export({ type: 'spki', format: 'der' }).toString('base64')
        };
 
+       this.logger.debug(`[ABDM HIP] Secure Payload generated: ${securePayload.iv}`);
+
        this.logger.log(`[ABDM HIP] Chiffrement ECDH+AES256 réussi. Poussée réseau en cours...`);
 
        // 3. ENVOI RÉSEAU AVEC GESTION DES TIMEOUTS

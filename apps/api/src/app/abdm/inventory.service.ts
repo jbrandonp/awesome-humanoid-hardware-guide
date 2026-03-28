@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Inventory Prediction Engine)
 // ============================================================================
 
-export type InventoryCategory = 'ANTI_MALARIAL' | 'ANTIBIOTIC' | 'ANALGESIC' | 'GENERAL';
+export type InventoryCategory = 'ANTI_MALARIAL' | 'ANTIBIOTIC' | 'ANALGESIC' | 'ANTI_DENGUE' | 'ANTI_PYRETIC' | 'GENERAL';
 
 export interface SeasonalFactor {
   multiplier: number;
@@ -111,28 +111,93 @@ export class InventoryService {
         );
 
         // --- D. Détection et Alerte ---
-        if (item.currentQuantity <= reorderPoint) {
+        if (item.quantity <= reorderPoint) {
 
            // Si on est en dessous du seuil, on calcule combien commander pour tenir 1 mois (30 jours)
            // au rythme de la demande projetée.
-           const recommendedOrder = Math.ceil((projectedDailyUsage * 30) - item.currentQuantity);
+           const recommendedOrder = Math.ceil((projectedDailyUsage * 30) - item.quantity);
 
            alerts.push({
              itemId: item.id,
              itemName: item.name,
              category: item.category as InventoryCategory,
-             currentStock: item.currentQuantity,
+             currentStock: item.quantity,
              dynamicThreshold: reorderPoint,
              recommendedOrder: recommendedOrder > 0 ? recommendedOrder : 0,
-             reason: `Stock critique (${item.currentQuantity} < ${reorderPoint}). ${seasonalFactor.reason}`
+             reason: `Stock critique (${item.quantity} < ${reorderPoint}). ${seasonalFactor.reason}`
            });
 
            this.logger.warn(`[Alerte Inventaire] ${item.name} en rupture imminente. Seuil ajusté à ${reorderPoint}. Recommandation: commander ${recommendedOrder}.`);
+
+           if (recommendedOrder > 0) {
+             await this.generateDraftPurchaseOrder(item.id, recommendedOrder, tx);
+           }
         }
       }
     });
 
     this.logger.log(`[Predictive Inventory] Analyse terminée. ${alerts.length} alertes générées.`);
     return alerts;
+  }
+
+  /**
+   * P2P - Procure-to-Pay : Création automatique d'un Bon de Commande (Purchase Order) au statut DRAFT.
+   * Remplace l'ancienne génération PDF directe.
+   */
+  async generateDraftPurchaseOrder(itemId: string, requestedQuantity: number, tx: any) {
+    const item = await tx.inventoryItem.findUnique({
+      where: { id: itemId },
+      include: { supplier: true }
+    });
+
+    if (!item) return;
+
+    // Idempotency: Verify no DRAFT or PENDING_APPROVAL order already exists for this item
+    const existingOrder = await tx.purchaseOrderItem.findFirst({
+      where: {
+        inventoryItemId: itemId,
+        purchaseOrder: {
+          status: { in: ['DRAFT', 'PENDING_APPROVAL'] }
+        }
+      }
+    });
+
+    if (existingOrder) {
+      this.logger.log(`[P2P] Ignoré : Une commande (DRAFT/PENDING) existe déjà pour l'article ${item.name}.`);
+      return;
+    }
+
+    // Auto-select preferred supplier (from item.supplierId)
+    // If none, we could fetch the first available active supplier or leave it unassigned (but schema requires supplierId)
+    let supplierId = item.supplierId;
+    if (!supplierId) {
+      const defaultSupplier = await tx.supplier.findFirst({ where: { isActive: true } });
+      if (!defaultSupplier) {
+        this.logger.error(`[P2P] Aucun fournisseur actif trouvé pour commander ${item.name}. Action requise.`);
+        return;
+      }
+      supplierId = defaultSupplier.id;
+    }
+
+    // Apply Minimum Order Quantity (MOQ)
+    const finalQuantity = Math.max(requestedQuantity, item.moq);
+    const lineTotalCents = item.unitPriceCents * finalQuantity;
+
+    this.logger.log(`[P2P] Création du PurchaseOrder DRAFT pour ${item.name} (Qté: ${finalQuantity}, Fournisseur: ${supplierId})`);
+
+    await tx.purchaseOrder.create({
+      data: {
+        supplierId: supplierId,
+        status: 'DRAFT',
+        totalCents: lineTotalCents, // Simplified: 1 order = 1 item for auto-generated drafts
+        items: {
+          create: [{
+            inventoryItemId: item.id,
+            quantity: finalQuantity,
+            unitPriceCents: item.unitPriceCents // Assuming purchase price is roughly the unitPriceCents for this example
+          }]
+        }
+      }
+    });
   }
 }

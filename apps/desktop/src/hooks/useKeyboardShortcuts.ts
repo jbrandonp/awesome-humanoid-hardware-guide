@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 
 /**
  * Hook de la "Zero-Mouse Policy"

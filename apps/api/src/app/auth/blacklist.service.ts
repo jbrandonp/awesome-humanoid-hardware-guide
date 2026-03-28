@@ -3,7 +3,7 @@ import Redis from 'ioredis';
 
 @Injectable()
 export class BlacklistService implements OnModuleInit, OnModuleDestroy {
-  private redisClient: Redis;
+  private redisClient!: Redis;
 
   onModuleInit() {
     this.redisClient = new Redis({
