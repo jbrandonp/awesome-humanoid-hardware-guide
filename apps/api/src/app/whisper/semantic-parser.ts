@@ -56,7 +56,7 @@ export class SemanticParser {
       else if (unit.startsWith('gramme')) unit = 'g';
       else if (unit.startsWith('microgramme')) unit = 'µg';
       else if (unit.startsWith('millilitre')) unit = 'ml';
-
+      
       result.dosage = `${dosageMatch[1]}${unit}`;
     }
 
@@ -89,19 +89,19 @@ export class SemanticParser {
     if (durationMatch) {
       const amount = durationMatch[1];
       const unit = durationMatch[2].toLowerCase();
-
+      
       let numAmount = amount;
       const numMap: { [key: string]: string } = { 'un': '1', 'une': '1', 'deux': '2', 'trois': '3', 'quatre': '4', 'cinq': '5', 'six': '6', 'sept': '7', 'huit': '8', 'neuf': '9', 'dix': '10' };
       if (numMap[amount.toLowerCase()]) {
         numAmount = numMap[amount.toLowerCase()];
       }
-
+      
       let normalizedUnit = unit.startsWith('jour') ? 'jours' : (unit.startsWith('semaine') ? 'semaines' : 'mois');
       // Gérer le singulier
       if (numAmount === '1' && normalizedUnit !== 'mois') {
           normalizedUnit = normalizedUnit.slice(0, -1);
       }
-
+      
       result.duration = `${numAmount} ${normalizedUnit}`;
     }
 

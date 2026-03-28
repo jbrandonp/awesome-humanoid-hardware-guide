@@ -28,8 +28,12 @@ body.high-legibility {
 
 /* Animations simples pour le Ticker et l'interface */
 @keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .animate-marquee {

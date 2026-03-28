@@ -2,6 +2,8 @@ import { Injectable, Logger, HttpException, HttpStatus, OnModuleInit } from '@ne
 import { PrismaService } from '../prisma/prisma.service';
 import { DpdpaConsentService } from '../audit/dpdpa-consent.service';
 import { z } from 'zod';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import * as Y from 'yjs';
 
 // ============================================================================
 // TYPAGES STRICTS & VALIDATION DE SCHÉMAS ZOD (PRODUCTION-READY)
@@ -69,7 +71,8 @@ export class IotMedicalService implements OnModuleInit {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly consentManager: DpdpaConsentService
+    private readonly consentManager: DpdpaConsentService,
+    private readonly eventEmitter: EventEmitter2
   ) {}
 
   onModuleInit() {
@@ -161,6 +164,9 @@ export class IotMedicalService implements OnModuleInit {
          this.logger.warn(warningMsg);
       }
 
+      // 5.b. DÉLÉGATION AU MOTEUR DE RÈGLES (Remote Patient Monitoring)
+      this.eventEmitter.emit('iot.vitals.received', payload);
+
       return {
          status: 'SUCCESS',
          vitalRecordId: transactionResult.id,
@@ -171,9 +177,6 @@ export class IotMedicalService implements OnModuleInit {
     } catch (dbError: unknown) {
       // 6. GESTION DES PANNES EXTRÊMES (Out Of Memory, Disque Plein, Lock DB)
       this.logger.error(`[CRITICAL] Le moteur Postgres a rejeté la transaction IoT (Surcharge ?). Sauvetage en RAM.`, dbError);
-
-      // On sauvegarde la constante dans la RAM du Node.js (File d'attente) au lieu de crasher
-      this.enqueueForLater('BLE', payload);
 
       return {
          status: 'QUEUED',
@@ -201,11 +204,18 @@ export class IotMedicalService implements OnModuleInit {
     }
 
     try {
+      // 4. CRDT ENCAPSULATION (Yjs)
+      // Integrating Smart Pen ink into the clinical notes CRDT format
+      const doc = new Y.Doc();
+      const yText = doc.getText('notes');
+      yText.insert(0, payload.rawSvgPathData);
+      const binaryUpdate = Buffer.from(Y.encodeStateAsUpdate(doc));
+
       const newVisit = await this.prisma.visit.create({
          data: {
             patientId: payload.patientId,
             date: new Date(payload.acquisitionTimestampIso),
-            notes: Buffer.from(payload.rawSvgPathData, 'utf-8'),
+            notes: binaryUpdate,
             status: 'created'
          }
       });
@@ -215,7 +225,6 @@ export class IotMedicalService implements OnModuleInit {
       return { status: 'SUCCESS', vitalRecordId: newVisit.id, message: 'Ordonnance manuscrite (Smart Pen) sauvegardée avec succès.' };
     } catch (dbError) {
       this.logger.error(`[CRITICAL] Échec d'écriture du tracé vectoriel Smart Pen.`, dbError);
-      this.enqueueForLater('PEN', payload);
       return { status: 'QUEUED', message: 'Surcharge base de données. Le tracé SVG est mis en attente en RAM.' };
     }
   }

@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, TextInput, FlatList, Text, TouchableOpacity, StyleSheet, Modal, Button } from 'react-native';
+import {
+  View,
+  TextInput,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Button,
+} from 'react-native';
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
-import { CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models/src/lib/databaseModels';
+import {
+  CatalogMedication,
+  CatalogDiagnostic,
+} from '@systeme-sante/models/src/lib/databaseModels';
 import { DrugInteractionChecker } from '../services/drug-interaction.service';
 import { useDebounce } from '../hooks/useDebounce';
 
@@ -22,11 +34,11 @@ export interface OmniboxSearchResult {
 }
 
 const QUICK_PROTOCOLS = {
-  'PALUDISME': [
+  PALUDISME: [
     { type: 'icd10', code: 'B50.9' },
     { type: 'medication', name: 'Artemether 20mg / Lumefantrine 120mg' },
     { type: 'medication', name: 'Paracétamol 1000mg' },
-  ]
+  ],
 };
 
 export function Omnibox() {
@@ -45,114 +57,154 @@ export function Omnibox() {
     const performSqlSearch = async () => {
       const searchTerm = debouncedQuery.trim().toLowerCase();
       if (!searchTerm || searchTerm.length < 2) {
-         if (isMounted) setSearchResults([]);
-         return;
+        if (isMounted) setSearchResults([]);
+        return;
       }
 
       try {
-         // 2. RECHERCHE ULTRA-RAPIDE VIA WATERMELONDB (Indexée)
-         // Remplace l'ancien `Fuse.js` qui chargeait 50k objets en RAM.
-         // L'exécution de `Q.like` est native (SQLite) et s'exécute en moins de 10ms.
-         const [medications, diagnostics] = await Promise.all([
-           database.get<CatalogMedication>('catalog_medications').query(
-             Q.where('name', Q.like(`%${searchTerm}%`)),
-             Q.take(5)
-           ).fetch(),
-           database.get<CatalogDiagnostic>('catalog_diagnostics').query(
-             Q.or(
+        // 2. RECHERCHE ULTRA-RAPIDE VIA WATERMELONDB (Indexée)
+        // Remplace l'ancien `Fuse.js` qui chargeait 50k objets en RAM.
+        // L'exécution de `Q.like` est native (SQLite) et s'exécute en moins de 10ms.
+        const [medications, diagnostics] = await Promise.all([
+          database
+            .get<CatalogMedication>('catalog_medications')
+            .query(Q.where('name', Q.like(`%${searchTerm}%`)), Q.take(5))
+            .fetch(),
+          database
+            .get<CatalogDiagnostic>('catalog_diagnostics')
+            .query(
+              Q.or(
                 Q.where('name', Q.like(`%${searchTerm}%`)),
-                Q.where('code', Q.like(`%${searchTerm}%`))
-             ),
-             Q.take(5)
-           ).fetch()
-         ]);
+                Q.where('code', Q.like(`%${searchTerm}%`)),
+              ),
+              Q.take(5),
+            )
+            .fetch(),
+        ]);
 
-         if (!isMounted) return;
+        if (!isMounted) return;
 
-         const results: OmniboxSearchResult[] = [
-           ...medications.map(m => ({
-             id: m.id, type: 'medication' as OmniboxItemType, name: m.name, dosage: m.defaultDosage || undefined, category: m.category
-           })),
-           ...diagnostics.map(d => ({
-             id: d.id, type: 'icd10' as OmniboxItemType, code: d.code, name: d.name
-           }))
-         ];
+        const results: OmniboxSearchResult[] = [
+          ...medications.map((m) => ({
+            id: m.id,
+            type: 'medication' as OmniboxItemType,
+            name: m.name,
+            dosage: m.defaultDosage || undefined,
+            category: m.category,
+          })),
+          ...diagnostics.map((d) => ({
+            id: d.id,
+            type: 'icd10' as OmniboxItemType,
+            code: d.code,
+            name: d.name,
+          })),
+        ];
 
-         setSearchResults(results);
+        setSearchResults(results);
       } catch (dbError: unknown) {
-         console.error("[Omnibox] Erreur de recherche WatermelonDB:", dbError);
-         if (isMounted) setSearchResults([]);
+        console.error('[Omnibox] Erreur de recherche WatermelonDB:', dbError);
+        if (isMounted) setSearchResults([]);
       }
     };
 
     performSqlSearch();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [debouncedQuery]);
 
   // 3. UX ZÉRO-CLICK : AUTO-COMPLÉTION INTELLIGENTE ET INTERACTIONS
-  const handleSelectItem = useCallback(async (item: OmniboxSearchResult) => {
-    setSelectedItems(prev => {
-      // Évite les doublons
-      if (prev.find(i => i.name === item.name)) return prev;
-      return [...prev, item];
-    });
+  const handleSelectItem = useCallback(
+    async (item: OmniboxSearchResult) => {
+      setSelectedItems((prev) => {
+        // Évite les doublons
+        if (prev.find((i) => i.name === item.name)) return prev;
+        return [...prev, item];
+      });
 
-    // Moteur d'Interaction Asynchrone (Non-Bloquant pour l'UI)
-    if (item.type === 'medication') {
-      const currentMeds = selectedItems.filter(i => i.type === 'medication').map(i => i.name);
-      const patientId = "dummy-patient-uuid";
+      // Moteur d'Interaction Asynchrone (Non-Bloquant pour l'UI)
+      if (item.type === 'medication') {
+        const currentMeds = selectedItems
+          .filter((i) => i.type === 'medication')
+          .map((i) => i.name);
+        const patientId = 'dummy-patient-uuid';
 
-      try {
-        const interactions = await DrugInteractionChecker.checkInteractionsOffline(item.name, currentMeds, patientId);
-        if (interactions.length > 0) {
-          const severityEmoji = interactions[0].severityLevel === 'ABSOLUTE_CONTRAINDICATION' ? '💀 CONTRE-INDICATION ABSOLUE' : '⚠️ AVERTISSEMENT MAJEUR';
-          showCustomAlert(`${severityEmoji} !\n\n${item.name} interagit avec : ${interactions.map(i => i.interactingDrugB).join(', ')}.\n\nDescription : ${interactions[0].medicalDescription}`);
+        try {
+          const interactions =
+            await DrugInteractionChecker.checkInteractionsLive(
+              item.name,
+              currentMeds,
+              patientId,
+              'dummy-practitioner-uuid',
+            );
+          if (interactions.length > 0) {
+            const severityEmoji =
+              interactions[0].severityLevel === 'CRITICAL'
+                ? '💀 CONTRE-INDICATION ABSOLUE'
+                : '⚠️ AVERTISSEMENT MAJEUR';
+            showCustomAlert(
+              `${severityEmoji} !\n\n${item.name} interagit avec : ${interactions.map((i) => i.interactingDrugB).join(', ')}.\n\nDescription : ${interactions[0].medicalDescription}`,
+            );
+          }
+        } catch (e) {
+          console.warn("[Omnibox] Impossible de vérifier l'interaction.");
         }
-      } catch (e) {
-        console.warn("[Omnibox] Impossible de vérifier l'interaction.");
       }
-    }
 
-    setQuery('');
-    setSearchResults([]);
-  }, [selectedItems]);
+      setQuery('');
+      setSearchResults([]);
+    },
+    [selectedItems],
+  );
 
   const handleQuickProtocol = useCallback(async (protocolName: string) => {
-    const protocolItems = QUICK_PROTOCOLS[protocolName as keyof typeof QUICK_PROTOCOLS];
+    const protocolItems =
+      QUICK_PROTOCOLS[protocolName as keyof typeof QUICK_PROTOCOLS];
     if (!protocolItems) return;
 
     // Protocole de soins instantané (Zero-Click)
     // Au lieu de taper, un clic ajoute tout le traitement. On interroge la BD asynchronement.
     try {
-       const [medsRef, diagRef] = await Promise.all([
-          database.get<CatalogMedication>('catalog_medications').query().fetch(),
-          database.get<CatalogDiagnostic>('catalog_diagnostics').query().fetch()
-       ]);
+      const [medsRef, diagRef] = await Promise.all([
+        database.get<CatalogMedication>('catalog_medications').query().fetch(),
+        database.get<CatalogDiagnostic>('catalog_diagnostics').query().fetch(),
+      ]);
 
-       const itemsToAdd: OmniboxSearchResult[] = [];
+      const itemsToAdd: OmniboxSearchResult[] = [];
 
-       for (const proto of protocolItems) {
-          if (proto.type === 'medication') {
-             const m = medsRef.find(db => db.name === proto.name);
-             if (m) itemsToAdd.push({ id: m.id, type: 'medication', name: m.name, dosage: m.defaultDosage || undefined });
-          } else if (proto.type === 'icd10') {
-             const d = diagRef.find(db => db.code === proto.code);
-             if (d) itemsToAdd.push({ id: d.id, type: 'icd10', code: d.code, name: d.name });
-          }
-       }
+      for (const proto of protocolItems) {
+        if (proto.type === 'medication') {
+          const m = medsRef.find((db) => db.name === proto.name);
+          if (m)
+            itemsToAdd.push({
+              id: m.id,
+              type: 'medication',
+              name: m.name,
+              dosage: m.defaultDosage || undefined,
+            });
+        } else if (proto.type === 'icd10') {
+          const d = diagRef.find((db) => db.code === proto.code);
+          if (d)
+            itemsToAdd.push({
+              id: d.id,
+              type: 'icd10',
+              code: d.code,
+              name: d.name,
+            });
+        }
+      }
 
-       setSelectedItems(prev => {
-          const newItems = [...prev];
-          itemsToAdd.forEach(item => {
-             if (!newItems.find(i => i.name === item.name)) newItems.push(item);
-          });
-          return newItems;
-       });
+      setSelectedItems((prev) => {
+        const newItems = [...prev];
+        itemsToAdd.forEach((item) => {
+          if (!newItems.find((i) => i.name === item.name)) newItems.push(item);
+        });
+        return newItems;
+      });
 
-       showCustomAlert(`Protocole ${protocolName} appliqué avec succès.`);
-
+      showCustomAlert(`Protocole ${protocolName} appliqué avec succès.`);
     } catch (e) {
-       console.error("[Omnibox] Échec de l'application du protocole.", e);
+      console.error("[Omnibox] Échec de l'application du protocole.", e);
     }
   }, []);
 
@@ -161,11 +213,21 @@ export function Omnibox() {
     setModalVisible(true);
   };
 
-  const memoizedCart = useMemo(() => selectedItems.map((item, index) => (
-    <View key={item.id + index} style={styles.cartItem}>
-        <Text>{item.type === 'icd10' ? `📋 Diagnostic : [${item.code}] ${item.name}` : item.type === 'lab' ? `🔬 Examen : ${item.name}` : `💊 Médicament : ${item.name}`}</Text>
-    </View>
-  )), [selectedItems]);
+  const memoizedCart = useMemo(
+    () =>
+      selectedItems.map((item, index) => (
+        <View key={item.id + index} style={styles.cartItem}>
+          <Text>
+            {item.type === 'icd10'
+              ? `📋 Diagnostic : [${item.code}] ${item.name}`
+              : item.type === 'lab'
+                ? `🔬 Examen : ${item.name}`
+                : `💊 Médicament : ${item.name}`}
+          </Text>
+        </View>
+      )),
+    [selectedItems],
+  );
 
   return (
     <View style={styles.container}>
@@ -173,7 +235,10 @@ export function Omnibox() {
 
       {/* Raccourcis Rapides */}
       <View style={styles.protocolsContainer}>
-        <TouchableOpacity style={styles.protocolButton} onPress={() => handleQuickProtocol('PALUDISME')}>
+        <TouchableOpacity
+          style={styles.protocolButton}
+          onPress={() => handleQuickProtocol('PALUDISME')}
+        >
           <Text style={styles.protocolText}>⚡ Protocole Paludisme</Text>
         </TouchableOpacity>
       </View>
@@ -191,16 +256,25 @@ export function Omnibox() {
       {searchResults.length > 0 && (
         <FlatList
           data={searchResults}
-          keyExtractor={item => item.id}
+          keyExtractor={(item) => item.id}
           style={styles.resultsList}
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.resultItem} onPress={() => handleSelectItem(item)}>
+            <TouchableOpacity
+              style={styles.resultItem}
+              onPress={() => handleSelectItem(item)}
+            >
               <Text style={styles.resultItemText}>
-                {item.type === 'icd10' ? `[${item.code}] ` : item.type === 'lab' ? '🔬 ' : '💊 '}
+                {item.type === 'icd10'
+                  ? `[${item.code}] `
+                  : item.type === 'lab'
+                    ? '🔬 '
+                    : '💊 '}
                 {item.name}
               </Text>
-              {item.dosage && <Text style={styles.resultItemSubText}>{item.dosage}</Text>}
+              {item.dosage && (
+                <Text style={styles.resultItemSubText}>{item.dosage}</Text>
+              )}
             </TouchableOpacity>
           )}
         />
@@ -213,12 +287,12 @@ export function Omnibox() {
       </View>
 
       <Modal visible={modalVisible} transparent={true} animationType="fade">
-         <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-               <Text style={styles.modalText}>{alertMessage}</Text>
-               <Button title="OK" onPress={() => setModalVisible(false)} />
-            </View>
-         </View>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>{alertMessage}</Text>
+            <Button title="OK" onPress={() => setModalVisible(false)} />
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -227,7 +301,15 @@ export function Omnibox() {
 const styles = StyleSheet.create({
   container: { padding: 16, flex: 1 },
   title: { fontSize: 20, fontWeight: 'bold', marginBottom: 10 },
-  input: { height: 50, borderColor: '#ccc', borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, fontSize: 16, marginBottom: 10 },
+  input: {
+    height: 50,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginBottom: 10,
+  },
   protocolsContainer: { flexDirection: 'row', marginBottom: 15 },
   protocolButton: { backgroundColor: '#007AFF', padding: 10, borderRadius: 20 },
   protocolText: { color: 'white', fontWeight: 'bold' },
@@ -235,10 +317,26 @@ const styles = StyleSheet.create({
   resultItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
   resultItemText: { fontSize: 16 },
   resultItemSubText: { fontSize: 12, color: '#666' },
-  cartContainer: { marginTop: 20, padding: 15, backgroundColor: '#eef', borderRadius: 8 },
+  cartContainer: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#eef',
+    borderRadius: 8,
+  },
   cartTitle: { fontWeight: 'bold', marginBottom: 10 },
   cartItem: { paddingVertical: 5 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: 'white', padding: 20, borderRadius: 10, minWidth: 300, alignItems: 'center' },
-  modalText: { fontSize: 16, marginBottom: 20 }
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    minWidth: 300,
+    alignItems: 'center',
+  },
+  modalText: { fontSize: 16, marginBottom: 20 },
 });

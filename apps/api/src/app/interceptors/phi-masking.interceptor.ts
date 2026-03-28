@@ -73,12 +73,12 @@ export class PhiMaskingInterceptor implements NestInterceptor {
       }
 
       const maskedObj: Record<string, unknown> = {};
-
+      
       const isPat = this.isPatient(plainObj);
       const isClin = this.isClinicalRecord(plainObj);
 
       for (const [key, value] of Object.entries(plainObj)) {
-        // Mask phone number if it's a Patient (or just any phone number to be safe, but we restrict it to Patient here if needed,
+        // Mask phone number if it's a Patient (or just any phone number to be safe, but we restrict it to Patient here if needed, 
         // actually phone might be on Patient or just returned. Let's mask phone if isPat is true)
         if (isPat && (key === 'phone' || key === 'phoneNumber')) {
           maskedObj[key] = this.maskPhoneNumber(value);
@@ -90,7 +90,7 @@ export class PhiMaskingInterceptor implements NestInterceptor {
           maskedObj[key] = this.maskData(value);
         }
       }
-
+      
       // Re-apply the original prototype (useful for Prisma or other custom classes) if it's not a plain object
       if (!('toJSON' in data && typeof data.toJSON === 'function')) {
         Object.setPrototypeOf(maskedObj, Object.getPrototypeOf(data));

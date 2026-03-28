@@ -1,22 +1,13 @@
-<<<<<<< HEAD
-import { Controller, Get, Param, UseGuards, Res, HttpStatus } from '@nestjs/common';
-=======
 import { Controller, Get, Post, Param, Query, Body, UseGuards, UseFilters, Res, HttpStatus } from '@nestjs/common';
->>>>>>> origin/main
 import { FhirService } from './fhir.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditLog } from '../audit/audit.decorator';
-import { FastifyReply } from 'fastify';
-<<<<<<< HEAD
-
-@Controller('fhir')
-=======
+import type { FastifyReply } from 'fastify';
 import { FhirValidationFilter } from './fhir-validation.filter';
 import { SmartOnFhirGuard, FhirScopes } from './smart-on-fhir.guard';
 
 @Controller('fhir')
 @UseFilters(FhirValidationFilter)
->>>>>>> origin/main
 export class FhirController {
   constructor(private readonly fhirService: FhirService) {}
 
@@ -24,23 +15,14 @@ export class FhirController {
    * Export complet (RGPD / DPDPA Portability)
    */
   @Get('patient/:id/export')
-<<<<<<< HEAD
-  @UseGuards(AuthGuard('jwt'))
-=======
   @UseGuards(AuthGuard('jwt'), SmartOnFhirGuard)
   @FhirScopes('patient/Patient.read', 'patient/Observation.read')
->>>>>>> origin/main
   @AuditLog('FHIR_EXPORT_FULL_RECORD')
   async exportRecord(@Param('id') id: string) {
     return this.fhirService.exportPatientToFhir(id);
   }
 
   /**
-<<<<<<< HEAD
-   * Portail Partenaire (Pharmacies locales scannant un QR Code)
-   * Ce point de terminaison devrait idéalement être protégé par une API Key partenaire (`@UseGuards(PartnerKeyGuard)`)
-   * ou un token d'usage unique encodé dans le QR.
-=======
    * GET /fhir/Patient/:id
    */
   @Get('Patient/:id')
@@ -88,7 +70,6 @@ export class FhirController {
 
   /**
    * Portail Partenaire (Pharmacies locales)
->>>>>>> origin/main
    */
   @Get('pharmacy/:patientId/prescriptions')
   @AuditLog('FHIR_PHARMACY_ACCESS_PRESCRIPTIONS')

@@ -28,7 +28,7 @@ describe('PhiMaskingInterceptor', () => {
   it('should mask phone number for Patient and clinical details for ClinicalRecord for RECEPTIONIST', (done) => {
     const context = mockExecutionContext('RECEPTIONIST');
     const appointmentTime = new Date();
-
+    
     // Create a mock Patient object (needs firstName, lastName, dateOfBirth)
     const mockPatient = {
       id: 'patient-1',
@@ -61,10 +61,10 @@ describe('PhiMaskingInterceptor', () => {
       expect(patient['phone']).toBe('+91 9876***');
       expect((patient['phone'] as string).endsWith('***')).toBeTruthy();
       expect((patient['phone'] as string)).not.toContain('543210');
-
+      
       // Patient appointment time and name should be preserved
       expect(patient['appointmentTime']).toBe(appointmentTime);
-      expect(patient['firstName']).toBe('John');
+      expect(patient['firstName']).toBe('John'); 
 
       // ClinicalRecord details should be masked
       expect(record['data']).toBe('*** MASKED ***');
@@ -78,7 +78,7 @@ describe('PhiMaskingInterceptor', () => {
   it('should NOT mask data for DOCTOR', (done) => {
     const context = mockExecutionContext('DOCTOR');
     const appointmentTime = new Date();
-
+    
     const mockPatient = {
       id: 'patient-1',
       firstName: 'John',
@@ -118,7 +118,7 @@ describe('PhiMaskingInterceptor', () => {
 
   it('should correctly handle normal objects and not mask them (e.g. general payload)', (done) => {
     const context = mockExecutionContext('RECEPTIONIST');
-
+    
     // An object that is neither Patient nor ClinicalRecord
     const mockData = {
       someOtherEntityId: 1,
@@ -134,7 +134,7 @@ describe('PhiMaskingInterceptor', () => {
       const res = result as Record<string, unknown>;
       // Phone should NOT be masked, because it's not a Patient
       expect(res['phone']).toBe('1234567890');
-
+      
       // Data should NOT be masked, because it's not a ClinicalRecord
       expect(res['data']).toEqual({ secretData: true });
       done();

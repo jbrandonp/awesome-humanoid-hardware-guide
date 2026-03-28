@@ -1,4 +1,4 @@
-import { appSchema, tableSchema } from '@nozbe/watermelondb'
+import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export default appSchema({
   version: 1,
@@ -11,7 +11,7 @@ export default appSchema({
         { name: 'date_of_birth', type: 'number' },
         { name: '_status', type: 'string' }, // synced, created, updated, deleted
         { name: 'deleted_at', type: 'number', isOptional: true },
-      ]
+      ],
     }),
     tableSchema({
       name: 'visits',
@@ -21,7 +21,7 @@ export default appSchema({
         { name: 'notes', type: 'string' }, // Base64 encoded Yjs update
         { name: '_status', type: 'string' },
         { name: 'deleted_at', type: 'number', isOptional: true },
-      ]
+      ],
     }),
     tableSchema({
       name: 'vitals',
@@ -33,7 +33,7 @@ export default appSchema({
         { name: 'recorded_at', type: 'number' },
         { name: '_status', type: 'string' },
         { name: 'deleted_at', type: 'number', isOptional: true },
-      ]
+      ],
     }),
     tableSchema({
       name: 'prescriptions',
@@ -46,22 +46,22 @@ export default appSchema({
         { name: 'prescribed_at', type: 'number' },
         { name: '_status', type: 'string' },
         { name: 'deleted_at', type: 'number', isOptional: true },
-      ]
+      ],
     }),
     tableSchema({
       name: 'catalog_medications', // Base de référence (ex: Vidal, RxNorm) poussée par le serveur (Read-Only)
       columns: [
         { name: 'name', type: 'string', isIndexed: true }, // Index critique pour la recherche Omnibox
         { name: 'default_dosage', type: 'string', isOptional: true },
-        { name: 'category', type: 'string' }
-      ]
+        { name: 'category', type: 'string' },
+      ],
     }),
     tableSchema({
       name: 'catalog_diagnostics', // Base de référence (ex: ICD-10)
       columns: [
         { name: 'code', type: 'string', isIndexed: true }, // Index critique
-        { name: 'name', type: 'string', isIndexed: true }
-      ]
+        { name: 'name', type: 'string', isIndexed: true },
+      ],
     }),
-  ]
-})
+  ],
+});

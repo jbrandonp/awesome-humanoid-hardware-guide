@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
@@ -9,12 +7,12 @@ services:
       POSTGRES_PASSWORD: medical_password
       POSTGRES_DB: medical_db
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U medical_user -d medical_db"]
+      test: ['CMD-SHELL', 'pg_isready -U medical_user -d medical_db']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,7 +24,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: mongo_admin
       MONGO_INITDB_ROOT_PASSWORD: mongo_password
     ports:
-      - "27017:27017"
+      - '27017:27017'
     volumes:
       - mongodb_data:/data/db
     restart: always
@@ -38,8 +36,8 @@ services:
       MINIO_ROOT_USER: minio_admin
       MINIO_ROOT_PASSWORD: minio_password
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     volumes:
       - minio_data:/data
     command: server /data --console-address ":9001"
@@ -49,7 +47,7 @@ services:
     image: redis:7-alpine
     container_name: systeme-sante-redis
     ports:
-      - "6379:6379"
+      - '6379:6379'
     restart: always
 
   # --- PRODUCTION DEPLOYMENT ---
@@ -58,10 +56,14 @@ services:
       context: .
       dockerfile: Dockerfile.api
     container_name: systeme-sante-api
+    ports:
+      - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      redis:
         condition: service_started
     environment:
       DATABASE_URL: postgresql://medical_user:medical_password@postgres:5432/medical_db?schema=public
@@ -76,7 +78,7 @@ services:
     image: nginx:alpine
     container_name: systeme-sante-proxy
     ports:
-      - "80:80"
+      - '80:80'
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:

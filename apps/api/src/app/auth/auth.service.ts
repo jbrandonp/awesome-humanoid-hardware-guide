@@ -73,6 +73,54 @@ export class AuthService {
     }
   }
 
+  async requestOtp(phone: string) {
+    const patient = await this.prisma.patient.findUnique({
+      where: { phone },
+    });
+
+    if (!patient) {
+      throw new UnauthorizedException('Patient non trouvé avec ce numéro.');
+    }
+
+    // Generate a 6-digit OTP (Cryptographically Secure)
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+
+    await this.prisma.patient.update({
+      where: { phone },
+      data: { otp, otpExpiresAt },
+    });
+
+    // In a real scenario, integrate with SMS/WhatsApp provider here
+    console.log(`[OTP] Generated OTP ${otp} for phone ${phone}`);
+
+    return { message: 'OTP envoyé avec succès.' };
+  }
+
+  async verifyOtp(phone: string, otp: string) {
+    const patient = await this.prisma.patient.findUnique({
+      where: { phone },
+    });
+
+    if (!patient || !patient.otp || !patient.otpExpiresAt) {
+      throw new UnauthorizedException('OTP invalide ou expiré.');
+    }
+
+    if (patient.otp !== otp || patient.otpExpiresAt < new Date()) {
+      throw new UnauthorizedException('OTP invalide ou expiré.');
+    }
+
+    // Clear OTP after successful validation
+    await this.prisma.patient.update({
+      where: { phone },
+      data: { otp: null, otpExpiresAt: null },
+    });
+
+    // PWA users authenticate as a PATIENT role (or similar)
+    // Here we'll just return a standard login payload using their ID
+    return this.login(patient.id, 'PATIENT');
+  }
+
   // --- Utility Methods for Encryption ---
 
   private encryptToken(token: string): string {

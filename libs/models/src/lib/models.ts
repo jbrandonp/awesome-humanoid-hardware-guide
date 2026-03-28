@@ -21,3 +21,18 @@ export const VisitSchema = z.object({
 });
 
 export type Visit = z.infer<typeof VisitSchema>;
+
+export const DualSignOffSchema = z.object({
+  primaryUserId: z.string().uuid(),
+  secondaryPin: z.string().min(4).max(8).optional(),
+  secondaryBadgeId: z.string().min(1).optional(),
+  patientId: z.string().uuid(),
+  medicationName: z.string().min(1),
+  dosage: z.string().min(1),
+  timestamp: z.string().datetime(),
+  offlineHash: z.string().optional(),
+}).refine(data => data.secondaryPin || data.secondaryBadgeId, {
+  message: "Either PIN or Badge ID must be provided for secondary sign-off",
+});
+
+export type DualSignOff = z.infer<typeof DualSignOffSchema>;

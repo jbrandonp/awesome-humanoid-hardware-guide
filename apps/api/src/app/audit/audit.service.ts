@@ -11,39 +11,42 @@ export class AuditService {
    * - Hides the first 5 digits of phone numbers.
    * - Truncates emails (e.g., john.doe@example.com -> j***@example.com).
    */
-  obfuscatePhiData(data: Record<string, any> | any[]): Record<string, any> | any[] {
+  /**
+   * Obfuscates PHI data for HIPAA Safe Harbor compliance.
+   */
+  obfuscatePhiData(data: Record<string, any> | any[], depth = 0, seen = new WeakSet()): Record<string, any> | any[] {
+    if (depth > 10) return Array.isArray(data) ? [] : {}; // Prevent stack overflow
+    if (typeof data === 'object' && data !== null) {
+      if (seen.has(data)) return Array.isArray(data) ? [] : {}; // Prevent circular references
+      seen.add(data);
+    }
+
     const obfuscated = Array.isArray(data) ? [...data] : { ...data };
 
-    // Obfuscate phone numbers (assume fields named 'phone' or 'phoneNumber')
     for (const key of Object.keys(obfuscated)) {
-      if (typeof obfuscated[key as keyof typeof obfuscated] === 'string') {
-        // Only obfuscate if the key implies it's a phone or email, unless it's in an array (then we just check if it resembles one, or apply general masking if needed)
-        // Since we don't have key context in arrays, we'll check the parent key context or apply conservatively.
-        if (key.toLowerCase().includes('phone')) {
-          const phone = obfuscated[key as keyof typeof obfuscated] as string;
-          // Hide first 5 digits replacing them with '*'
-          const digitsMatch = phone.match(/\d/g);
-          if (digitsMatch && digitsMatch.length >= 5) {
-            let replacedCount = 0;
-            (obfuscated as any)[key] = phone.replace(/\d/g, (match) => {
-              if (replacedCount < 5) {
-                replacedCount++;
-                return '*';
-              }
-              return match;
-            });
-          }
-        } else if (key.toLowerCase().includes('email')) {
-          const email = obfuscated[key as keyof typeof obfuscated] as string;
-          const parts = email.split('@');
-          if (parts.length === 2) {
-            const [username, domain] = parts;
-            const obfuscatedUsername = username.length > 1 ? username.charAt(0) + '***' : '*';
-            (obfuscated as any)[key] = `${obfuscatedUsername}@${domain}`;
-          }
+      const val = (obfuscated as any)[key];
+      const lowerKey = key.toLowerCase();
+
+      if (typeof val === 'string') {
+        if (lowerKey.includes('phone')) {
+          (obfuscated as any)[key] = val.replace(/\d/g, (match, offset) => (offset < 5 ? '*' : match));
+        } else if (lowerKey.includes('email')) {
+          const [user, domain] = val.split('@');
+          (obfuscated as any)[key] = domain ? `${user.charAt(0)}***@${domain}` : '***';
+        } else if (
+          lowerKey.includes('name') || 
+          lowerKey.includes('firstname') || 
+          lowerKey.includes('lastname') ||
+          lowerKey.includes('address') ||
+          lowerKey.includes('aadhar') ||
+          lowerKey.includes('nationalid')
+        ) {
+          (obfuscated as any)[key] = val.length > 2 ? `${val.charAt(0)}***${val.charAt(val.length - 1)}` : '***';
+        } else if (lowerKey.includes('date') || lowerKey.includes('dob') || lowerKey.includes('birth')) {
+          (obfuscated as any)[key] = '****-**-**';
         }
-      } else if (typeof obfuscated[key as keyof typeof obfuscated] === 'object' && obfuscated[key as keyof typeof obfuscated] !== null) {
-        (obfuscated as any)[key] = this.obfuscatePhiData(obfuscated[key as keyof typeof obfuscated]);
+      } else if (typeof val === 'object' && val !== null) {
+        (obfuscated as any)[key] = this.obfuscatePhiData(val, depth + 1, seen);
       }
     }
 

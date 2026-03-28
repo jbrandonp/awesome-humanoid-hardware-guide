@@ -7,6 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================================================
+// ENUMS
+// ============================================================================
+
 enum Role {
   ADMIN
   DOCTOR
@@ -14,44 +18,80 @@ enum Role {
   PHARMACIST
   LAB_TECH
   RECEPTIONIST
+  MINISTRY_LIAISON
+  DISPLAY_KIOSK
 }
 
 enum ActionType {
-<<<<<<< HEAD
-  EXPORT_REPORT
-=======
->>>>>>> origin/main
   READ
   CREATE
   UPDATE
   DELETE
+  EXPORT_REPORT
 }
+
+enum MedicationAdministrationStatus {
+  ADMINISTERED
+  REFUSED
+  OMITTED
+  PARTIAL
+}
+
+enum BedStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+  OUT_OF_SERVICE
+}
+
+enum BedType {
+  STANDARD
+  GENERAL
+  PEDIATRIC
+  ICU
+  MATERNITY
+}
+
+// ============================================================================
+// MODELS — Core Identity
+// ============================================================================
 
 model User {
   id          String   @id @default(uuid())
   email       String   @unique
   password    String
   role        Role     @default(DOCTOR)
-  totpSecret  String?  @map("totp_secret") // Base32 encoded secret for offline MFA
+  totpSecret  String?  @map("totp_secret")
   mfaEnabled  Boolean  @default(false) @map("mfa_enabled")
-  backupCodes String[] @map("backup_codes") // Array of hashed backup codes
+  backupCodes String[] @map("backup_codes")
+  // Dual Sign-Off fields (High Alert Medication)
+  pin         String?  // Hashed PIN for secondary sign-off
+  badgeId     String?  @unique @map("badge_id") // Physical badge identifier
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  auditLogs    AuditLog[]
-  dpdpaConsent DpdpaConsent[]
+  auditLogs                 AuditLog[]
+  dpdpaConsent              DpdpaConsent[]
+  medicationAdministrations MedicationAdministration[]
 }
 
 model Patient {
-  id          String    @id @default(uuid())
-  firstName   String
-  lastName    String
-  dateOfBirth DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(uuid())
+  firstName     String
+  lastName      String
+  dateOfBirth   DateTime
+  // OTP-based authentication fields (Auth Service)
+  phone         String?   @unique
+  otp           String?
+  otpExpiresAt  DateTime? @map("otp_expires_at")
+  // Epidemiology/HIPAA fields
+  zipCode       String?   @map("zip_code")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   // Sync Status Fields
-  status      String    @default("created") @map("_status") // synced, created, updated, deleted
-  deletedAt   DateTime? @map("deleted_at")
+  status        String    @default("created") @map("_status")
+  deletedAt     DateTime? @map("deleted_at")
 
   auditLogs     AuditLog[]
   dpdpaConsent  DpdpaConsent[]
@@ -62,11 +102,15 @@ model Patient {
   notifications NotificationStatus[]
 }
 
+// ============================================================================
+// MODELS — Clinical Data
+// ============================================================================
+
 model Visit {
   id        String    @id @default(uuid())
   patientId String    @map("patient_id")
   date      DateTime
-  notes     Bytes? // Will store Yjs Binary Updates (Uint8Array)
+  notes     Bytes? // Yjs Binary Updates (Uint8Array)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   // Sync Status Fields
@@ -75,6 +119,7 @@ model Visit {
 
   patient       Patient        @relation(fields: [patientId], references: [id])
   prescriptions Prescription[]
+  diagnoses     Diagnosis[]
 }
 
 model Vital {
@@ -83,6 +128,7 @@ model Vital {
   bloodPressure String?   @map("blood_pressure")
   heartRate     Int?      @map("heart_rate")
   temperature   Float?
+  glucose       Float?
   recordedAt    DateTime  @map("recorded_at")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -107,22 +153,74 @@ model Prescription {
   status         String    @default("created") @map("_status")
   deletedAt      DateTime? @map("deleted_at")
 
-  visit   Visit   @relation(fields: [visitId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
+  visit           Visit                      @relation(fields: [visitId], references: [id])
+  patient         Patient                    @relation(fields: [patientId], references: [id])
+  administrations MedicationAdministration[]
+  crdtAdministrations Bytes?                 @map("crdt_administrations")
 }
 
-model AuditLog {
-  id              String     @id @default(uuid())
-  userId          String     @map("user_id")
-  actionType      ActionType @map("action_type")
-  resourceId      String     @map("resource_id")
-  phiDataAccessed Json       @map("phi_data_accessed")
-  ipAddress       String?    @map("ip_address")
-  timestamp       DateTime   @default(now())
+model MedicationAdministration {
+  id                    String                         @id @default(uuid())
+  prescriptionId        String                         @map("prescription_id")
+  nurseId               String                         @map("nurse_id")
+  status                MedicationAdministrationStatus
+  dosageGiven           String                         @map("dosage_given")
+  route                 String
+  administeredAt        DateTime                       @map("administered_at")
+  isPrn                 Boolean                        @default(false) @map("is_prn")
+  clinicalJustification String?                        @map("clinical_justification")
+  createdAt             DateTime                       @default(now())
+  updatedAt             DateTime                       @updatedAt
 
-  user      User    @relation(fields: [userId], references: [id])
-  patient   Patient @relation(fields: [patientId], references: [id])
-  patientId String  @map("patient_id")
+  prescription Prescription @relation(fields: [prescriptionId], references: [id])
+  nurse        User         @relation(fields: [nurseId], references: [id])
+
+  @@map("medication_administrations")
+}
+
+model Diagnosis {
+  id        String   @id @default(uuid())
+  visitId   String   @map("visit_id")
+  icd10Code String   @map("icd10_code")
+  createdAt DateTime @default(now())
+
+  visit Visit @relation(fields: [visitId], references: [id])
+
+  @@map("diagnoses")
+}
+
+model ClinicalIncident {
+  id          String   @id @default(uuid())
+  patientId   String   @map("patient_id")
+  type        String   // e.g., DOSAGE_ANOMALY, VITAL_OUT_OF_RANGE
+  severity    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
+  description String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@map("clinical_incidents")
+}
+
+// ============================================================================
+// MODELS — Security & Compliance
+// ============================================================================
+
+model AuditLog {
+  id              String      @id @default(uuid())
+  userId          String      @map("user_id")
+  patientId       String      @map("patient_id")
+  // Formal audit (used by AuditService via AuditRepository)
+  actionType      ActionType? @map("action_type")
+  resourceId      String?     @map("resource_id")
+  phiDataAccessed Json?       @map("phi_data_accessed")
+  // Flexible audit (used by interceptor and direct tx.auditLog.create calls)
+  action          String?     // Free-form action string (e.g., 'DPDPA_CONSENT_GRANTED')
+  metadata        Json?       // Flexible metadata for contextual info
+  ipAddress       String?     @map("ip_address")
+  timestamp       DateTime    @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 
   @@index([patientId, timestamp])
   @@index([userId, timestamp])
@@ -130,15 +228,14 @@ model AuditLog {
 }
 
 model DpdpaConsent {
-  id        String   @id @default(uuid())
-  patientId String   @map("patient_id")
-  userId    String   @map("user_id")
-  grantedAt DateTime @default(now())
-  expiresAt DateTime
-  purpose   String
-
-  consentHash String? @map("consent_hash") // SHA-256 hash of consent parameters
-  version     Int     @default(1)
+  id          String   @id @default(uuid())
+  patientId   String   @map("patient_id")
+  userId      String   @map("user_id")
+  grantedAt   DateTime @default(now())
+  expiresAt   DateTime
+  purpose     String
+  version     Int      @default(1)
+  consentHash String?  @map("consent_hash")
 
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
@@ -146,40 +243,143 @@ model DpdpaConsent {
   @@map("dpdpa_consents")
 }
 
+// ============================================================================
+// MODELS — Billing & Inventory
+// ============================================================================
+
 model Invoice {
   id             String   @id @default(uuid())
-  idempotencyKey String   @unique @map("idempotency_key") // Essentiel pour éviter la double facturation
+  idempotencyKey String   @unique @map("idempotency_key")
   patientId      String   @map("patient_id")
-  currency       String   @default("INR") // INR, EUR, XOF
-  subtotalCents  Int      @map("subtotal_cents") // Toujours en entiers
+  currency       String   @default("INR")
+  subtotalCents  Int      @map("subtotal_cents")
   taxCents       Int      @map("tax_cents")
   totalCents     Int      @map("total_cents")
-  status         String   @default("UNPAID") // UNPAID, PAID, CANCELLED
+  status         String   @default("UNPAID")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
   patient Patient @relation(fields: [patientId], references: [id])
+  financialTransactions FinancialTransaction[]
 
   @@map("invoices")
 }
 
 model InventoryItem {
-  id             String   @id @default(uuid())
-  name           String   @unique
-  quantity       Int      @default(0)
-  unitPriceCents Int      @map("unit_price_cents") // Prix de vente unitaire
-  updatedAt      DateTime @updatedAt
+  id               String    @id @default(uuid())
+  name             String    @unique
+  quantity         Int       @default(0)
+  unitPriceCents   Int       @map("unit_price_cents")
+  category         String    @default("GENERAL") // ANTI_MALARIAL, ANTIBIOTIC, ANALGESIC, ANTI_DENGUE, ANTI_PYRETIC, GENERAL
+  isActive         Boolean   @default(true) @map("is_active")
+  leadTimeDays     Int?      @map("lead_time_days")
+  moq              Int       @default(1) // Minimum Order Quantity
+  criticalThreshold Int      @default(10) @map("critical_threshold") // Used by inventory predictor
+  supplierId       String?   @map("supplier_id")
+  updatedAt        DateTime  @updatedAt
+
+  supplier             Supplier?             @relation(fields: [supplierId], references: [id])
+  transactions         InventoryTransaction[]
+  purchaseOrderItems   PurchaseOrderItem[]
 
   @@map("inventory_items")
 }
 
+model InventoryTransaction {
+  id             String   @id @default(uuid())
+  itemId         String   @map("item_id")
+  quantityChange Int      @map("quantity_change") // Negative for DISPENSE, Positive for RESTOCK
+  type           String   // DISPENSE, RESTOCK, ADJUSTMENT
+  timestamp      DateTime @default(now())
+
+  item InventoryItem @relation(fields: [itemId], references: [id])
+
+  @@map("inventory_transactions")
+}
+
+model Supplier {
+  id       String  @id @default(uuid())
+  name     String
+  isActive Boolean @default(true) @map("is_active")
+  contact  String?
+
+  items          InventoryItem[]
+  purchaseOrders PurchaseOrder[]
+
+  @@map("suppliers")
+}
+
+model PurchaseOrder {
+  id         String   @id @default(uuid())
+  supplierId String   @map("supplier_id")
+  status     String   @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, SENT, RECEIVED
+  totalCents Int      @default(0) @map("total_cents")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  supplier Supplier            @relation(fields: [supplierId], references: [id])
+  items    PurchaseOrderItem[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String @id @default(uuid())
+  purchaseOrderId String @map("purchase_order_id")
+  inventoryItemId String @map("inventory_item_id")
+  quantity        Int
+  unitPriceCents  Int    @map("unit_price_cents")
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@map("purchase_order_items")
+}
+
+// ============================================================================
+// MODELS — ADT (Admission, Discharge, Transfer)
+// ============================================================================
+
+model Bed {
+  id               String    @id @default(uuid())
+  roomNumber       String    @map("room_number")
+  bedType          BedType   @default(GENERAL) @map("bed_type")
+  status           BedStatus @default(AVAILABLE)
+  currentPatientId String?   @map("current_patient_id")
+  features         String[]
+  version          Int       @default(1) // Optimistic locking
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  encounters BedEncounter[]
+
+  @@map("beds")
+}
+
+model BedEncounter {
+  id              String    @id @default(uuid())
+  patientId       String    @map("patient_id")
+  bedId           String    @map("bed_id")
+  admittedAt      DateTime  @map("admitted_at")
+  dischargedAt    DateTime? @map("discharged_at")
+  dischargeReason String?   @map("discharge_reason")
+
+  bed Bed @relation(fields: [bedId], references: [id])
+
+  @@map("bed_encounters")
+}
+
+// ============================================================================
+// MODELS — Communication & Notifications
+// ============================================================================
+
 model NotificationStatus {
   id             String   @id @default(uuid())
   patientId      String   @map("patient_id")
-  channel        String   @default("WHATSAPP") // WHATSAPP, SMS
-  status         String   @default("QUEUED") // QUEUED, SENT, DELIVERED, READ, FAILED
-  messagePayload String   @map("message_payload") // Contenu textuel ou template
-  externalId     String?  @map("external_id") // ID renvoyé par l'API Meta/Twilio
+  channel        String   @default("WHATSAPP")
+  status         String   @default("QUEUED")
+  messagePayload String   @map("message_payload")
+  externalId     String?  @map("external_id")
   failCount      Int      @default(0) @map("fail_count")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -189,15 +389,145 @@ model NotificationStatus {
   @@map("notification_statuses")
 }
 
-model SyncError {
-  id        String   @id @default(uuid())
-  deviceId  String   @map("device_id")
-  recordId  String   @map("record_id")
-  model     String
-  payload   Json
-  error     String
-  createdAt DateTime @default(now())
+// ============================================================================
+// MODELS — Epidemiology
+// ============================================================================
 
-  @@index([deviceId])
-  @@map("sync_errors")
+model ZipPopulation {
+  zipCode    String @id @map("zip_code")
+  population Int
+
+  @@map("zip_populations")
+}
+
+model EpiReportCache {
+  id        String   @id @default(uuid())
+  ageGroup  String   @map("age_group")
+  zipCode   String   @map("zip_code")
+  icd10Code String   @map("icd10_code")
+  count     Int      @default(0)
+  date      DateTime @db.Date
+
+  @@unique([ageGroup, zipCode, icd10Code, date])
+  @@map("epi_report_cache")
+}
+
+// ============================================================================
+// MODELS — PACS Imaging (DICOM)
+// ============================================================================
+
+enum DicomStudyStatus {
+  MATCHED
+  ORPHANED
+}
+
+model DicomStudy {
+  id               String           @id @default(uuid())
+  studyInstanceUID String           @unique @map("study_instance_uid")
+  dicomPatientId   String?          @map("dicom_patient_id")
+  patientId        String?          @map("patient_id")
+  status           DicomStudyStatus @default(ORPHANED)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  series DicomSeries[]
+
+  @@map("dicom_studies")
+}
+
+model DicomSeries {
+  id                String   @id @default(uuid())
+  seriesInstanceUID String   @unique @map("series_instance_uid")
+  studyId           String   @map("study_id")
+  createdAt         DateTime @default(now())
+
+  study     DicomStudy     @relation(fields: [studyId], references: [id])
+  instances DicomInstance[]
+
+  @@map("dicom_series")
+}
+
+model DicomInstance {
+  id              String   @id @default(uuid())
+  sopInstanceUID  String   @unique @map("sop_instance_uid")
+  seriesId        String   @map("series_id")
+  thumbnailUrl    String?  @map("thumbnail_url")
+  createdAt       DateTime @default(now())
+
+  series DicomSeries @relation(fields: [seriesId], references: [id])
+
+  @@map("dicom_instances")
+}
+
+// ============================================================================
+// NEW MODELS (Recovered from PR Merges)
+// ============================================================================
+
+enum RegisterStatus {
+  OPEN
+  PENDING_APPROVAL
+  CLOSED
+}
+
+enum TransactionType {
+  PAYMENT
+  REFUND
+  PAY_IN
+  PAY_OUT
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  UPI
+}
+
+model CashRegisterSession {
+  id                       String                 @id @default(uuid())
+  terminalId               String                 @map("terminal_id")
+  cashierId                String                 @map("cashier_id")
+  openingFloatCents        Int                    @map("opening_float_cents")
+  expectedCloseAmountCents Int?                   @map("expected_close_amount_cents")
+  actualCloseAmountCents   Int?                   @map("actual_close_amount_cents")
+  discrepancyCents         Int?                   @map("discrepancy_cents")
+  status                   RegisterStatus         @default(OPEN)
+  closedAt                 DateTime?              @map("closed_at")
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+
+  financialTransactions    FinancialTransaction[]
+
+  @@map("cash_register_sessions")
+}
+
+model FinancialTransaction {
+  id                    String              @id @default(uuid())
+  sessionId             String              @map("session_id")
+  invoiceId             String              @map("invoice_id")
+  type                  TransactionType     
+  amountCents           Int                 @map("amount_cents")
+  paymentMethod         PaymentMethod       @map("payment_method")
+  idempotencyKey        String              @unique @map("idempotency_key")
+  supervisorId          String?             @map("supervisor_id")
+  metadata              Json?               
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  cashRegisterSession   CashRegisterSession @relation(fields: [sessionId], references: [id])
+  invoice               Invoice             @relation(fields: [invoiceId], references: [id])
+
+  @@map("financial_transactions")
+}
+
+model Hl7DeadLetterQueue {
+  id              String   @id @default(uuid())
+  idempotencyKey  String   @unique @map("idempotency_key")
+  rawMessage      String   @map("raw_message")
+  status          String   @default("UNPROCESSED")
+  rejectionReason String?  @map("rejection_reason")
+  patientId       String?  @map("patient_id")
+  parsedData      Json?    @map("parsed_data")
+  createdAt       DateTime @default(now())
+
+  @@map("hl7_dead_letter_queue")
 }

@@ -7,11 +7,13 @@ Bienvenue sur le monorepo **Système de Santé Résilient**, une plateforme EMR/
 L'application est conçue pour être déployée localement sur le réseau LAN de la clinique (zéro dépendance au Cloud public).
 
 ### Prérequis
+
 - `Node.js` v18+
 - `Docker` et `Docker Compose`
 - `Rust` (Pour la compilation du client Desktop Tauri)
 
 ### 1. Installation
+
 ```bash
 # 1. Cloner le projet
 npm install
@@ -24,12 +26,14 @@ npm run db:push
 ```
 
 ### 2. Démarrage de l'Environnement de Développement
+
 ```bash
 # Démarre l'API, le backend, le client Web et l'expo bundler simultanément
 npm run start:all
 ```
 
 Pour compiler le client natif de bureau (Tauri / Windows) :
+
 ```bash
 cd apps/desktop/src-tauri
 cargo build --release
@@ -41,14 +45,15 @@ cargo build --release
 
 Le code est géré par **Nx**, et divisé en 4 espaces de travail :
 
-* **`apps/api` (NestJS + Fastify)** : Le cerveau du système. Il embarque la gestion des rôles (RBAC), le moteur d'intelligence artificielle locale (via *Whisper.cpp*), et l'exportation *HL7/FHIR R4*.
-* **`apps/desktop` (React + Tauri)** : Application de bureau native optimisée pour Windows 7. Elle incorpore le mode `FixedRuntime` de WebView2, un "Zéro-Menu" *ZenConsultationLayout* et un moteur d'impression thermique direct en Rust via la crate `serialport`.
-* **`apps/mobile` (React Native + Expo)** : Le terminal mobile pour les visites en brousse ou l'acquisition de signaux vitaux. Économe en batterie via le *PowerManagementService*.
-* **`libs/models` (Zod + Types)** : Le contrat de données partagé.
+- **`apps/api` (NestJS + Fastify)** : Le cerveau du système. Il embarque la gestion des rôles (RBAC), le moteur d'intelligence artificielle locale (via _Whisper.cpp_), et l'exportation _HL7/FHIR R4_.
+- **`apps/desktop` (React + Tauri)** : Application de bureau native optimisée pour Windows 7. Elle incorpore le mode `FixedRuntime` de WebView2, un "Zéro-Menu" _ZenConsultationLayout_ et un moteur d'impression thermique direct en Rust via la crate `serialport`.
+- **`apps/mobile` (React Native + Expo)** : Le terminal mobile pour les visites en brousse ou l'acquisition de signaux vitaux. Économe en batterie via le _PowerManagementService_.
+- **`libs/models` (Zod + Types)** : Le contrat de données partagé.
 
 ## 🛡️ Sécurité & Conformité DPDPA / HIPAA
 
 Ce projet s'engage à une politique de **Zéro Trust & Zéro Cloud Logs**.
+
 1. **Consent Manager** : Avant la consultation ou l'exportation vers un spécialiste, le consentement du patient est validé (`DpdpaConsent`). En cas de révocation, les données sont immédiatement purgées localement (Tombstone).
 2. **Audit Log Inaltérable** : Chaque action est stockée via l'`AuditInterceptor` dans PostgreSQL avec IP et estampille temporelle.
 3. **Anonymisation (Zero-PHI)** : Le partage vers un réseau de confrères génère un clone de `ClinicalRecord` sans PII (remplacé par un UUID généré aléatoirement).
@@ -61,4 +66,5 @@ Ce projet s'engage à une politique de **Zéro Trust & Zéro Cloud Logs**.
 - **Epi-Ticker & SSE** : Un bandeau visuel prévient les praticiens de tout pic d'épidémie local et de pénurie de médicaments en temps réel via un Server-Sent Event ultra léger.
 
 ---
-*Ce projet est sous licence MIT.*
+
+_Ce projet est sous licence MIT._

@@ -1,4 +1,4 @@
-import { Injectable, ForbiddenException, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
 import * as crypto from 'crypto';
@@ -143,31 +143,54 @@ export class DpdpaConsentService {
       const purgeStats = await this.prisma.$transaction(async (tx) => {
         let totalDeleted = 0;
 
-        // 1. Destruction des Prescriptions
+        // 1. Destruction des Administrations de Médicaments (via Prescription)
+        const deletedAdmins = await tx.medicationAdministration.deleteMany({
+           where: { prescription: { patientId } }
+        });
+        totalDeleted += deletedAdmins.count;
+
+        // 2. Destruction des Prescriptions
         const deletedPrescriptions = await tx.prescription.deleteMany({
            where: { patientId }
         });
         totalDeleted += deletedPrescriptions.count;
 
-        // 2. Destruction des Constantes Vitales (Vitals IoT)
+        // 3. Destruction des Diagnostics (via Visit)
+        const deletedDiagnoses = await tx.diagnosis.deleteMany({
+          where: { visit: { patientId } }
+        });
+        totalDeleted += deletedDiagnoses.count;
+
+        // 4. Destruction des Constantes Vitales (Vitals IoT)
         const deletedVitals = await tx.vital.deleteMany({
            where: { patientId }
         });
         totalDeleted += deletedVitals.count;
 
-        // 3. Destruction des Notes Cliniques (Yjs CRDT Visits)
+        // 5. Destruction des Notes Cliniques (Yjs CRDT Visits)
         const deletedVisits = await tx.visit.deleteMany({
            where: { patientId }
         });
         totalDeleted += deletedVisits.count;
 
-        // 4. Révocation du Droit d'Accès lui-même
+        // 6. Destruction de l'Imagerie Médicale (DICOM)
+        const deletedInstances = await tx.dicomInstance.deleteMany({
+          where: { series: { study: { patientId } } }
+        });
+        const deletedSeries = await tx.dicomSeries.deleteMany({
+          where: { study: { patientId } }
+        });
+        const deletedStudies = await tx.dicomStudy.deleteMany({
+          where: { patientId }
+        });
+        totalDeleted += (deletedInstances.count + deletedSeries.count + deletedStudies.count);
+
+        // 7. Révocation du Droit d'Accès lui-même
         await tx.dpdpaConsent.deleteMany({
           where: { userId, patientId }
         });
 
-        // 5. TRACE INALTÉRABLE : L'Audit Log est la SEULE donnée conservée
-        // par obligation légale de prouver que la destruction a bien eu lieu.
+        // 8. TRACE INALTÉRABLE : L'Audit Log est la SEULE donnée conservée
         await tx.auditLog.create({
           data: {
              userId: userId,
@@ -184,30 +207,30 @@ export class DpdpaConsentService {
 
         return totalDeleted;
       }, {
-        // En cas de gros dossier patient, la purge peut prendre quelques secondes
-        timeout: 15000
+        timeout: 30000 // 30s for large purges
       });
 
       // ============================================================================
       // PURGE DE LA BASE DOCUMENTAIRE (MongoDB - Spécialités Dynamiques)
       // Exécutée après la validation de la transaction Postgres
       // ============================================================================
+      let totalPurged = purgeStats;
       try {
          const mongoDeletedCount = await this.clinicalRecordService.hardDeletePatientRecords(patientId);
          this.logger.log(`[DPDPA PURGE] ${mongoDeletedCount} documents MongoDB détruits pour le patient ${patientId}.`);
-         purgeStats += mongoDeletedCount;
+         totalPurged += mongoDeletedCount;
       } catch (mongoError: unknown) {
          // Si Mongo crash, on a au moins détruit Postgres. On log l'échec partiel
          this.logger.error(`[DPDPA PURGE PARTIAL FAILURE] Les données Postgres sont détruites, mais MongoDB a échoué.`, mongoError);
          // Dans un système d'entreprise, on relancerait une file d'attente (Dead Letter Queue)
       }
 
-      this.logger.log(`[DPDPA PURGE SUCCESS] Dossier patient ${patientId} totalement effacé (Total: ${purgeStats} entrées) de l'appareil du médecin ${userId}.`);
+      this.logger.log(`[DPDPA PURGE SUCCESS] Dossier patient ${patientId} totalement effacé (Total: ${totalPurged} entrées) de l'appareil du médecin ${userId}.`);
 
       return {
          status: 'REVOKED_AND_PURGED',
          message: "Consentement révoqué. Les données du patient ont été physiquement et irréversiblement effacées du système (Hard Delete).",
-         recordsDeletedCount: purgeStats
+         recordsDeletedCount: totalPurged
       };
 
     } catch (transactionError: unknown) {

@@ -9,7 +9,7 @@ export class PeerConsultService {
 
   constructor(
     private prisma: PrismaService,
-    private clinicalRecordService: ClinicalRecordService
+    private clinicalRecordService: ClinicalRecordService,
   ) {}
 
   /**
@@ -45,29 +45,42 @@ export class PeerConsultService {
   /**
    * Broadcast/Envoi d'un cas clinique vers une spécialité ou un confrère
    */
-  async broadcastCase(doctorId: string, patientId: string, specialtyTarget: string, message: string, recordId: string) {
-    this.logger.log(`Médecin ${doctorId} demande un avis en ${specialtyTarget} pour le dossier ${recordId}`);
+  async broadcastCase(
+    doctorId: string,
+    patientId: string,
+    specialtyTarget: string,
+    message: string,
+    recordId: string,
+  ) {
+    this.logger.log(
+      `Médecin ${doctorId} demande un avis en ${specialtyTarget} pour le dossier ${recordId}`,
+    );
 
     // 1. Vérification du Consentement (Loi DPDPA 2023)
     const consent = await this.prisma.dpdpaConsent.findFirst({
-       where: {
-         patientId: patientId,
-         // On cherche un flag explicite ou le 'purpose' défini à NETWORK_CONSULT
-         purpose: 'NETWORK_CONSULT',
-         expiresAt: { gt: new Date() }
-       }
+      where: {
+        patientId: patientId,
+        // On cherche un flag explicite ou le 'purpose' défini à NETWORK_CONSULT
+        purpose: 'NETWORK_CONSULT',
+        expiresAt: { gt: new Date() },
+      },
     });
 
     if (!consent) {
-       throw new ForbiddenException("Le patient n'a pas donné son consentement explicite (NETWORK_CONSULT) pour la diffusion de ce dossier.");
+      throw new ForbiddenException(
+        "Le patient n'a pas donné son consentement explicite (NETWORK_CONSULT) pour la diffusion de ce dossier.",
+      );
     }
 
     // 2. Récupération du dossier clinique (MongoDB)
-    const rawRecords = await this.clinicalRecordService.getPatientRecords(patientId);
-    const targetRecord = rawRecords.find(r => r.id === recordId || r._id.toString() === recordId);
+    const rawRecords =
+      await this.clinicalRecordService.getPatientRecords(patientId);
+    const targetRecord = rawRecords.find(
+      (r) => r.id === recordId || r._id.toString() === recordId,
+    );
 
     if (!targetRecord) {
-       throw new ForbiddenException("Dossier clinique introuvable.");
+      throw new ForbiddenException('Dossier clinique introuvable.');
     }
 
     // 3. Anonymisation Radicale (Zero-PHI)
@@ -75,25 +88,28 @@ export class PeerConsultService {
 
     // 4. Traçabilité Inaltérable dans l'AuditLog
     await this.prisma.auditLog.create({
-       data: {
-         userId: doctorId,
-         patientId: patientId,
-         action: 'BROADCAST_CASE_NETWORK',
-         metadata: {
-           targetSpecialty: specialtyTarget,
-           anonymousUUID: anonymizedRecord.anonymousId,
-           question: message
-         }
-       }
+      data: {
+        userId: doctorId,
+        patientId: patientId,
+        action: 'BROADCAST_CASE_NETWORK',
+        metadata: {
+          targetSpecialty: specialtyTarget,
+          anonymousUUID: anonymizedRecord.anonymousId,
+          question: message,
+        },
+      },
     });
 
     // 5. (Simulé) Routage vers le réseau de spécialistes
-    this.logger.log(`[Réseau Spécialistes] Dossier anonymisé envoyé. UUID: ${anonymizedRecord.anonymousId}`);
+    this.logger.log(
+      `[Réseau Spécialistes] Dossier anonymisé envoyé. UUID: ${anonymizedRecord.anonymousId}`,
+    );
 
     return {
-       status: 'BROADCAST_SUCCESS',
-       anonymousId: anonymizedRecord.anonymousId,
-       message: 'Demande de second avis transmise au réseau des spécialistes avec succès.'
+      status: 'BROADCAST_SUCCESS',
+      anonymousId: anonymizedRecord.anonymousId,
+      message:
+        'Demande de second avis transmise au réseau des spécialistes avec succès.',
     };
   }
 }

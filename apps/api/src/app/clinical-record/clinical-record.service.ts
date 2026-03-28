@@ -9,7 +9,7 @@ export class ClinicalRecordService {
 
   constructor(
     @InjectModel(ClinicalRecord.name) private recordModel: Model<ClinicalRecordDocument>,
-  ) {}
+  ) { }
 
   async createSpecialtyRecord(patientId: string, specialty: string, formData: any) {
     this.logger.log(`Création d'un dossier ${specialty} dynamique pour le patient ${patientId}`);
@@ -60,22 +60,22 @@ export class ClinicalRecordService {
           dataObj[key] = `ANON-${Math.random().toString(36).substring(7)}`;
           hasModifications = true;
         } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('dob') || key.toLowerCase().includes('birth')) {
-          const dateVal = new Date(dataObj[key]);
+          const dateVal = new Date(dataObj[key] as string | number);
           if (!isNaN(dateVal.getTime())) {
-             dateVal.setDate(dateVal.getDate() + 10); // Shift date par ex de 10 jours
-             dataObj[key] = dateVal.toISOString();
-             hasModifications = true;
+            dateVal.setDate(dateVal.getDate() + 10); // Shift date par ex de 10 jours
+            dataObj[key] = dateVal.toISOString();
+            hasModifications = true;
           }
         }
       }
 
       if (hasModifications) {
-         record.data = dataObj;
-         record.markModified('data');
-         record.status = 'deleted';
-         record.deletedAt = new Date();
-         await record.save();
-         updatedCount++;
+        record.data = dataObj;
+        record.markModified('data');
+        record.status = 'deleted';
+        record.deletedAt = new Date();
+        await record.save();
+        updatedCount++;
       }
     }
 

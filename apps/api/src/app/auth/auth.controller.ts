@@ -25,6 +25,26 @@ export class AuthController {
     return this.authService.login(userId, role);
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('request-otp')
+  async requestOtp(@Body() body: { phone: string }) {
+    if (!body.phone) {
+      throw new Error('Phone number is required');
+    }
+    return this.authService.requestOtp(body.phone);
+  }
+
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Post('verify-otp')
+  async verifyOtp(@Body() body: { phone: string; otp: string }) {
+    if (!body.phone || !body.otp) {
+      throw new Error('Phone number and OTP are required');
+    }
+    return this.authService.verifyOtp(body.phone, body.otp);
+  }
+
   /**
    * Endpoint de logout pour invalider instantanément le Refresh Token via Redis.
    */

@@ -4,10 +4,10 @@ import { BleManager, Device, BleError, State, Characteristic } from 'react-nativ
 import { Buffer } from 'buffer';
 import { database } from '../database';
 
-// ======
+// ============================================================================
 // INTERFACES TYPÉES STRICTES (ZÉRO 'ANY' POLICY)
 // Les données doivent être blindées avant de transiter vers l'AuditLog DPDPA
-// ======
+// ============================================================================
 
 export type VitalType = 'BLOOD_PRESSURE' | 'HEART_RATE' | 'GLUCOSE';
 
@@ -53,9 +53,9 @@ const ALL_MEDICAL_SERVICES = [
   GATT_PROFILES.GLUCOSE.service
 ];
 
-// ======
+// ============================================================================
 // LOGIQUE DE PRODUCTION : GESTION DES ERREURS EXTRÊMES & CONNEXION
-// ======
+// ============================================================================
 
 export function useBleScanner(): BleScannerState & {
   startScan: () => Promise<void>;
@@ -74,7 +74,7 @@ export function useBleScanner(): BleScannerState & {
   useEffect(() => {
     managerRef.current = new BleManager();
 
-    const subscription = managerRef.current.onStateChange((state) => {
+    const subscription = managerRef.current.onStateChange((state: State) => {
       setBluetoothState(state);
       if (state === State.PoweredOff) {
          setSystemError("Le Bluetooth est désactivé. Veuillez l'activer pour l'acquisition médicale.");
@@ -217,15 +217,15 @@ export function useBleScanner(): BleScannerState & {
       let targetChar = '';
       let vitalType: VitalType = 'BLOOD_PRESSURE';
 
-      if (services.find(s => s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service))) {
+      if (services.find((s: any) => s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service))) {
          targetService = GATT_PROFILES.BLOOD_PRESSURE.service;
          targetChar = GATT_PROFILES.BLOOD_PRESSURE.characteristic;
          vitalType = 'BLOOD_PRESSURE';
-      } else if (services.find(s => s.uuid.includes(GATT_PROFILES.HEART_RATE.service))) {
+      } else if (services.find((s: any) => s.uuid.includes(GATT_PROFILES.HEART_RATE.service))) {
          targetService = GATT_PROFILES.HEART_RATE.service;
          targetChar = GATT_PROFILES.HEART_RATE.characteristic;
          vitalType = 'HEART_RATE';
-      } else if (services.find(s => s.uuid.includes(GATT_PROFILES.GLUCOSE.service))) {
+      } else if (services.find((s: any) => s.uuid.includes(GATT_PROFILES.GLUCOSE.service))) {
          targetService = GATT_PROFILES.GLUCOSE.service;
          targetChar = GATT_PROFILES.GLUCOSE.characteristic;
          vitalType = 'GLUCOSE';
@@ -281,9 +281,9 @@ export function useBleScanner(): BleScannerState & {
     }
   };
 
-  // ======
+  // ============================================================================
   // ROUTAGE ET DÉCODAGE HEXADÉCIMAL STRICT (SANS 'ANY')
-  // ======
+  // ============================================================================
   const decodeGattPayload = (base64Payload: string, hardwareId: string, type: VitalType): MedicalVitalMeasurement => {
      switch (type) {
        case 'BLOOD_PRESSURE': return decodeBloodPressure(base64Payload, hardwareId);
@@ -355,9 +355,9 @@ export function useBleScanner(): BleScannerState & {
     };
   };
 
-  // ======
+  // ============================================================================
   // ÉCRITURE HORS-LIGNE & RÉSILIENCE BASE DE DONNÉES (WATERMELON DB)
-  // ======
+  // ============================================================================
   const saveVitalDataOfflineSecurely = async (vitalData: MedicalVitalMeasurement): Promise<void> => {
     try {
       await database.write(async () => {

@@ -115,7 +115,7 @@ export type FhirBundle = z.infer<typeof FhirBundleSchema>;
 export class FhirMapper {
   // --- EGRESS (Internal -> FHIR) ---
 
-  toFhirPatient(patient: any): FhirPatient {
+  toFhirPatient(patient: { id: string; lastName: string; firstName: string; dateOfBirth: Date | string }): FhirPatient {
     return {
       resourceType: 'Patient',
       id: patient.id,
@@ -126,13 +126,13 @@ export class FhirMapper {
       }],
       birthDate: patient.dateOfBirth instanceof Date
         ? patient.dateOfBirth.toISOString().split('T')[0]
-        : patient.dateOfBirth.split('T')[0],
+        : (patient.dateOfBirth as string).split('T')[0],
       gender: 'unknown' as const
     };
   }
 
-  toFhirObservation(vital: any, type: 'temperature' | 'heartRate' | 'bloodPressure'): FhirObservation {
-    const base: any = {
+  toFhirObservation(vital: { id: string; patientId: string; recordedAt?: Date | null; temperature?: number | null; heartRate?: number | null; bloodPressure?: string | null; glucose?: number | null }, type: 'temperature' | 'heartRate' | 'bloodPressure' | 'glucose'): FhirObservation {
+    const base: Partial<FhirObservation> & { [key: string]: any } = {
       resourceType: 'Observation',
       status: 'final',
       subject: { reference: `Patient/${vital.patientId}` },
@@ -140,13 +140,13 @@ export class FhirMapper {
     };
 
     if (type === 'temperature') {
-      base.id = `${vital.id}-temp` || "temp-id";
+      base.id = `${vital.id}-temp`;
       base.code = { coding: [{ system: 'http://loinc.org', code: '8310-5', display: 'Body temperature' }] };
-      base.valueQuantity = { value: vital.temperature, unit: 'Cel', system: 'http://unitsofmeasure.org', code: 'Cel' };
+      base.valueQuantity = { value: vital.temperature ?? 0, unit: 'Cel', system: 'http://unitsofmeasure.org', code: 'Cel' };
     } else if (type === 'heartRate') {
       base.id = `${vital.id}-hr`;
       base.code = { coding: [{ system: 'http://loinc.org', code: '8867-4', display: 'Heart rate' }] };
-      base.valueQuantity = { value: vital.heartRate, unit: 'beats/minute', system: 'http://unitsofmeasure.org', code: '/min' };
+      base.valueQuantity = { value: vital.heartRate ?? 0, unit: 'beats/minute', system: 'http://unitsofmeasure.org', code: '/min' };
     } else if (type === 'bloodPressure') {
       base.id = `${vital.id}-bp`;
       base.code = { coding: [{ system: 'http://loinc.org', code: '85354-9', display: 'Blood pressure panel' }] };
@@ -165,14 +165,19 @@ export class FhirMapper {
           }
         ];
       } else {
-        base.valueString = vital.bloodPressure;
+        base.valueString = vital.bloodPressure ?? undefined;
       }
+    } else if (type === 'glucose') {
+      base.id = `${vital.id}-glucose`;
+      base.code = { coding: [{ system: 'http://loinc.org', code: '88365-2', display: 'Glucose [Mass/volume] in Blood' }] };
+      base.valueQuantity = { value: vital.glucose ?? 0, unit: 'mg/dL', system: 'http://unitsofmeasure.org', code: 'mg/dL' };
     }
 
     return base as FhirObservation;
   }
 
-  toFhirClinicalRecord(record: any): FhirObservation | null {
+  toFhirClinicalRecord(record: { _id?: { toString: () => string } | any; specialty: string; patientId: string; createdAt?: Date | null; data?: { headCircumference?: number | null; lesionType?: string | null; location?: string | null; diagnosisCode?: string | null; diagnosisDisplay?: string | null; notes?: string | null } }): FhirObservation | null {
+    const createdAtDate = record.createdAt ? new Date(record.createdAt) : new Date();
     // 1. Example 1: PEDIATRICS mapping to LOINC
     if (record.specialty === 'PEDIATRICS' && record.data?.headCircumference) {
       return {
@@ -180,11 +185,11 @@ export class FhirMapper {
         id: record._id ? record._id.toString() : 'temp-id',
         status: 'final',
         subject: { reference: `Patient/${record.patientId}` },
-        effectiveDateTime: record.createdAt ? record.createdAt.toISOString() : new Date().toISOString(),
+        effectiveDateTime: createdAtDate.toISOString(),
         code: {
           coding: [{ system: 'http://loinc.org', code: '9843-4', display: 'Head Occipital-frontal circumference' }]
         },
-        valueQuantity: { value: record.data.headCircumference, unit: 'cm', system: 'http://unitsofmeasure.org', code: 'cm' }
+        valueQuantity: { value: record.data.headCircumference ?? 0, unit: 'cm', system: 'http://unitsofmeasure.org', code: 'cm' }
       };
     }
 
@@ -195,7 +200,7 @@ export class FhirMapper {
         id: record._id ? record._id.toString() : 'temp-id',
         status: 'final',
         subject: { reference: `Patient/${record.patientId}` },
-        effectiveDateTime: record.createdAt ? record.createdAt.toISOString() : new Date().toISOString(),
+        effectiveDateTime: createdAtDate.toISOString(),
         code: {
           coding: [
             { system: 'http://snomed.info/sct', code: '400041002', display: 'Macule (finding)' },
@@ -213,7 +218,7 @@ export class FhirMapper {
          id: record._id ? record._id.toString() : 'temp-id',
          status: 'final',
          subject: { reference: `Patient/${record.patientId}` },
-         effectiveDateTime: record.createdAt ? record.createdAt.toISOString() : new Date().toISOString(),
+         effectiveDateTime: createdAtDate.toISOString(),
          code: {
            coding: [
              { system: 'http://hl7.org/fhir/sid/icd-10', code: record.data.diagnosisCode, display: record.data.diagnosisDisplay || 'Diagnosis' }
@@ -226,7 +231,7 @@ export class FhirMapper {
     return null;
   }
 
-  toFhirMedicationRequest(prescription: any): FhirMedicationRequest {
+  toFhirMedicationRequest(prescription: { id: string; status: string; medicationName: string; patientId: string; prescribedAt: Date | null; dosage: string; instructions?: string | null }): FhirMedicationRequest {
     return {
       resourceType: 'MedicationRequest',
       id: prescription.id,
@@ -242,7 +247,7 @@ export class FhirMapper {
     };
   }
 
-  toFhirEncounter(visit: any): FhirEncounter {
+  toFhirEncounter(visit: { id: string; patientId: string; date?: Date; createdAt: Date }): FhirEncounter {
     return {
       resourceType: 'Encounter',
       id: visit.id,
@@ -272,20 +277,20 @@ export class FhirMapper {
     };
   }
 
-  fromFhirObservation(fhirObservation: FhirObservation): any {
-    const patientIdParts = fhirObservation.subject.reference.split('/');
-    const patientId = patientIdParts[patientIdParts.length - 1];
+  fromFhirObservation(fhirObservation: FhirObservation): { patientId: string; temperature?: number; heartRate?: number; bloodPressure?: string; glucose?: number } {
+    const patientId = this.extractIdFromReference(fhirObservation.subject.reference);
 
-    // Simplistic mapping for vital signs
     const code = fhirObservation.code?.coding?.[0]?.code;
     const value = fhirObservation.valueQuantity?.value;
 
-    let updateData: any = { patientId };
+    const updateData: { patientId: string; temperature?: number; heartRate?: number; bloodPressure?: string; glucose?: number } = { patientId };
 
     if (code === '8310-5') {
       updateData.temperature = value;
     } else if (code === '8867-4') {
       updateData.heartRate = value;
+    } else if (code === '88365-2') {
+       updateData.glucose = value;
     } else if (code === '85354-9' && fhirObservation.component) {
       const sysComp = fhirObservation.component.find(c => c.code.coding[0].code === '8480-6');
       const diaComp = fhirObservation.component.find(c => c.code.coding[0].code === '8462-4');
@@ -295,5 +300,15 @@ export class FhirMapper {
     }
 
     return updateData;
+  }
+
+  /**
+   * Safely extracts a resource ID from a FHIR Reference string.
+   * Handles absolute URLs (e.g., http://server/fhir/Patient/123) and relative ones (e.g., Patient/123).
+   */
+  extractIdFromReference(reference: string): string {
+    if (!reference) return '';
+    const parts = reference.split('/');
+    return parts[parts.length - 1]; // Always the last segment in standard FHIR
   }
 }

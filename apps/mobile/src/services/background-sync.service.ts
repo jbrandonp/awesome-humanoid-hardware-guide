@@ -5,9 +5,9 @@ import axios from 'axios';
 // (Note: En environnement complet, on utiliserait le Sync de WatermelonDB ou une vraie DB SQLite,
 // mais AsyncStorage est adéquat pour une queue d'urgence/fallback simple structurée).
 
-// ======
+// ============================================================================
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Production-Ready Offline Sync)
-// ======
+// ============================================================================
 
 export type SyncPriorityLevel = 'CRITICAL' | 'HIGH' | 'LOW';
 
@@ -26,11 +26,11 @@ export const BACKGROUND_SYNC_TASK_NAME = 'MEDICAL_OFFLINE_SYNC_WORKER';
 // Clé de persistance pour ne jamais perdre une donnée même si l'app est tuée par l'OS
 const QUEUE_STORAGE_KEY = '@resilient_health_sync_queue';
 
-// ======
+// ============================================================================
 // GESTIONNAIRE DE TÂCHE NATIVE (TASK MANAGER)
 // Enregistré au niveau de l'OS. S'exécute même si l'application React Native
 // est "fermée" (Tuée par l'utilisateur ou par le gestionnaire de batterie).
-// ======
+// ============================================================================
 
 TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
   try {
@@ -88,7 +88,6 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
          });
 
          processedCount++;
-
        } catch (networkError: unknown) {
          // Le serveur NestJS est hors-ligne, ou le routeur Wi-Fi est hors de portée.
          // On incrémente le compteur de retry et on garde la tâche.
@@ -119,10 +118,10 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
 });
 
 
-// ======
+// ============================================================================
 // SERVICE UTILISATEUR (REACT NATIVE HOOKS / MODULE EXPORT)
 // Expose les fonctions pour s'enregistrer auprès de l'OS et ajouter des tâches.
-// ======
+// ============================================================================
 
 export class BackgroundSyncService {
 

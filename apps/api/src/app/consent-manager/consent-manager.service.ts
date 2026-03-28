@@ -18,7 +18,7 @@ export class ConsentManagerService {
 
   async enqueueRevocationJob(payload: RevokeConsentJobPayload): Promise<string> {
     this.logger.log(`Enqueuing revocation job for patient: ${payload.patientId}`);
-
+    
     const job = await this.consentQueue.add('revoke-consent-job', payload, {
       attempts: 3,
       backoff: {

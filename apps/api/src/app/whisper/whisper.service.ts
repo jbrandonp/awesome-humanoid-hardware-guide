@@ -106,6 +106,17 @@ export class WhisperService {
    * Récupère le statut d'une transcription en cours (Polling du frontend)
    */
   getTaskStatus(taskId: string): WhisperTask | undefined {
+    // SECURITY/RAM: Perform a quick cleanup of old tasks to prevent memory leak
+    const now = Date.now();
+    const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
+    const MAX_TASKS = 100;
+
+    // Prune old or excessive tasks
+    this.taskQueue = this.taskQueue.filter(t => 
+      (t.status === 'PENDING' || t.status === 'PROCESSING') || // Keep active tasks
+      (now - t.enqueuedAt.getTime() < MAX_AGE_MS) // Keep recent finished tasks
+    ).slice(-MAX_TASKS); // Keep only the last 100
+
     return this.taskQueue.find(t => t.id === taskId);
   }
 
@@ -262,7 +273,7 @@ export class WhisperService {
    */
   private applyBasicMedicalNer(rawText: string): { text: string, extractedData: SemanticExtractionResult } {
      let resultText = rawText;
-
+     
      // 1. Appel au nouveau moteur NLP basé sur Regex
      const extractedData = SemanticParser.extractPrescriptionData(rawText);
 

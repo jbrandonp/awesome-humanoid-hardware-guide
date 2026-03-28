@@ -2,18 +2,17 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "types": [
-      "node"
-    ],
-    "rootDir": "src",
+    "types": ["node"],
+    "rootDir": "../../",
     "jsx": "react-jsx",
     "noUnusedLocals": false,
     "tsBuildInfoFile": "dist/tsconfig.app.tsbuildinfo",
-    "strict": true
+    "strict": true,
+    "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "files": [
-    "../../node_modules/@nx/expo/typings/svg.d.ts"
-  ],
+  "files": ["../../node_modules/@nx/expo/typings/svg.d.ts"],
   "exclude": [
     "out-tsc",
     "dist",
@@ -33,6 +32,8 @@
     "**/*.js",
     "**/*.jsx",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "../../libs/models/src/**/*.ts",
+    "src/i18n/**/*.json"
   ]
 }
