@@ -16,7 +16,7 @@
     }
   },
   "dependencies": {
-    "@nozbe/watermelondb": "^0.25.5",
+    "@nozbe/watermelondb": "^0.28.0",
     "tslib": "^2.3.0"
   }
 }

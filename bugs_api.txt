@@ -1,1 +1,0 @@
-﻿apps/api/src/app/ocr/ocr.controller.ts(45,13): error TS6133: 'glucose' is declared but its value is never read.

@@ -1,13 +1,13 @@
 import { Database } from '@nozbe/watermelondb';
 import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs';
 
-import schema from '@systeme-sante/models/src/lib/schema';
+import { schema } from '@systeme-sante/models';
 import {
   Patient,
   Visit,
   Vital,
   Prescription,
-} from '@systeme-sante/models/src/lib/databaseModels';
+} from '@systeme-sante/models';
 
 const adapter = new LokiJSAdapter({
   schema,

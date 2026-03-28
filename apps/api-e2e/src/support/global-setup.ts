@@ -1,4 +1,4 @@
-import { waitForPortOpen } from '@nx/node/utils';
+const { waitForPortOpen } = require('@nx/node/utils');
 
 /* eslint-disable */
 var __TEARDOWN_MESSAGE__: string;

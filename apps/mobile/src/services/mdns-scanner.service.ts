@@ -45,7 +45,7 @@ export class MDNSScannerService {
       }, timeoutSecs * 1000);
 
       // Écoute de l'événement de résolution de service (IP + Port obtenus)
-      this.zeroconf.on('resolved', (service: { type: string; addresses: string[]; port: number }) => {
+      this.zeroconf.on('resolved', (service: any) => {
         if (isResolved) return;
 
         // On vérifie le type de service pour ignorer les imprimantes et les Apple TV

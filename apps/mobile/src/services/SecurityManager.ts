@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
+const documentDirectory = (FileSystem as any).documentDirectory;
 import JailMonkey from 'jail-monkey';
 import { Platform } from 'react-native';
 
@@ -35,8 +36,8 @@ export class SecurityManager {
     // 2. Destroy the local SQLite database file
     // Handle OS-specific WatermelonDB database paths
     const basePath = Platform.OS === 'android'
-      ? `${FileSystem.documentDirectory}../databases/`
-      : `${FileSystem.documentDirectory}../Library/Application Support/`;
+      ? `${documentDirectory}../databases/`
+      : `${documentDirectory}../Library/Application Support/`;
 
     const dbPath = `${basePath}${DB_NAME}`;
     const dbPathShm = `${basePath}${DB_NAME}-shm`;

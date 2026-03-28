@@ -1,5 +1,5 @@
 import { InsurancePolicy, LineItem, RuleExecutionTrace, ExplanationOfBenefits, EOBLineItem, LineItemSchema, InsurancePolicySchema } from './types';
-import Dinero from 'dinero.js';
+const Dinero = require('dinero.js');
 
 export class InsuranceEngine {
   public evaluate(items: LineItem[], policies: InsurancePolicy[]): ExplanationOfBenefits {

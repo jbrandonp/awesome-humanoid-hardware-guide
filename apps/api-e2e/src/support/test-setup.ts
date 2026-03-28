@@ -1,5 +1,5 @@
 /* eslint-disable */
-import axios from 'axios';
+const axios = require('axios');
 
 module.exports = async function () {
   // Configure axios for tests to use.

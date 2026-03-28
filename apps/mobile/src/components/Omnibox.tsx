@@ -14,7 +14,7 @@ import { Q } from '@nozbe/watermelondb';
 import {
   CatalogMedication,
   CatalogDiagnostic,
-} from '@systeme-sante/models/src/lib/databaseModels';
+} from '@systeme-sante/models';
 import { DrugInteractionChecker } from '../services/drug-interaction.service';
 import { useDebounce } from '../hooks/useDebounce';
 

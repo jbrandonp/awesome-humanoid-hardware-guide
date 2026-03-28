@@ -72,3 +72,14 @@ export class Prescription extends Model {
   @field('_status') status!: string;
   @date('deleted_at') deletedAt!: Date | null;
 }
+
+export class DrugContraindication extends Model {
+  static override table = 'drug_contraindications';
+
+  @field('drug_id') drugId!: string;
+  @field('contraindicated_drug_id') contraindicatedDrugId!: string;
+  @field('severity') severity!: string;
+  @field('description') description!: string | null;
+  @date('created_at') createdAt!: Date;
+  @date('updated_at') updatedAt!: Date;
+}

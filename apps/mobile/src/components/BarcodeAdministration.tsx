@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator } fr
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
-import { Patient, Prescription } from '@systeme-sante/models/src/lib/databaseModels';
+import { Patient, Prescription } from '@systeme-sante/models';
 
 export const BarcodeAdministration = () => {
   const [permission, requestPermission] = useCameraPermissions();
