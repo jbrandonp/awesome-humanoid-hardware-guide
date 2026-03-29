@@ -31,6 +31,13 @@
 ### 2.3 Sécurité et Authentification
 - **Utilisation non-autorisée de `console.log` en production** : Dans `AuthService.requestOtp`, un mot de passe à usage unique (OTP) est loggé en clair dans la console (`console.log('[OTP] Generated OTP...')`). Cela viole la politique Zero-Trust & Zero-Cloud Logs (fuite de PHI/Données sensibles dans les logs serveurs). Il faut utiliser le `Logger` NestJS de manière sécurisée ou omettre le OTP.
 
+### 2.4 Synchronisation (SyncService) & eMAR
+- **Détection des surdosages silencieuse (Overdose Detection)** : Dans `SyncService` (gestion de `Y.Doc()`), si un conflit CRDT de surdosage est détecté, l'alerte `EpiTickerService` est diffusée de façon asynchrone *sans attendre le retour* (pas de `await` sur `this.epiTickerService.broadcastAlert`). De plus, bien qu'un `ClinicalIncident` soit créé, l'update Prisma lui-même est laissé sans résolution (le code retient les deux événements potentiellement mortels sans les bloquer).
+- **Problème Redis (EmarsyncListener)** : Dans l'intercepteur `EmarsyncListener`, l'architecture utilise "Fail-Open" si Redis est indisponible pour l'idempotence (le code continue). Cependant, cela annule la sécurité de l'idempotence et pourrait déduire le stock deux fois.
+
+### 2.5 Indexation PACS (PacsIndexerProcessor)
+- **Échappement mémoire non protégé** : La méthode `downloadDicomHeader` télécharge un buffer complet en RAM (`Buffer.concat(chunks)`) et utilise `dicomParser.parseDicom(byteArray)`. Si le fichier DICOM est malveillant ou compressé d'une certaine façon, `parseDicom` (qui est synchrone) va bloquer l'Event Loop de Node.js, ce qui est une mauvaise pratique pour un Worker, surtout pour des fichiers d'imagerie médicale de 2MB.
+
 ## 3. Inspection Manuelle : `apps/mobile` (React Native/Expo)
 
 ### 3.1 Logs Non Conformes en Production
@@ -42,6 +49,10 @@
 ### 3.3 Accessibilité ("Zéro-Mouse Policy")
 - **Manque de support d'accessibilité (A11y)** : Dans `PrescriptionForm.tsx`, les `TouchableOpacity` et `TextInput` n'ont aucune gestion de focus claire (par exemple, utilisation de refs pour passer au champ suivant avec le clavier, ou indication de focus). Bien que l'application mobile soit tactile, la politique exige un support 100% clavier "zéro-souris", ce qui requiert des props comme `accessible`, `accessibilityRole`, et une gestion rigoureuse du focus.
 
+### 3.4 Services en Arrière-Plan et Matériel (Hardware)
+- **Risques liés à `DeviceEventEmitter` (SmartPen)** : Dans `SmartPenCanvas.tsx`, le `DeviceEventEmitter.addListener` est bien nettoyé (`remove()`) lors du démontage du composant, mais la simulation (`simulateHeavyBluetoothStream()`) utilise un `setInterval` dont l'ID (`intervalId`) n'est jamais nettoyé/annulé dans la fonction de retour de `useEffect`. Cela va créer un Memory Leak certain avec une boucle infinie de modifications d'état si le composant est monté/démonté à plusieurs reprises.
+- **Faille dans Background Sync** : Dans `background-sync.service.ts`, si `axios.post` échoue (timeout/network error), la tâche est repoussée dans `remainingQueue` en l'état. Cependant, l'appel HTTP ne gère pas le fait que si le serveur NestJS retourne une erreur 500 ou 400 permanente (ex: payload invalide), le statut `networkError` rattrapera quand même l'erreur. Ainsi, une erreur de validation bloquera la file pendant 50 itérations complètes (inondation du serveur).
+
 ## 4. Inspection Manuelle : `apps/desktop` (React/Tauri)
 
 ### 4.1 Problèmes de Typage et Gestion des API (Tauri)
@@ -50,6 +61,10 @@
 
 ### 4.2 Optimisation GPU & "Zéro-Mouse Policy"
 - **`DesktopOmnibox.tsx`** : Bien que le code mentionne expressément la "Navigation 100% clavier", le défilement (Scroll) utilise `behavior: 'smooth'` pour `scrollIntoView()`. Les commentaires indiquent eux-mêmes que cela peut "lagger sur Win7", ce qui contredit l'objectif de résilience pour des machines avec des GPU faibles (< 4Go RAM).
+
+### 4.3 Backend Rust (Tauri)
+- **Dépendance obsolète génératrice de crash (`Cargo.toml`)** : Le backend Rust utilise `printpdf = "0.9.1"`. Or, la base de connaissances indique : "*The Tauri desktop application's Rust backend requires `printpdf` version `0.7.0` in `Cargo.toml`. Upgrading to `0.9.1` causes compilation errors due to breaking API changes*". Cela confirme un bug de compilation majeur pour l'environnement de bureau.
+- **Chiffrement PDF incomplet (`pdf_generator.rs`)** : La fonction `encrypt_and_save` préfixe le *nonce* aléatoire au fichier, mais n'enregistre jamais le `tag` GCM ni dans le fichier, ni dans la base de données. L'algorithme `AES-256-GCM` requiert impérativement un *auth tag* de 16 octets pour le déchiffrement, ce qui signifie que **les PDF générés ne pourront jamais être déchiffrés correctement**.
 
 ## 5. Inspection Manuelle : Librairies Communes (`libs/models` & `libs/insurance-engine`)
 
