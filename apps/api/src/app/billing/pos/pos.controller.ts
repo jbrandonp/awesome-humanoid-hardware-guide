@@ -59,6 +59,15 @@ export class PosController {
     ) {
       throw new HttpException('Données de remboursement incomplètes ou clé d\'idempotence manquante.', HttpStatus.BAD_REQUEST);
     }
+
+    // Application stricte du RBAC pour le remboursement dépassant le seuil métier
+    const REFUND_SUPERVISOR_THRESHOLD_CENTS = 500000;
+    if (payload.refundAmountCents > REFUND_SUPERVISOR_THRESHOLD_CENTS) {
+      if (!payload.supervisorId) {
+        throw new HttpException('Un ID de superviseur (ADMIN) est requis pour les remboursements dépassant le seuil.', HttpStatus.FORBIDDEN);
+      }
+    }
+
     return this.reconciliationService.processRefund({ ...payload, idempotencyKey });
   }
 

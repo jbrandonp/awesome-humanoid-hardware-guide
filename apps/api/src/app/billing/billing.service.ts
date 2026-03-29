@@ -69,23 +69,23 @@ export class BillingService {
          // A. Calcul des lignes et déduction d'inventaire
          for (const item of payload.items) {
             // Lecture du stock actuel (Pessimistic Lock simulé)
-            const inventoryItem = await tx.inventoryItem.findUnique({
+            const foundItem = await tx.inventoryItem.findUnique({
                where: { name: item.inventoryItemName }
             });
 
-            if (!inventoryItem) {
+            if (!foundItem) {
                throw new HttpException(`Article non reconnu dans l'inventaire: ${item.inventoryItemName}`, HttpStatus.BAD_REQUEST);
             }
 
-            if (inventoryItem.quantity < item.quantity) {
+            if (foundItem.quantity < item.quantity) {
                throw new HttpException(
-                 `Rupture de stock pour ${item.inventoryItemName}. Reste: ${inventoryItem.quantity}, Demandé: ${item.quantity}. Facturation annulée.`,
+                 `Rupture de stock pour ${item.inventoryItemName}. Reste: ${foundItem.quantity}, Demandé: ${item.quantity}. Facturation annulée.`,
                  HttpStatus.CONFLICT
                );
             }
 
             // Calcul du total de la ligne (Toujours arrondi en ENTIERS / Cents pour éviter les bugs Float Javascript type 10.1 * 10 = 101.00000000000001)
-            const lineTotalCents = Math.round(inventoryItem.unitPriceCents * item.quantity);
+            const lineTotalCents = Math.round(foundItem.unitPriceCents * item.quantity);
             subtotalCents += lineTotalCents;
 
             // Déduction atomique du stock (Empêche les stocks négatifs en cas de concurrence)
