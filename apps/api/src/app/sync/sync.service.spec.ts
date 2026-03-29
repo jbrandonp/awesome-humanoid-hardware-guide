@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SyncService } from './sync.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EpiTickerService } from '../ticker/epi-ticker.service';
 
 describe('SyncService', () => {
   let service: SyncService;
@@ -10,7 +11,7 @@ describe('SyncService', () => {
       providers: [
         SyncService,
         {
-          provide: PrismaService,
+          provide: PrismaService, useValue: {} }, { provide: EpiTickerService,
           useValue: {}
         }
       ],

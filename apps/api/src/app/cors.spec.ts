@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
+import * as request from 'supertest';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';

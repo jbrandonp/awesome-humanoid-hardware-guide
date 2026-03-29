@@ -1,6 +1,6 @@
-import { appSchema, tableSchema } from '@nozbe/watermelondb';
+import { appSchema, tableSchema, AppSchema } from '@nozbe/watermelondb';
 
-export default appSchema({
+const schema: AppSchema = appSchema({
   version: 1,
   tables: [
     tableSchema({
@@ -65,3 +65,4 @@ export default appSchema({
     }),
   ],
 });
+export default schema;

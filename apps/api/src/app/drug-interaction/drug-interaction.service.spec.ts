@@ -49,7 +49,7 @@ describe('DrugInteractionService', () => {
   });
 
   it('should detect FATAL interaction and throw HttpException', async () => {
-    mockRecordModel.exec.mockResolvedValueOnce([
+    mockRecordModel.exec.mockResolvedValue([
       { data: { medications: ['Amoxicilline'] } },
     ]);
 
@@ -65,13 +65,12 @@ describe('DrugInteractionService', () => {
     });
   });
 
-  it('should allow override for HIGH interaction and hash justification', async () => {
-    mockRecordModel.exec.mockResolvedValueOnce([
+  it('should allow override for HIGH interaction and store justification', async () => {
+    mockRecordModel.exec.mockResolvedValue([
       { data: { medications: ['Aspirine'] } },
     ]);
 
     const justification = 'Patient needs this specific medication';
-    const expectedHash = crypto.createHash('sha256').update(justification).digest('hex');
 
     const dto = {
       patientId: 'patient-1',
@@ -89,7 +88,7 @@ describe('DrugInteractionService', () => {
         data: expect.objectContaining({
           action: 'PRESCRIPTION_OVERRIDE',
           metadata: expect.objectContaining({
-            justificationHash: expectedHash,
+            justification: justification,
           }),
         }),
       })
@@ -97,7 +96,7 @@ describe('DrugInteractionService', () => {
   });
 
   it('should detect LOW interaction and NOT throw', async () => {
-    mockRecordModel.exec.mockResolvedValueOnce([
+    mockRecordModel.exec.mockResolvedValue([
       { data: { medications: ['Fer'] } },
     ]);
 
@@ -112,7 +111,7 @@ describe('DrugInteractionService', () => {
   });
 
   it('should return NONE when no interaction', async () => {
-    mockRecordModel.exec.mockResolvedValueOnce([
+    mockRecordModel.exec.mockResolvedValue([
       { data: { medications: ['Doliprane'] } },
     ]);
 
