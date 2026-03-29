@@ -38,6 +38,9 @@
 ### 2.5 Indexation PACS (PacsIndexerProcessor)
 - **Échappement mémoire non protégé** : La méthode `downloadDicomHeader` télécharge un buffer complet en RAM (`Buffer.concat(chunks)`) et utilise `dicomParser.parseDicom(byteArray)`. Si le fichier DICOM est malveillant ou compressé d'une certaine façon, `parseDicom` (qui est synchrone) va bloquer l'Event Loop de Node.js, ce qui est une mauvaise pratique pour un Worker, surtout pour des fichiers d'imagerie médicale de 2MB.
 
+### 2.6 Moteur FHIR (FHIR Mapper)
+- **Faille NaN sur le Parsing JavaScript** : Dans `FhirMapper.toFhirObservation` pour la pression sanguine (`bloodPressure`), le code effectue un simple `parseFloat(sys)` et `parseFloat(dia)` après un `.split('/')` sans aucune vérification. Si le format de la tension enregistrée comporte des erreurs (ex: "120/abc"), l'export produira un `NaN` dans un JSON qui prétend être strict, pouvant casser les moteurs HL7/FHIR des hôpitaux cibles.
+
 ## 3. Inspection Manuelle : `apps/mobile` (React Native/Expo)
 
 ### 3.1 Logs Non Conformes en Production
@@ -65,6 +68,7 @@
 ### 4.3 Backend Rust (Tauri)
 - **Dépendance obsolète génératrice de crash (`Cargo.toml`)** : Le backend Rust utilise `printpdf = "0.9.1"`. Or, la base de connaissances indique : "*The Tauri desktop application's Rust backend requires `printpdf` version `0.7.0` in `Cargo.toml`. Upgrading to `0.9.1` causes compilation errors due to breaking API changes*". Cela confirme un bug de compilation majeur pour l'environnement de bureau.
 - **Chiffrement PDF incomplet (`pdf_generator.rs`)** : La fonction `encrypt_and_save` préfixe le *nonce* aléatoire au fichier, mais n'enregistre jamais le `tag` GCM ni dans le fichier, ni dans la base de données. L'algorithme `AES-256-GCM` requiert impérativement un *auth tag* de 16 octets pour le déchiffrement, ce qui signifie que **les PDF générés ne pourront jamais être déchiffrés correctement**.
+- **Gestion des lecteurs de cartes à puces (`smart_card.rs`)** : La logique prend nativement le premier lecteur disponible (`readers.next()`) sans vérifier s'il s'agit réellement d'un lecteur médical (ou s'il correspond aux attentes de la configuration locale). Cela pourrait planter silencieusement ou lire une mauvaise carte si plusieurs lecteurs sont branchés.
 
 ## 5. Inspection Manuelle : Librairies Communes (`libs/models` & `libs/insurance-engine`)
 
