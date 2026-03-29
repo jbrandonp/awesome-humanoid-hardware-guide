@@ -177,12 +177,14 @@ export class SyncService {
                 }
               });
 
-              this.epiTickerService.broadcastAlert({
+              await this.epiTickerService.broadcastAlert({
                 id: `INCIDENT-${Date.now()}-${prescription.id}`,
                 type: 'INCIDENT',
                 message: `🚨 URGENCE : Double administration potentielle (surdosage) détectée hors-ligne pour ${existingPrescription?.medicationName || prescription.medication_name}.`,
                 timestamp: new Date()
               });
+
+              throw new Error(`CRDT Conflict: Potential overdose for ${prescription.id}. Skipping sync update to protect patient.`);
             }
 
             mergedAdministrationsBuffer = Buffer.from(Y.encodeStateAsUpdate(serverDoc));
