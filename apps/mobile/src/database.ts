@@ -2,7 +2,6 @@ import { Database } from '@nozbe/watermelondb'
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
 
 import { schema } from '@systeme-sante/models';
-      DrugContraindication,
 import { Vital, Prescription, CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models';
 import { Patient, Visit, DrugContraindication } from '@systeme-sante/models';
 
