@@ -89,7 +89,7 @@ export class QueueService {
     await this.auditService.logAudit({
       userId: nurseId,
       patientId: patientId,
-      actionType: ActionType.UPDATE,
+      actionType: 'UPDATE' as any, // Memory constraint: the ActionType enum is not exported by Prisma client in some versions, string literal 'UPDATE' is required
       resourceId: 'QueueTriage',
       phiDataAccessed: { overrideReason, oldScore, newScore } as Record<string, any>,
     });
