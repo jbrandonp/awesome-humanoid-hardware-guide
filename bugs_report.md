@@ -41,6 +41,10 @@
 ### 2.6 Moteur FHIR (FHIR Mapper)
 - **Faille NaN sur le Parsing JavaScript** : Dans `FhirMapper.toFhirObservation` pour la pression sanguine (`bloodPressure`), le code effectue un simple `parseFloat(sys)` et `parseFloat(dia)` après un `.split('/')` sans aucune vérification. Si le format de la tension enregistrée comporte des erreurs (ex: "120/abc"), l'export produira un `NaN` dans un JSON qui prétend être strict, pouvant casser les moteurs HL7/FHIR des hôpitaux cibles.
 
+### 2.7 Moteur de Rapports Épidémiologiques & IA
+- **Vulnérabilité Injection SQL & Cache** : Dans `EpidemiologyReportService.generateDailyReport()`, bien que `Prisma.sql` soit utilisé de manière native, l'approche globale pour l'insertion massive et l'agrégation via requêtes brutes (`$executeRaw`) repose sur des variables non-strictement indexées. De plus, `EpidemiologyReportController` contient un problème d'architecture avec son décorateur `@UseGuards(RolesGuard)` qui est appelé sans spécifier l'`AuthGuard('jwt')` en amont. Résultat : `req.user` sera toujours `undefined` et l'AuditLog échouera ou passera silencieusement au travers de la sécurité.
+- **Défaut de nettoyage dans l'IA `InventoryPredictorWorker`** : La pré-traitement des données (moving average) pour l'IA LSTM assume systématiquement qu'il y a des données saines. Si toutes les valeurs sont à zéro, `maxVal` devient 1 mais le lissage et les itérations LSTM pourraient stagner silencieusement (bien que la fonction `smoothOutliers` tente d'y pallier).
+
 ## 3. Inspection Manuelle : `apps/mobile` (React Native/Expo)
 
 ### 3.1 Logs Non Conformes en Production
