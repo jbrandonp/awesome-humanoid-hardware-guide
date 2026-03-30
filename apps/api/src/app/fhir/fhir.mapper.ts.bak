@@ -154,22 +154,16 @@ export class FhirMapper {
       // Parse "120/80"
       if (vital.bloodPressure && vital.bloodPressure.includes('/')) {
         const [sys, dia] = vital.bloodPressure.split('/');
-        const sysNum = parseFloat(sys);
-        const diaNum = parseFloat(dia);
-        if (!isNaN(sysNum) && !isNaN(diaNum)) {
-          base.component = [
+        base.component = [
           {
             code: { coding: [{ system: 'http://loinc.org', code: '8480-6', display: 'Systolic blood pressure' }] },
-            valueQuantity: { value: sysNum, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' }
+            valueQuantity: { value: parseFloat(sys), unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' }
           },
           {
             code: { coding: [{ system: 'http://loinc.org', code: '8462-4', display: 'Diastolic blood pressure' }] },
-            valueQuantity: { value: diaNum, unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' }
+            valueQuantity: { value: parseFloat(dia), unit: 'mmHg', system: 'http://unitsofmeasure.org', code: 'mm[Hg]' }
           }
         ];
-        } else {
-          base.valueString = vital.bloodPressure;
-        }
       } else {
         base.valueString = vital.bloodPressure ?? undefined;
       }
