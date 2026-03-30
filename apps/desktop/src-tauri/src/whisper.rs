@@ -73,18 +73,17 @@ pub async fn transcribe_audio(app: AppHandle, audio_path: String) -> Result<Stri
         loop {
             if let Some(status) = child.try_wait().map_err(|e| format!("Failed to try_wait: {}", e))? {
                 if status.success() {
-                    return Ok("Transcription completed".to_string());
+                    break Ok("Transcription completed".to_string());
                 } else {
-                    return Err("Whisper failed".to_string());
+                    break Err("Whisper failed".to_string());
                 }
             }
             
-            sys.refresh_all();
+            sys.refresh_processes(sysinfo::ProcessesToUpdate::Some(&[Pid::from_u32(child_id)]), true);
             if let Some(process) = sys.processes().get(&Pid::from_u32(child_id)) {
                 let mem = process.memory(); // memory in bytes
                 if mem > max_ram_bytes {
-                    let _ = child.kill().await;
-                    return Err("Circuit Breaker: RAM limit exceeded (2GB)".to_string());
+                    break Err("Circuit Breaker: RAM limit exceeded (2GB)".to_string());
                 }
             } else {
                 // If the process is not found in sysinfo, maybe it exited just now. Wait for try_wait in next iteration.
@@ -100,6 +99,8 @@ pub async fn transcribe_audio(app: AppHandle, audio_path: String) -> Result<Stri
             Err("Circuit Breaker: 10s timeout reached".to_string())
         }
     };
+
+    let _ = child.kill().await;
 
     app.emit("whisper-progress", ProgressPayload {
         message: "Transcription terminée".to_string(),

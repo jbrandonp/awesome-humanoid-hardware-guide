@@ -1,7 +1,7 @@
 import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditService } from '../audit/audit.service';
-import { ActionType } from '@prisma/client';
+
 import { TriageInput, TriageInputSchema } from './triage.schema';
 import { calculateTriageScore } from './triage.algorithm';
 
