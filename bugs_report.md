@@ -92,3 +92,14 @@
 
 ### 6.2 Problèmes Complémentaires Front-End / Desktop
 - **Whisper Rust Circuit Breaker** : Dans `apps/desktop/src-tauri/src/whisper.rs`, le disjoncteur (Circuit Breaker) mémoire de 2GB sur le processus enfant "whisper.cpp" tue le processus via `.kill().await` mais renvoie immédiatement une erreur sans l'intégrer proprement au bloc `tokio::select!`. Cela pourrait causer des conditions de course asynchrones avec le timer de 10 secondes. De plus, `sysinfo` utilisé dans une boucle toutes les 500ms sans nettoyage peut impacter significativement les CPU peu puissants visés par l'architecture.
+
+---
+## 7. Conclusions Suite aux Exécutions `typecheck` et `cargo check`
+- **TypeScript (`npx nx run-many -t typecheck`)** :
+  - La vérification des types TypeScript a passé pour tous les 8 projets du workspace. Aucun échec ou erreur globale bloquante signalée, uniquement un avertissement Node lié aux `EventEmitter` signalant potentiellement des fuites de mémoire (voir section 1.2).
+- **ESLint (`npx nx run-many -t lint`)** :
+  - Le linting configuré avec succès s'est exécuté uniquement pour le projet `portail-pwa` et n'a révélé aucune erreur.
+- **Rust (`cargo check`)** :
+  - La vérification du code de l'application de bureau Rust avec `cargo check` a réussi. Certaines librairies système (`libwebkit2gtk-4.1-dev`, `libudev-dev`, etc.) manquaient lors de la première itération et ont été résolues avec succès via apt-get pour permettre l'exécution complète du check.
+
+**Fin du rapport.**
