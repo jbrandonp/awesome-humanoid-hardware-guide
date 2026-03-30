@@ -1,0 +1,10 @@
+--- libs/models/src/index.ts
++++ libs/models/src/index.ts
+@@ -1,5 +1,5 @@
+ export { PatientSchema, VisitSchema, DualSignOffSchema } from './lib/models.js';
+-export type { DualSignOff } from './lib/models.js';
+-export type { Patient as PatientDto, Visit as VisitDto } from './lib/models.js';
++export type { DualSignOffDto as DualSignOff } from './lib/models.js';
++export type { PatientDto, VisitDto } from './lib/models.js';
+ export * from './lib/databaseModels.js';
+ export { default as schema } from './lib/schema.js';

@@ -1,5 +1,5 @@
 import { InsurancePolicy, LineItem, RuleExecutionTrace, ExplanationOfBenefits, EOBLineItem, LineItemSchema, InsurancePolicySchema } from './types';
-const Dinero = require('dinero.js');
+import Dinero from 'dinero.js';
 
 export class InsuranceEngine {
   public evaluate(items: LineItem[], policies: InsurancePolicy[]): ExplanationOfBenefits {
@@ -50,6 +50,10 @@ export class InsuranceEngine {
 
         const initialAmountForPolicy = currentPatientResponsibility;
         let amountToCover = initialAmountForPolicy;
+
+        // Make sure we use the item's currency for the state checks
+        const itemCurrency = amountToCover.getCurrency();
+
         const traces: RuleExecutionTrace[] = [];
 
         // 1. Exclusions
@@ -61,7 +65,7 @@ export class InsuranceEngine {
             amountPatientCents: amountToCover.getAmount(),
             description: `Diagnosis ${item.diagnosisCode} is excluded by policy ${policy.name}`,
           });
-          amountToCover = Dinero({ amount: 0, currency: 'USD' });
+          amountToCover = Dinero({ amount: 0, currency: itemCurrency });
           itemTraces.push(...traces);
           continue; // Skip rest of rules for this policy
         }
@@ -89,7 +93,7 @@ export class InsuranceEngine {
 
         // 3. Copay
         if (policy.rules.copayCents > 0) {
-           const copay = Dinero({ amount: policy.rules.copayCents, currency: 'USD' });
+           const copay = Dinero({ amount: policy.rules.copayCents, currency: itemCurrency });
            const copayToApply = Dinero.minimum([amountToCover, copay]);
            amountToCover = amountToCover.subtract(copayToApply);
 
@@ -126,7 +130,7 @@ export class InsuranceEngine {
 
         // 5. Caps
         if (policy.rules.capsCents?.perItem !== undefined) {
-           const capItem = Dinero({ amount: policy.rules.capsCents.perItem, currency: 'USD' });
+           const capItem = Dinero({ amount: policy.rules.capsCents.perItem, currency: itemCurrency });
            if (amountToCover.greaterThan(capItem)) {
              const difference = amountToCover.subtract(capItem);
              amountToCover = capItem;
@@ -141,12 +145,17 @@ export class InsuranceEngine {
         }
 
         if (policy.rules.capsCents?.annual !== undefined) {
-          const capAnnual = Dinero({ amount: policy.rules.capsCents.annual, currency: 'USD' });
+          const capAnnual = Dinero({ amount: policy.rules.capsCents.annual, currency: itemCurrency });
+
+          if (state.accumulatedAnnualCovered.getCurrency() !== itemCurrency) {
+             // Handle currency mismatch gracefully
+             state.accumulatedAnnualCovered = Dinero({ amount: state.accumulatedAnnualCovered.getAmount(), currency: itemCurrency });
+          }
           const spaceLeft = capAnnual.subtract(state.accumulatedAnnualCovered);
 
           if (spaceLeft.getAmount() <= 0) {
              const difference = amountToCover;
-             amountToCover = Dinero({ amount: 0, currency: 'USD' });
+             amountToCover = Dinero({ amount: 0, currency: itemCurrency });
              traces.push({
                rule: 'cap',
                applied: true,
