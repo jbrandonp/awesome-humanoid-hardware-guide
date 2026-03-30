@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AuditService } from '../audit/audit.service';
 import { ActionType } from '@prisma/client';
@@ -16,13 +16,14 @@ export interface QueueEntry {
 @Injectable()
 export class QueueService {
   private queue: QueueEntry[] = [];
+  private readonly logger = new Logger(QueueService.name);
 
   constructor(
     private readonly eventEmitter: EventEmitter2,
     private readonly auditService: AuditService,
   ) {}
 
-  addPatientToQueue(patientId: string, input: TriageInput): QueueEntry {
+  async addPatientToQueue(patientId: string, input: TriageInput): Promise<QueueEntry> {
     // 1. Validate Input (Zod)
     const parseResult = TriageInputSchema.safeParse(input);
     if (!parseResult.success) {
@@ -36,11 +37,15 @@ export class QueueService {
 
     // 3. Emit Critical Patient alert if score is 1 or 2
     if (initialEsiScore === 1 || initialEsiScore === 2) {
-      this.eventEmitter.emit('CRITICAL_PATIENT_ARRIVED', {
-        patientId,
-        esiScore: initialEsiScore,
-        vitals: validatedInput,
-      });
+      try {
+        await this.eventEmitter.emitAsync('CRITICAL_PATIENT_ARRIVED', {
+          patientId,
+          esiScore: initialEsiScore,
+          vitals: validatedInput,
+        });
+      } catch (err) {
+        this.logger.error(`Error emitting CRITICAL_PATIENT_ARRIVED event for patient ${patientId}`, err);
+      }
     }
 
     // 4. Create and push entry
@@ -96,12 +101,16 @@ export class QueueService {
 
     // Re-evaluate criticality triggers based on manual override
     if (newScore === 1 || newScore === 2) {
-      this.eventEmitter.emit('CRITICAL_PATIENT_ARRIVED', {
-        patientId,
-        esiScore: newScore,
-        vitals: entry.input,
-        isOverride: true,
-      });
+      try {
+        await this.eventEmitter.emitAsync('CRITICAL_PATIENT_ARRIVED', {
+          patientId,
+          esiScore: newScore,
+          vitals: entry.input,
+          isOverride: true,
+        });
+      } catch (err) {
+        this.logger.error(`Error emitting CRITICAL_PATIENT_ARRIVED override event for patient ${patientId}`, err);
+      }
     }
 
     // Sort queue again

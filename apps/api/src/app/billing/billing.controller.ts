@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Body,
+  Headers,
   UseGuards,
   HttpException,
   HttpStatus,
@@ -18,10 +19,13 @@ export class BillingController {
 
   @Post('invoice')
   @AuditLog('BILLING_GENERATE_INVOICE')
-  async createInvoice(@Body() payload: CreateInvoicePayload) {
+  async createInvoice(
+    @Headers('x-idempotency-key') idempotencyKey: string,
+    @Body() payload: Omit<CreateInvoicePayload, 'idempotencyKey'>
+  ) {
     if (
       !payload ||
-      !payload.idempotencyKey ||
+      !idempotencyKey ||
       !payload.patientId ||
       !payload.items ||
       payload.items.length === 0
@@ -32,6 +36,6 @@ export class BillingController {
       );
     }
 
-    return this.billingService.generateInvoice(payload);
+    return this.billingService.generateInvoice({ ...payload, idempotencyKey });
   }
 }

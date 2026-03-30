@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { BlacklistService } from './blacklist.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -6,6 +6,8 @@ import * as crypto from 'crypto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly jwtService: JwtService,
     private readonly blacklistService: BlacklistService,
@@ -92,7 +94,7 @@ export class AuthService {
     });
 
     // In a real scenario, integrate with SMS/WhatsApp provider here
-    console.log(`[OTP] Generated OTP ${otp} for phone ${phone}`);
+    this.logger.log(`[OTP] Un OTP a été généré et envoyé au numéro: ${phone}`);
 
     return { message: 'OTP envoyé avec succès.' };
   }

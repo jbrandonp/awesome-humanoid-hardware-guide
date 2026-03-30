@@ -1,0 +1,38 @@
+--- apps/api/src/app/billing/billing.controller.ts
++++ apps/api/src/app/billing/billing.controller.ts
+@@ -2,6 +2,7 @@
+   Controller,
+   Post,
+   Body,
++  Headers,
+   UseGuards,
+   HttpException,
+   HttpStatus,
+@@ -17,20 +18,22 @@
+
+   @Post('invoice')
+   @AuditLog('BILLING_GENERATE_INVOICE')
+-  async createInvoice(@Body() payload: CreateInvoicePayload) {
++  async createInvoice(
++    @Headers('x-idempotency-key') idempotencyKey: string,
++    @Body() payload: Omit<CreateInvoicePayload, 'idempotencyKey'>
++  ) {
+     if (
+       !payload ||
+-      !payload.idempotencyKey ||
++      !idempotencyKey ||
+       !payload.patientId ||
+       !payload.items ||
+       payload.items.length === 0
+     ) {
+       throw new HttpException(
+-        'Données de facturation (Payload Zéro-Any) incomplètes ou corrompues.',
++        'Données de facturation (Payload Zéro-Any) incomplètes ou corrompues.',
+         HttpStatus.BAD_REQUEST,
+       );
+     }
+
+-    return this.billingService.generateInvoice(payload);
++    return this.billingService.generateInvoice({ ...payload, idempotencyKey });
+   }
+ }

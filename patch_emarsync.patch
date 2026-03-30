@@ -1,0 +1,34 @@
+--- apps/api/src/app/emar/emarsync-listener.interceptor.ts
++++ apps/api/src/app/emar/emarsync-listener.interceptor.ts
+@@ -53,10 +53,11 @@
+     const idempotencyKey = `emarsync:${payload.idempotencyKey}`;
+
+     try {
+-      // 1. Idempotency Check (Redis) - Fail-Open if Redis is down
++      // 1. Idempotency Check (Redis) - Fail-Closed if Redis is down
+       let isAlreadyProcessed = false;
+       try {
+         const cached = await this.redisClient.get(idempotencyKey);
+         isAlreadyProcessed = !!cached;
+       } catch (redisError) {
+-        this.logger.warn(`[EmarsyncListener] Redis is UNAVAILABLE. Skipping idempotency check: ${redisError}`);
++        this.logger.error(`[EmarsyncListener] Redis is UNAVAILABLE. Cannot perform idempotency check.`, redisError);
++        throw new HttpException('Le service cache Redis est indisponible. Veuillez réessayer plus tard.', HttpStatus.SERVICE_UNAVAILABLE);
+       }
+
+       if (isAlreadyProcessed) {
+@@ -82,10 +83,11 @@
+         });
+       });
+
+-      // 3. Mark Idempotency in Redis - Fail-Open
++      // 3. Mark Idempotency in Redis - Fail-Closed
+       try {
+         await this.redisClient.set(idempotencyKey, 'PROCESSED', 'EX', 86400);
+       } catch (redisError) {
+-        this.logger.warn(`[EmarsyncListener] Failed to mark idempotency in Redis: ${redisError}`);
++        this.logger.error(`[EmarsyncListener] Failed to mark idempotency in Redis: ${redisError}`);
++        throw new HttpException('Erreur lors de la confirmation d\'idempotence (Redis).', HttpStatus.INTERNAL_SERVER_ERROR);
+       }
+
+       this.logger.log(`[EmarsyncListener] Successfully decremented stock for ${payload.medicationName}.`);

@@ -90,16 +90,28 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     return Buffer.concat(chunks);
   }
 
-  private parseDicomMetadata(buffer: Buffer): DicomMetadata {
-    const byteArray = new Uint8Array(buffer);
-    const dataSet = dicomParser.parseDicom(byteArray);
+  private async parseDicomMetadata(buffer: Buffer): Promise<DicomMetadata> {
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(`
+        const { parentPort, workerData } = require('worker_threads');
+        const dicomParser = require('dicom-parser');
 
-    return {
-      patientId: dataSet.string('x00100020') || null,
-      studyInstanceUID: dataSet.string('x0020000d') || null,
-      seriesInstanceUID: dataSet.string('x0020000e') || null,
-      sopInstanceUID: dataSet.string('x00080018') || null,
-    };
+        try {
+          const byteArray = new Uint8Array(workerData);
+          const dataSet = dicomParser.parseDicom(byteArray);
+          parentPort.postMessage({
+            patientId: dataSet.string('x00100020') || null,
+            studyInstanceUID: dataSet.string('x0020000d') || null,
+            seriesInstanceUID: dataSet.string('x0020000e') || null,
+            sopInstanceUID: dataSet.string('x00080018') || null,
+          });
+        } catch (error) {
+          throw error;
+        }
+      `, { eval: true, workerData: buffer });
+      worker.on('message', resolve);
+      worker.on('error', reject);
+    });
   }
 
   async process(job: Job<PacsIndexerJobData, void, string>): Promise<void> {
@@ -107,7 +119,7 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     try {
       // Step 1: DICOM S3 Download and Parsing Logic
       const buffer = await this.downloadDicomHeader(job.data.bucket, job.data.objectKey);
-      const metadata = this.parseDicomMetadata(buffer);
+      const metadata = await this.parseDicomMetadata(buffer);
 
       this.logger.log(`Parsed metadata: ${JSON.stringify(metadata)}`);
 

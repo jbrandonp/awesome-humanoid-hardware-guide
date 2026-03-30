@@ -1,0 +1,9 @@
+--- apps/api/src/app/queue/queue.service.ts
++++ apps/api/src/app/queue/queue.service.ts
+@@ -2,6 +2,7 @@
+ import { EventEmitter2 } from '@nestjs/event-emitter';
+ import { AuditService } from '../audit/audit.service';
+ import { ActionType } from '@prisma/client';
+ import { TriageInput, TriageInputSchema } from './triage.schema';
+ import { calculateTriageScore } from './triage.algorithm';
++import { Logger } from '@nestjs/common';
