@@ -65,7 +65,7 @@ export class ClinicalProtocolManager {
       name,
       medications: [...medications],
     };
-    
+
     this.protocols.push(newProtocol);
     return newProtocol;
   }
@@ -73,7 +73,7 @@ export class ClinicalProtocolManager {
   static shareProtocol(protocol: ClinicalProtocol): void {
     // Zero Cloud Logs Policy: We log locally to simulate P2P / CRDT sharing.
     // In a real application, this would broadcast via the local network or sync via CRDT.
-    console.warn(`[P2P/CRDT Simulation] Broadcasting protocol: ${protocol.name}`);
+    console.log(`[P2P/CRDT Simulation] Broadcasting protocol: ${protocol.name}`);
   }
 
   static mergeProtocol(

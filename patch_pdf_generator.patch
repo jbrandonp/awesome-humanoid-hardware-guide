@@ -1,0 +1,29 @@
+--- apps/mobile/src/services/pdf-generator.service.ts
++++ apps/mobile/src/services/pdf-generator.service.ts
+@@ -86,9 +86,9 @@
+         // L'HTML généré contient TOUJOURS la langue de référence du docteur (Anglais ou Français)
+         // ET la traduction régionale en dessous pour le patient, évitant toute erreur médicamenteuse.
+         return `
+         <tr class="item-row">
+-          <td class="med-name">${item.name}</td>
+-          <td class="med-dosage">
+-             <div class="dosage-doctor">${originalDosageText}</div>
+-             ${translatedDosageText ? `<div class="dosage-patient" dir="auto">${translatedDosageText}</div>` : ''}
++          <td class="med-name">${escapeHtml(item.name)}</td>
++          <td class="med-dosage">
++             <div class="dosage-doctor">${escapeHtml(originalDosageText)}</div>
++             ${translatedDosageText ? `<div class="dosage-patient" dir="auto">${escapeHtml(translatedDosageText)}</div>` : ''}
+           </td>
+         </tr>
+       `}).join('');
+@@ -157,8 +157,8 @@
+
+             <div class="patient-card">
+               <div>
+-                 <p><strong>Patient Name :</strong> ${patientName}</p>
+-                 <p><strong>Date of Issue :</strong> ${date}</p>
++                 <p><strong>Patient Name :</strong> ${escapeHtml(patientName)}</p>
++                 <p><strong>Date of Issue :</strong> ${escapeHtml(date)}</p>
+               </div>
+               <div style="text-align: right;">
+                  <p><strong>Prescription ID :</strong> RX-${Date.now().toString().slice(-6)}</p>
