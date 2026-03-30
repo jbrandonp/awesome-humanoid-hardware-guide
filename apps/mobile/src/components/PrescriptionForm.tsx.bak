@@ -46,7 +46,7 @@ export const PrescriptionForm: React.FC = () => {
   const handleApplyProtocol = (protocol: ClinicalProtocol) => {
     const merged = ClinicalProtocolManager.mergeProtocol(medications, protocol);
     setMedications(merged);
-    
+
     // Simulate P2P sharing log for Zero Cloud Logs Policy
     ClinicalProtocolManager.shareProtocol(protocol);
   };
@@ -66,11 +66,11 @@ export const PrescriptionForm: React.FC = () => {
     }
 
     const newProtocol = ClinicalProtocolManager.createProtocol(protocolName, medications);
-    
+
     // Update local state to show the new protocol badge
     setProtocols([...ClinicalProtocolManager.getAvailableProtocols()]);
     setProtocolName('');
-    
+
     // Share immediately
     ClinicalProtocolManager.shareProtocol(newProtocol);
   };
@@ -118,19 +118,19 @@ export const PrescriptionForm: React.FC = () => {
       {/* Manual Input Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Ajout Manuel</Text>
-        <TextInput accessible={true}
+        <TextInput
           style={styles.input}
           placeholder="Nom du médicament"
           value={medName}
           onChangeText={setMedName}
         />
-        <TextInput accessible={true}
+        <TextInput
           style={styles.input}
           placeholder="Dosage (ex: 500mg)"
           value={medDosage}
           onChangeText={setMedDosage}
         />
-        <TextInput accessible={true}
+        <TextInput
           style={styles.input}
           placeholder="Instructions (Optionnel)"
           value={medInstructions}
@@ -161,7 +161,7 @@ export const PrescriptionForm: React.FC = () => {
         <View style={styles.createProtocolSection}>
           <Text style={styles.sectionTitle}>Sauvegarder en tant que Protocole</Text>
           <View style={styles.createProtocolRow}>
-            <TextInput accessible={true}
+            <TextInput
               style={[styles.input, styles.createProtocolInput]}
               placeholder="Nom du nouveau protocole"
               value={protocolName}

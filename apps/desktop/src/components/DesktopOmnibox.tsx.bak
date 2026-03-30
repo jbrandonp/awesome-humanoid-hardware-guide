@@ -157,7 +157,7 @@ export const DesktopOmnibox = React.forwardRef<HTMLInputElement, unknown>(
       if (itemRefs.current[index]) {
         itemRefs.current[index]?.scrollIntoView({
           block: 'nearest',
-          behavior: 'auto', // 'smooth' peut lagger sur Win7, 'auto' ou 'instant' serait mieux si performance absolue requise, mais 'nearest' fait le travail basique.
+          behavior: 'smooth', // 'smooth' peut lagger sur Win7, 'auto' ou 'instant' serait mieux si performance absolue requise, mais 'nearest' fait le travail basique.
         });
       }
     };

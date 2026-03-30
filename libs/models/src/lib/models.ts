@@ -9,7 +9,7 @@ export const PatientSchema = z.object({
   deleted_at: z.string().datetime().nullable(),
 });
 
-export type Patient = z.infer<typeof PatientSchema>;
+export type PatientDto = z.infer<typeof PatientSchema>;
 
 export const VisitSchema = z.object({
   id: z.string().uuid(),
@@ -20,7 +20,7 @@ export const VisitSchema = z.object({
   deleted_at: z.string().datetime().nullable(),
 });
 
-export type Visit = z.infer<typeof VisitSchema>;
+export type VisitDto = z.infer<typeof VisitSchema>;
 
 export const DualSignOffSchema = z.object({
   primaryUserId: z.string().uuid(),
@@ -35,4 +35,4 @@ export const DualSignOffSchema = z.object({
   message: "Either PIN or Badge ID must be provided for secondary sign-off",
 });
 
-export type DualSignOff = z.infer<typeof DualSignOffSchema>;
+export type DualSignOffDto = z.infer<typeof DualSignOffSchema>;

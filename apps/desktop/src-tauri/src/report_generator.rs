@@ -3,8 +3,7 @@ use tauri::AppHandle;
 use serde::Deserialize;
 use printpdf::*;
 use std::fs::File;
-use std::io::Write;
-use image::GenericImageView;
+use ::image::GenericImageView;
 
 #[derive(Deserialize, Debug)]
 pub struct EpidemiologicalData {
@@ -29,15 +28,15 @@ pub fn generate_official_pdf_report(app: AppHandle, report_data: ReportData) -> 
     };
     let path_str = path.to_string();
 
-    let mut doc = PdfDocument::new("Official Report");
+    let (doc, page1, layer1) = PdfDocument::new("Official Report", Mm(210.0), Mm(297.0), "Layer 1");
+    let mut current_page = page1;
+    let mut current_layer = doc.get_page(current_page).get_layer(layer1);
     
-    let font_bold = PdfFontHandle::Builtin(BuiltinFont::HelveticaBold);
-    let font_regular = PdfFontHandle::Builtin(BuiltinFont::Helvetica);
-    
+    let font_bold = doc.add_builtin_font(BuiltinFont::HelveticaBold).map_err(|e| e.to_string())?;
+    let font_regular = doc.add_builtin_font(BuiltinFont::Helvetica).map_err(|e| e.to_string())?;
+
     let logo_bytes = include_bytes!("../icons/icon.png");
-    let image_data = image::load_from_memory_with_format(logo_bytes, image::ImageFormat::Png);
-    let mut image_xobject_id = None;
-    if let Ok(dynamic_image) = image_data {
+    if let Ok(dynamic_image) = ::image::load_from_memory_with_format(logo_bytes, ::image::ImageFormat::Png) {
         let (width, height) = dynamic_image.dimensions();
         let mut pixels = Vec::new();
         
@@ -48,90 +47,47 @@ pub fn generate_official_pdf_report(app: AppHandle, report_data: ReportData) -> 
             pixels.push(pixel[2]);
         }
 
-        let raw_image = RawImage {
-            pixels: RawImageData::U8(pixels),
-            width: width as usize,
-            height: height as usize,
-            data_format: RawImageFormat::RGB8,
-            tag: Vec::new(),
-        };
-        
-        image_xobject_id = Some(doc.add_image(&raw_image));
-    }
+        let raw_image = printpdf::image_crate::ImageBuffer::from_raw(width, height, pixels).unwrap();
+        let dyn_img = printpdf::image_crate::DynamicImage::ImageRgb8(raw_image);
+        let image = Image::from_dynamic_image(&dyn_img);
 
-    let mut pages = Vec::new();
-    let mut ops = Vec::new();
-
-    ops.push(Op::SaveGraphicsState);
-    
-    // Draw Logo if exists
-    if let Some(img_id) = image_xobject_id.clone() {
-        ops.push(Op::UseXobject {
-            id: img_id,
-            transform: XObjectTransform {
-                translate_x: Some(Mm(180.0).into()),
-                translate_y: Some(Mm(270.0).into()),
-                rotate: None,
-                scale_x: Some(20.0), // Scale to 20x20
-                scale_y: Some(20.0),
-                dpi: None,
-            }
+        image.add_to_layer(current_layer.clone(), ImageTransform {
+            translate_x: Some(Mm(180.0)),
+            translate_y: Some(Mm(270.0)),
+            rotate: None,
+            scale_x: Some(0.1),
+            scale_y: Some(0.1),
+            dpi: Some(300.0),
         });
     }
 
     // Header Title
-    ops.push(Op::StartTextSection);
-    ops.push(Op::SetTextMatrix {
-        matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(20.0).into_pt().0, Mm(275.0).into_pt().0])
-    });
-    ops.push(Op::SetFont { font: font_bold.clone(), size: Pt(24.0) });
-    ops.push(Op::ShowText { items: vec![TextItem::Text(report_data.title.clone())] });
-    ops.push(Op::EndTextSection);
+    current_layer.use_text(report_data.title.clone(), 24.0, Mm(20.0), Mm(275.0), &font_bold);
 
-    let draw_table_headers = |ops: &mut Vec<Op>, y: Mm| {
-        ops.push(Op::StartTextSection);
-        ops.push(Op::SetFont { font: font_bold.clone(), size: Pt(12.0) });
-        
-        ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(20.0).into_pt().0, y.into_pt().0])
-        });
-        ops.push(Op::ShowText { items: vec![TextItem::Text("ICD-10 Code".to_string())] });
-        
-        ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(60.0).into_pt().0, y.into_pt().0])
-        });
-        ops.push(Op::ShowText { items: vec![TextItem::Text("Description".to_string())] });
-        
-        ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(160.0).into_pt().0, y.into_pt().0])
-        });
-        ops.push(Op::ShowText { items: vec![TextItem::Text("Cases".to_string())] });
-        ops.push(Op::EndTextSection);
+    let mut current_y = 250.0f32;
+
+    let draw_table_headers = |layer: &PdfLayerReference, y: f32| {
+        layer.use_text("ICD-10 Code", 12.0, Mm(20.0), Mm(y), &font_bold);
+        layer.use_text("Description", 12.0, Mm(60.0), Mm(y), &font_bold);
+        layer.use_text("Cases", 12.0, Mm(160.0), Mm(y), &font_bold);
     };
 
-    let mut current_y = Mm(250.0);
-    draw_table_headers(&mut ops, current_y);
+    draw_table_headers(&current_layer, current_y);
 
-    current_y -= Mm(10.0);
+    current_y -= 10.0;
 
     for item in report_data.data {
-        if current_y.0 < 30.0 {
-            // New page
-            ops.push(Op::RestoreGraphicsState);
-            pages.push(PdfPage::new(Mm(210.0), Mm(297.0), std::mem::take(&mut ops)));
-            current_y = Mm(270.0);
-            ops.push(Op::SaveGraphicsState);
-            draw_table_headers(&mut ops, current_y);
-            current_y -= Mm(10.0);
+        if current_y < 30.0 {
+            let (new_page, new_layer) = doc.add_page(Mm(210.0), Mm(297.0), "Layer 1");
+            current_page = new_page;
+            current_layer = doc.get_page(current_page).get_layer(new_layer);
+
+            current_y = 270.0;
+            draw_table_headers(&current_layer, current_y);
+            current_y -= 10.0;
         }
         
-        ops.push(Op::StartTextSection);
-        ops.push(Op::SetFont { font: font_regular.clone(), size: Pt(10.0) });
-        
-        ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(20.0).into_pt().0, current_y.into_pt().0])
-        });
-        ops.push(Op::ShowText { items: vec![TextItem::Text(item.icd10_code.clone())] });
+        current_layer.use_text(item.icd10_code.clone(), 10.0, Mm(20.0), Mm(current_y), &font_regular);
 
         let desc = if item.description.chars().count() > 50 {
             let truncated: String = item.description.chars().take(47).collect();
@@ -139,45 +95,17 @@ pub fn generate_official_pdf_report(app: AppHandle, report_data: ReportData) -> 
         } else {
             item.description.clone()
         };
-        ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(60.0).into_pt().0, current_y.into_pt().0])
-        });
-        ops.push(Op::ShowText { items: vec![TextItem::Text(desc)] });
+        current_layer.use_text(desc, 10.0, Mm(60.0), Mm(current_y), &font_regular);
+        current_layer.use_text(item.cases.to_string(), 10.0, Mm(160.0), Mm(current_y), &font_regular);
         
-        ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(160.0).into_pt().0, current_y.into_pt().0])
-        });
-        ops.push(Op::ShowText { items: vec![TextItem::Text(item.cases.to_string())] });
-        
-        ops.push(Op::EndTextSection);
-        current_y -= Mm(8.0);
+        current_y -= 8.0;
     }
-    
-    ops.push(Op::RestoreGraphicsState);
-    pages.push(PdfPage::new(Mm(210.0), Mm(297.0), ops));
-
-    let total_pages = pages.len();
-    for (i, page) in pages.iter_mut().enumerate() {
-        let page_text = format!("Page {} of {}", i + 1, total_pages);
-        page.ops.push(Op::StartTextSection);
-        page.ops.push(Op::SetFont { font: font_regular.clone(), size: Pt(10.0) });
-        page.ops.push(Op::SetTextMatrix {
-            matrix: TextMatrix::Raw([1.0, 0.0, 0.0, 1.0, Mm(100.0).into_pt().0, Mm(15.0).into_pt().0])
-        });
-        page.ops.push(Op::ShowText { items: vec![TextItem::Text(page_text)] });
-        page.ops.push(Op::EndTextSection);
-    }
-
-    doc.pages = pages;
 
     let std_path = path.into_path().map_err(|_| "Invalid path".to_string())?;
     let mut file = File::create(std_path).map_err(|e| e.to_string())?;
     
-    let options = PdfSaveOptions::default();
-    let mut warnings = Vec::new();
-    let bytes = doc.save(&options, &mut warnings);
-    
-    file.write_all(&bytes).map_err(|e| e.to_string())?;
+    let mut buf = std::io::BufWriter::new(&mut file);
+    doc.save(&mut buf).map_err(|e| e.to_string())?;
 
     Ok(path_str)
 }

@@ -169,7 +169,7 @@ export function SmartPenCanvas() {
      let simY = 50;
      let angle = 0;
 
-     return setInterval(() => {
+     const intervalId = setInterval(() => {
         angle += 0.1;
         simX += 1.5;
         simY += Math.sin(angle) * 5; // Simule des boucles cursives (écriture)

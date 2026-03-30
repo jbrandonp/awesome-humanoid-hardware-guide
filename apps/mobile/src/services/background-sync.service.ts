@@ -88,7 +88,12 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
          });
 
          processedCount++;
-       } catch (networkError: unknown) {
+       } catch (networkError: any) {
+         if (networkError.response && (networkError.response.status === 400 || networkError.response.status === 500)) {
+            console.error(`[OS Background Worker] Erreur de validation (${networkError.response.status}) pour la tâche ${task.transactionId}. Tâche rejetée pour ne pas inonder le serveur.`);
+            continue;
+         }
+
          // Le serveur NestJS est hors-ligne, ou le routeur Wi-Fi est hors de portée.
          // On incrémente le compteur de retry et on garde la tâche.
          console.warn(`[OS Background Worker] Échec réseau pour la tâche ${task.transactionId}. Conservée en file d'attente.`);

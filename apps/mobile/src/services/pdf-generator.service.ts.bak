@@ -205,7 +205,7 @@ export class PdfGeneratorService {
             <div class="patient-card">
               <div>
                  <p><strong>Patient Name :</strong> ${escapeHtml(patientName)}</p>
-                 <p><strong>Date of Issue :</strong> ${escapeHtml(date)}</p>
+                 <p><strong>Date of Issue :</strong> ${date}</p>
               </div>
               <div style="text-align: right;">
                  <p><strong>Prescription ID :</strong> RX-${Date.now().toString().slice(-6)}</p>
