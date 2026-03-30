@@ -1,8 +1,7 @@
-/* eslint-disable */
-const axios = require('axios');
+import axios from 'axios';
 
-module.exports = async function () {
-  // Configure axios for tests to use.
+module.exports = async function() {
+  // Configure axios for tests
   const host = process.env.HOST ?? 'localhost';
   const port = process.env.PORT ?? '3333';
   axios.defaults.baseURL = `http://${host}:${port}/api`;

@@ -47,7 +47,7 @@ describe('Hl7MllpService', () => {
   });
 
   it('should generate AE ACK on parsing error', async () => {
-    parseMock.mockRejectedValue(new Error('Invalid segment'));
+    parseMock.mockRejectedValueOnce(new Error('Invalid segment'));
 
     const result = await service.processHl7Message('MSH|^~\\&|LAB||||20230101000000||ORU^R01|MSG002|P|2.3\rPID|1||PAT123||DOE^JOHN||19800101|M\r');
     
@@ -55,7 +55,7 @@ describe('Hl7MllpService', () => {
   });
 
   it('should generate AR ACK on server error', async () => {
-    parseMock.mockRejectedValue(new Error('Database error'));
+    parseMock.mockRejectedValueOnce(new Error('Database error'));
 
     const result = await service.processHl7Message('MSH|^~\\&|LAB||||20230101000000||ORU^R01|MSG003|P|2.3\rPID|1||PAT123||DOE^JOHN||19800101|M\r');
     
