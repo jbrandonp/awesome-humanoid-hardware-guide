@@ -53,6 +53,7 @@ export function SmartPenCanvas() {
 
   useEffect(() => {
     let penSubscription: EmitterSubscription | null = null;
+    let mockIntervalId: NodeJS.Timeout | null = null;
 
     if (isConnected) {
       setHardwareError(null);
@@ -72,7 +73,7 @@ export function SmartPenCanvas() {
 
         // --- MOCK POUR LE SANDBOX : Injection artificielle d'événements Bluetooth ---
         // Simule un médecin écrivant rapidement une longue ordonnance (Test de charge mémoire)
-        simulateHeavyBluetoothStream();
+        mockIntervalId = simulateHeavyBluetoothStream();
 
       } catch (sdkError: unknown) {
         console.error("[SmartPen FATAL] Le SDK du stylo Bluetooth a crashé.", sdkError);
@@ -84,6 +85,9 @@ export function SmartPenCanvas() {
     return () => {
       // Nettoyage obligatoire pour éviter la fuite de mémoire (Zombies Listeners)
       penSubscription?.remove();
+      if (mockIntervalId) {
+        clearInterval(mockIntervalId);
+      }
     };
   }, [isConnected]);
 

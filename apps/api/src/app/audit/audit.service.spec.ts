@@ -31,13 +31,13 @@ describe('AuditService', () => {
   describe('obfuscatePhiData', () => {
     it('should obfuscate phone numbers by hiding the first 5 digits', () => {
       const data = { phoneNumber: '1234567890' };
-      const result = service.obfuscatePhiData(data);
+      const result = service.obfuscatePhiData(data) as any;
       expect(result.phoneNumber).toBe('*****67890');
     });
 
     it('should obfuscate emails by truncating the username', () => {
       const data = { email: 'john.doe@example.com' };
-      const result = service.obfuscatePhiData(data);
+      const result = service.obfuscatePhiData(data) as any;
       expect(result.email).toBe('j***@example.com');
     });
 
@@ -48,14 +48,14 @@ describe('AuditService', () => {
           contactEmail: 'jane.smith@hospital.org'
         }
       };
-      const result = service.obfuscatePhiData(data);
+      const result = service.obfuscatePhiData(data) as any;
       expect(result.patient.phone).toBe('*****43210');
       expect(result.patient.contactEmail).toBe('j***@hospital.org');
     });
 
     it('should leave non-PHI fields intact', () => {
       const data = { diagnosis: 'Hypertension', phone: '1112223333' };
-      const result = service.obfuscatePhiData(data);
+      const result = service.obfuscatePhiData(data) as any;
       expect(result.diagnosis).toBe('Hypertension');
       expect(result.phone).toBe('*****23333');
     });

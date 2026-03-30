@@ -82,7 +82,9 @@ export class KeyRotationService {
     try {
       model = this.connection.model(modelName);
     } catch (err) {
-      this.logger.error(`Model ${modelName} not found.`);
+      if (process.env.NODE_ENV !== 'test') {
+        this.logger.error(`Model ${modelName} not found.`);
+      }
       throw new Error(`Model ${modelName} not registered.`);
     }
 
@@ -127,7 +129,9 @@ export class KeyRotationService {
 
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        this.logger.error(`Failed to rotate keys for document ${String(docRecord['_id'])}: ${errorMsg}`);
+        if (process.env.NODE_ENV !== 'test') {
+          this.logger.error(`Failed to rotate keys for document ${String(docRecord['_id'])}: ${errorMsg}`);
+        }
         errors.push(err instanceof Error ? err : new Error(errorMsg));
       }
     }

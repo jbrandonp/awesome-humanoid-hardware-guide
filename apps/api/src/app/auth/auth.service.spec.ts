@@ -1,10 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { AuthService } from './auth.service';
 import { JwtService } from '@nestjs/jwt';
 import { BlacklistService } from './blacklist.service';
 import * as crypto from 'crypto';
-
-class MockPrismaService {}
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -60,7 +57,7 @@ describe('AuthService', () => {
     it('should invalidate the decrypted refresh token via blacklist service', async () => {
       // Manually encrypt a token to test decryption and invalidation
       const rawToken = 'raw-refresh-token';
-      const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY.substring(0, 32));
+      const secret = Buffer.from((process.env.TOKEN_ENCRYPTION_KEY || "").substring(0, 32));
       const iv = crypto.randomBytes(16);
       const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
       let encrypted = cipher.update(rawToken, 'utf8', 'hex');
@@ -78,7 +75,7 @@ describe('AuthService', () => {
      it('should return false if the token is blacklisted', async () => {
         (blacklistService.isTokenBlacklisted as any).mockResolvedValue(true);
         const rawToken = 'raw-refresh-token';
-        const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY.substring(0, 32));
+        const secret = Buffer.from((process.env.TOKEN_ENCRYPTION_KEY || "").substring(0, 32));
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
         let encrypted = cipher.update(rawToken, 'utf8', 'hex');
@@ -93,7 +90,7 @@ describe('AuthService', () => {
      it('should return true if token is valid and not blacklisted', async () => {
         (blacklistService.isTokenBlacklisted as any).mockResolvedValue(false);
         const rawToken = 'raw-refresh-token';
-        const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY.substring(0, 32));
+        const secret = Buffer.from((process.env.TOKEN_ENCRYPTION_KEY || "").substring(0, 32));
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
         let encrypted = cipher.update(rawToken, 'utf8', 'hex');

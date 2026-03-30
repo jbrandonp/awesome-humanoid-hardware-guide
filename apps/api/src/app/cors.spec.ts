@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -22,13 +21,13 @@ describe('CORS Configuration', () => {
     const whitelistedOrigins = allowedOriginsRaw.split(',').map(o => o.trim());
 
     app.enableCors({
-      origin: (origin, callback) => {
+      origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
         if (!origin || whitelistedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          callback(new Error('Blocked by CORS'));
+          callback(new Error('Blocked by CORS'), false);
         }
-      },
+      } as any,
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
       credentials: true,
     });
