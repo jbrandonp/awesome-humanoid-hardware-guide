@@ -1,10 +1,28 @@
 import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 
+export interface InventoryItem {
+  name: string;
+  moq: number;
+}
+
+export interface PurchaseOrderItem {
+  quantity: number;
+  inventoryItem: InventoryItem;
+}
+
+export interface PurchaseOrderDraft {
+  id: string;
+  createdAt: string;
+  supplierId: string;
+  items: PurchaseOrderItem[];
+}
+
 export function PurchaseOrderQueue({ apiUrl }: { apiUrl: string }) {
-  const [drafts, setDrafts] = useState<any[]>([]);
+  const [drafts, setDrafts] = useState<PurchaseOrderDraft[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const fetchDrafts = async () => {
     try {
@@ -22,8 +40,8 @@ export function PurchaseOrderQueue({ apiUrl }: { apiUrl: string }) {
       }
       const data = await response.json();
       setDrafts(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -33,7 +51,7 @@ export function PurchaseOrderQueue({ apiUrl }: { apiUrl: string }) {
     fetchDrafts();
   }, [apiUrl]);
 
-  const handleApprove = async (draftId: string, item: any, supplierId: string, quantity: number) => {
+  const handleApprove = async (draftId: string, item: PurchaseOrderItem, supplierId: string, quantity: number) => {
     try {
       const token = await invoke<string>('get_token').catch(() => '');
       const response = await fetch(`${apiUrl}/api/procurement/${draftId}/approve`, {
@@ -57,14 +75,14 @@ export function PurchaseOrderQueue({ apiUrl }: { apiUrl: string }) {
       // Call Rust backend to generate PDF
       try {
         await invoke('generate_purchase_order_pdf', { orderJson: JSON.stringify(approvedOrder) });
-        alert('Commande approuvée et PDF généré avec succès.');
-      } catch (pdfErr: any) {
-        alert(`Commande approuvée, mais erreur lors de la génération du PDF: ${pdfErr}`);
+        setFeedbackMessage({ type: 'success', text: 'Commande approuvée et PDF généré avec succès.' });
+      } catch (pdfErr: unknown) {
+        setFeedbackMessage({ type: 'error', text: `Commande approuvée, mais erreur lors de la génération du PDF: ${pdfErr}` });
       }
 
       fetchDrafts();
-    } catch (err: any) {
-      alert(`Erreur d'approbation: ${err.message}`);
+    } catch (err: unknown) {
+      setFeedbackMessage({ type: 'error', text: `Erreur d'approbation: ${err instanceof Error ? err.message : String(err)}` });
     }
   };
 
@@ -74,6 +92,11 @@ export function PurchaseOrderQueue({ apiUrl }: { apiUrl: string }) {
   return (
     <div className="mt-8 p-6 bg-medical-surface rounded-lg shadow-md border border-medical-border">
       <h2 className="text-2xl font-bold mb-4">Commandes en Attente d'Approbation</h2>
+      {feedbackMessage && (
+        <div className={`p-4 mb-4 rounded ${feedbackMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`} role="alert">
+          {feedbackMessage.text}
+        </div>
+      )}
       {drafts.length === 0 ? (
         <p className="text-gray-400">Aucune commande critique à approuver.</p>
       ) : (
@@ -95,7 +118,7 @@ export function PurchaseOrderQueue({ apiUrl }: { apiUrl: string }) {
   );
 }
 
-function DraftRow({ draft, item, onApprove }: { draft: any, item: any, onApprove: any }) {
+function DraftRow({ draft, item, onApprove }: { draft: PurchaseOrderDraft, item: PurchaseOrderItem, onApprove: (id: string, item: PurchaseOrderItem, supplierId: string, quantity: number) => void }) {
   const [quantity, setQuantity] = useState(item.quantity);
   const [supplierId, setSupplierId] = useState(draft.supplierId);
 

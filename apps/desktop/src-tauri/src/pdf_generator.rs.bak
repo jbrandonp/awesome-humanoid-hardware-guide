@@ -23,14 +23,14 @@ pub struct PrescriptionData {
 pub fn generate_qr_code() -> Result<(String, printpdf::image_crate::DynamicImage), String> {
     let uuid = Uuid::new_v4().to_string();
     let code = QrCode::new(uuid.as_bytes()).map_err(|e| e.to_string())?;
-    
+
     // Render the QR code into an image buffer
     let image = code.render::<Luma<u8>>().build();
-    
+
     // Create the image using printpdf's embedded image crate version to avoid trait bound errors
     let img_buffer = printpdf::image_crate::ImageBuffer::from_raw(image.width(), image.height(), image.into_raw()).ok_or("Failed to create image buffer")?;
     let dyn_img = printpdf::image_crate::DynamicImage::ImageLuma8(img_buffer);
-        
+
     Ok((uuid, dyn_img))
 }
 
@@ -94,29 +94,28 @@ pub fn encrypt_and_save(pdf_bytes: &[u8]) -> Result<(String, String), String> {
     let mut key_bytes = [0u8; 32];
     rand::rng().fill_bytes(&mut key_bytes);
     let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&key_bytes);
-    
+
     let cipher = Aes256Gcm::new(key);
-    
+
     let mut nonce_bytes = [0u8; 12];
     rand::rng().fill_bytes(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
-    
+
     let mut buffer = pdf_bytes.to_vec();
     let tag = cipher.encrypt_in_place_detached(nonce, b"", &mut buffer).map_err(|e| e.to_string())?;
-    
+
     let mut file = tempfile::NamedTempFile::new().map_err(|e| e.to_string())?;
-    
+
     // Prepend nonce to the encrypted file for decryption later if needed
     file.write_all(&nonce_bytes).map_err(|e| e.to_string())?;
-    file.write_all(tag.as_slice()).map_err(|e| e.to_string())?;
-    file.write_all(&buffer).map_err(|e| e.to_string())?;
-    
+    file.write_all(&encrypted_bytes).map_err(|e| e.to_string())?;
+
     let path = file.into_temp_path();
     let path_str = path.to_str().unwrap_or("").to_string();
-    
+
     // Keep the file from being deleted immediately
     path.keep().map_err(|e| e.to_string())?;
-    
+
     // Return both the path and the hex-encoded encryption key
     let key_hex = hex::encode(key_bytes);
 
@@ -133,9 +132,9 @@ pub struct PrescriptionResult {
 pub async fn generate_pdf_prescription(data: PrescriptionData) -> Result<PrescriptionResult, String> {
     let (uuid, qr_code_img) = generate_qr_code()?;
     let pdf_bytes = generate_pdf_document(&data, &qr_code_img, &uuid)?;
-    
+
     let (file_path, encryption_key) = encrypt_and_save(&pdf_bytes)?;
-    
+
     Ok(PrescriptionResult {
         file_path,
         encryption_key,

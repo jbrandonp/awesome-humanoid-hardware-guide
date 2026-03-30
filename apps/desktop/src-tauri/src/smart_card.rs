@@ -34,17 +34,17 @@ pub async fn read_smart_card() -> Result<SmartCardData, SmartCardError> {
         }
     };
 
-    // Prendre le premier lecteur disponible
-    let reader = match readers.next() {
-        Some(reader) => reader,
-        None => {
-            return Err(SmartCardError {
-                message: "No smart card readers found".to_string(),
-                code: "NO_READERS_FOUND".to_string(),
-            });
+    // Filtrer pour un lecteur médical
+    let mut medical_reader = None;
+    for reader in readers {
+        let name = reader.to_string_lossy().into_owned();
+        if name.to_lowercase().contains("omni") || name.to_lowercase().contains("gemalto") || name.to_lowercase().contains("medical") || name.to_lowercase().contains("smart") {
+            medical_reader = Some(reader);
+            break;
         }
-    };
+    }
 
+    let reader = medical_reader.ok_or(SmartCardError { message: "No medical smart card readers found".to_string(), code: "NO_MEDICAL_READERS".to_string() })?;
     let reader_name = reader.to_string_lossy().into_owned();
 
     // Se connecter à la carte dans le lecteur
