@@ -82,3 +82,13 @@
 ### 5.2 Moteur d'Assurance
 - **Import require(dinero)** : L'import de Dinero se fait via `const Dinero = require('dinero.js');` au lieu d'un import ES6 propre `import Dinero from 'dinero.js';`.
 - **Cas Edge pour l'accumulation des caps annuels** : L'accumulation des caps (`state.accumulatedAnnualCovered.add(amountToCover)`) ne prend pas correctement en compte les multi-devises si jamais des devises différentes étaient introduites (bien que pour l'instant USD soit hardcodé). De plus, l'engine parcourt toutes les polices, mais n'optimise pas la sortie anticipée si le patient n'a plus rien à payer pour les items suivants.
+
+---
+## Nouvelles Découvertes (Analyse Complémentaire)
+
+### 6.1 Nouvelles Erreurs de Compilation (Backend API)
+- **`inventoryItem` introuvable** : `apps/api/src/app/billing/billing.service.ts` : La compilation TypeScript de l'API échoue avec l'erreur `TS2304: Cannot find name 'inventoryItem'`. La variable est utilisée mais non déclarée.
+- **`Worker` Node.js mal importé** : `apps/api/src/app/pacs-indexer/pacs-indexer.processor.ts` : L'erreur `TS2552: Cannot find name 'Worker'` est due à l'absence de l'import `{ Worker } from 'worker_threads'`. De plus, `dicomParser` y est importé mais jamais lu (`TS6133`).
+
+### 6.2 Problèmes Complémentaires Front-End / Desktop
+- **Whisper Rust Circuit Breaker** : Dans `apps/desktop/src-tauri/src/whisper.rs`, le disjoncteur (Circuit Breaker) mémoire de 2GB sur le processus enfant "whisper.cpp" tue le processus via `.kill().await` mais renvoie immédiatement une erreur sans l'intégrer proprement au bloc `tokio::select!`. Cela pourrait causer des conditions de course asynchrones avec le timer de 10 secondes. De plus, `sysinfo` utilisé dans une boucle toutes les 500ms sans nettoyage peut impacter significativement les CPU peu puissants visés par l'architecture.
