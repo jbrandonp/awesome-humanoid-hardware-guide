@@ -6,6 +6,7 @@ import { Role, ActionType } from '@prisma/client';
 import { EpidemiologyReportService } from './epidemiology-report.service';
 import { AuditService } from '../audit/audit.service';
 import { FastifyRequest } from 'fastify';
+import { AuthGuard } from '@nestjs/passport';
 
 interface AuthenticatedRequest extends FastifyRequest {
   user: {
@@ -23,7 +24,7 @@ export class EpidemiologyReportController {
 
   @Get()
   @Roles(Role.ADMIN, Role.MINISTRY_LIAISON)
-  @UseGuards(RolesGuard)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
   
   async getEpidemiologyReport(
     @Req() req: AuthenticatedRequest,

@@ -5,14 +5,14 @@ import { TrainingWorkerData, PredictionResult, DailyConsumption } from './invent
 // Helper: Moving Average for smoothing outliers
 function smoothOutliers(data: DailyConsumption[], windowSize = 3): DailyConsumption[] {
   if (data.length === 0) return [];
-  
+
   const smoothed: DailyConsumption[] = [];
   for (let i = 0; i < data.length; i++) {
     const start = Math.max(0, i - windowSize + 1);
     const window = data.slice(start, i + 1);
     const sum = window.reduce((acc, curr) => acc + curr.quantity, 0);
     const avg = sum / window.length;
-    
+
     smoothed.push({
       date: data[i].date,
       quantity: avg,
@@ -24,14 +24,14 @@ function smoothOutliers(data: DailyConsumption[], windowSize = 3): DailyConsumpt
 // Helper: Interpolation for missing days
 function fillMissingDays(data: DailyConsumption[]): DailyConsumption[] {
   if (data.length <= 1) return data;
-  
+
   const interpolated: DailyConsumption[] = [];
   interpolated.push(data[0]);
 
   for (let i = 1; i < data.length; i++) {
     const prevDate = new Date(data[i - 1].date);
     const currDate = new Date(data[i].date);
-    
+
     // Add 1 day to prevDate
     const expectedNextDate = new Date(prevDate);
     expectedNextDate.setUTCDate(expectedNextDate.getUTCDate() + 1);
@@ -52,10 +52,10 @@ function fillMissingDays(data: DailyConsumption[]): DailyConsumption[] {
 function preprocessData(data: DailyConsumption[]): number[] {
   // Sort by date just in case
   const sorted = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  
+
   const filled = fillMissingDays(sorted);
   const smoothed = smoothOutliers(filled);
-  
+
   return smoothed.map(d => d.quantity);
 }
 
@@ -66,7 +66,7 @@ function run(): void {
 
   try {
     const data = workerData as TrainingWorkerData;
-    
+
     if (!data.consumptionHistory || data.consumptionHistory.length < 10) {
       throw new Error('Not enough historical data to train the model.');
     }
@@ -74,15 +74,7 @@ function run(): void {
     const processedSeries = preprocessData(data.consumptionHistory);
 
     // Normalize data (LSTM performs better with values between 0 and 1)
-    const maxVal = Math.max(...processedSeries);
-    if (maxVal === 0) {
-      return parentPort.postMessage({
-        itemId: data.itemId,
-        predictedConsumption30Days: 0,
-        mse: 0,
-        success: true,
-      });
-    }
+    const maxVal = Math.max(...processedSeries, 1);
     const normalizedSeries = processedSeries.map(val => val / maxVal);
 
     // Prepare training data for LSTMTimeStep
@@ -120,7 +112,7 @@ function run(): void {
       const nextNormalized = net.run(currentWindow) as number;
       // Depending on brain.js typings and LSTMTimeStep, run() on a 1D array returns a number
       predictedTotal += (nextNormalized * maxVal);
-      
+
       currentWindow.shift();
       currentWindow.push(nextNormalized);
     }
