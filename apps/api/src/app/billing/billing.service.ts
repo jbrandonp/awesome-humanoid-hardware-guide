@@ -91,7 +91,7 @@ export class BillingService {
             // Déduction atomique du stock (Empêche les stocks négatifs en cas de concurrence)
             const updateResult = await tx.inventoryItem.updateMany({
                where: { 
-                 name: inventoryItem.name,
+                 name: foundItem.name,
                  quantity: { gte: item.quantity } // Condition de garde atomique
                },
                data: { quantity: { decrement: item.quantity } }

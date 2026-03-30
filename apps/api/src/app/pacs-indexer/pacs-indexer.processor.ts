@@ -1,3 +1,4 @@
+import { Worker } from 'worker_threads';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
@@ -5,7 +6,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { ActionType, DicomStudyStatus } from '@prisma/client';
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import * as dicomParser from 'dicom-parser';
+
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
