@@ -91,7 +91,9 @@ export class Hl7MllpService implements OnModuleInit, OnModuleDestroy {
       
       return this.generateAck(parsed.messageControlId, 'AA', 'Message processed successfully');
     } catch (error: unknown) {
-      this.logger.error(`Error processing HL7 message`, error);
+      if (process.env.NODE_ENV !== 'test') {
+        this.logger.error(`Error processing HL7 message`, error);
+      }
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       let messageId = 'UNKNOWN';

@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { HttpException } from '@nestjs/common';
 import { ReconciliationService } from './reconciliation.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterStatus, TransactionType, PaymentMethod } from '@prisma/client';
-import { HttpException, HttpStatus } from '@nestjs/common';
 
 const mockPrismaService = {
   cashRegisterSession: {

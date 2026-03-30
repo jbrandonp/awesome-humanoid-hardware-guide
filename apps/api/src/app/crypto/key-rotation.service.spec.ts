@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { KeyRotationService, EncryptedPayload } from './key-rotation.service';
+import { KeyRotationService } from './key-rotation.service';
 import { getConnectionToken } from '@nestjs/mongoose';
-import { Logger } from '@nestjs/common';
 import * as crypto from 'crypto';
 
 describe('KeyRotationService', () => {

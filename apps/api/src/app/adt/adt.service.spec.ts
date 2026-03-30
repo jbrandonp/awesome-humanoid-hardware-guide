@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AdtService } from './adt.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BedStatus, BedType } from '@prisma/client';
 
 describe('AdtService', () => {
   let service: AdtService;

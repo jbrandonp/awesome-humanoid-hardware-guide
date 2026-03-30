@@ -3,12 +3,10 @@ import { DrugInteractionService } from './drug-interaction.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { PrismaService } from '../prisma/prisma.service';
 import { ClinicalRecord } from '../clinical-record/clinical-record.schema';
-import * as crypto from 'crypto';
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 describe('DrugInteractionService', () => {
   let service: DrugInteractionService;
-  let prismaService: PrismaService;
 
   const mockRecordModel = {
     find: jest.fn().mockReturnThis(),
@@ -37,7 +35,6 @@ describe('DrugInteractionService', () => {
     }).compile();
 
     service = module.get<DrugInteractionService>(DrugInteractionService);
-    prismaService = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
