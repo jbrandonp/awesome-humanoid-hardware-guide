@@ -34,8 +34,11 @@ export class WaitingRoomGateway implements OnGatewayConnection, OnGatewayDisconn
       }
 
       // 2. Validate JWT and extract payload
+      if (!process.env.JWT_SECRET) {
+        throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET is not defined in environment variables.');
+      }
       const payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_SECRET || 'super-secret', // Should match AuthService
+        secret: process.env.JWT_SECRET, // Should match AuthService
       });
 
       // 3. Security Constraint: Must have DISPLAY_KIOSK role

@@ -12,7 +12,25 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly blacklistService: BlacklistService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) {
+    this.validateSecrets();
+  }
+
+  private validateSecrets() {
+    const requiredSecrets = [
+      'JWT_SECRET',
+      'JWT_REFRESH_SECRET',
+      'TOKEN_ENCRYPTION_KEY',
+    ];
+    for (const secret of requiredSecrets) {
+      if (!process.env[secret]) {
+        throw new Error(`CRITICAL SECURITY ERROR: ${secret} is not defined in environment variables.`);
+      }
+    }
+    if (process.env.TOKEN_ENCRYPTION_KEY && process.env.TOKEN_ENCRYPTION_KEY.length < 32) {
+      throw new Error('CRITICAL SECURITY ERROR: TOKEN_ENCRYPTION_KEY must be at least 32 characters long.');
+    }
+  }
 
   /**
    * Generates a new Access Token (15 mins) and an encrypted Refresh Token (7 days).
@@ -23,13 +41,13 @@ export class AuthService {
     // Access Token: 15 minutes
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '15m',
-      secret: process.env.JWT_SECRET || 'super-secret',
+      secret: process.env.JWT_SECRET,
     });
 
     // Refresh Token: 7 days
     const rawRefreshToken = this.jwtService.sign(payload, {
       expiresIn: '7d',
-      secret: process.env.JWT_REFRESH_SECRET || 'super-refresh-secret',
+      secret: process.env.JWT_REFRESH_SECRET,
     });
 
     // Encrypt the Refresh Token
@@ -68,7 +86,7 @@ export class AuthService {
        if (isBlacklisted) {
            return false;
        }
-       this.jwtService.verify(decrypted, { secret: process.env.JWT_REFRESH_SECRET || 'super-refresh-secret' });
+       this.jwtService.verify(decrypted, { secret: process.env.JWT_REFRESH_SECRET });
        return true;
     } catch (e) {
        return false;
@@ -126,7 +144,7 @@ export class AuthService {
   // --- Utility Methods for Encryption ---
 
   private encryptToken(token: string): string {
-    const secret = (process.env.TOKEN_ENCRYPTION_KEY || '12345678901234567890123456789012').substring(0, 32);
+    const secret = process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32);
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(secret), iv);
     let encrypted = cipher.update(token, 'utf8', 'hex');
@@ -137,7 +155,7 @@ export class AuthService {
   private decryptToken(encryptedData: string): string {
     const parts = encryptedData.split(':');
     if (parts.length !== 2) throw new Error('Invalid encrypted token format');
-    const secret = (process.env.TOKEN_ENCRYPTION_KEY || '12345678901234567890123456789012').substring(0, 32);
+    const secret = process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32);
     const iv = Buffer.from(parts[0], 'hex');
     const encryptedText = parts[1];
     const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(secret), iv);

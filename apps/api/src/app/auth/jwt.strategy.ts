@@ -6,10 +6,13 @@ import { BlacklistService } from './blacklist.service';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly blacklistService: BlacklistService) {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET is not defined in environment variables.');
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'super-secret',
+      secretOrKey: process.env.JWT_SECRET,
       passReqToCallback: true,
     });
   }

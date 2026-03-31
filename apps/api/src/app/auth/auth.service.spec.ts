@@ -39,6 +39,24 @@ describe('AuthService', () => {
     jest.clearAllMocks();
   });
 
+  describe('constructor validation', () => {
+    it('should throw error if JWT_SECRET is missing', () => {
+      delete process.env.JWT_SECRET;
+      expect(() => new AuthService({} as any, {} as any, {} as any)).toThrow(
+        'CRITICAL SECURITY ERROR: JWT_SECRET is not defined'
+      );
+    });
+
+    it('should throw error if TOKEN_ENCRYPTION_KEY is too short', () => {
+      process.env.JWT_SECRET = 'secret';
+      process.env.JWT_REFRESH_SECRET = 'refresh';
+      process.env.TOKEN_ENCRYPTION_KEY = 'short';
+      expect(() => new AuthService({} as any, {} as any, {} as any)).toThrow(
+        'CRITICAL SECURITY ERROR: TOKEN_ENCRYPTION_KEY must be at least 32 characters long'
+      );
+    });
+  });
+
   describe('login', () => {
     it('should generate an access token and an encrypted refresh token', async () => {
       const result = await service.login('user123', 'DOCTOR');
@@ -57,7 +75,7 @@ describe('AuthService', () => {
     it('should invalidate the decrypted refresh token via blacklist service', async () => {
       // Manually encrypt a token to test decryption and invalidation
       const rawToken = 'raw-refresh-token';
-      const secret = Buffer.from((process.env.TOKEN_ENCRYPTION_KEY || "").substring(0, 32));
+      const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32));
       const iv = crypto.randomBytes(16);
       const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
       let encrypted = cipher.update(rawToken, 'utf8', 'hex');
@@ -75,7 +93,7 @@ describe('AuthService', () => {
      it('should return false if the token is blacklisted', async () => {
         (blacklistService.isTokenBlacklisted as any).mockResolvedValue(true);
         const rawToken = 'raw-refresh-token';
-        const secret = Buffer.from((process.env.TOKEN_ENCRYPTION_KEY || "").substring(0, 32));
+        const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32));
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
         let encrypted = cipher.update(rawToken, 'utf8', 'hex');
@@ -90,7 +108,7 @@ describe('AuthService', () => {
      it('should return true if token is valid and not blacklisted', async () => {
         (blacklistService.isTokenBlacklisted as any).mockResolvedValue(false);
         const rawToken = 'raw-refresh-token';
-        const secret = Buffer.from((process.env.TOKEN_ENCRYPTION_KEY || "").substring(0, 32));
+        const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32));
         const iv = crypto.randomBytes(16);
         const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
         let encrypted = cipher.update(rawToken, 'utf8', 'hex');
