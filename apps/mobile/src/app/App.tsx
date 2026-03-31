@@ -10,7 +10,6 @@ import { Omnibox } from '../components/Omnibox';
 import { usePowerManagement } from '../hooks/usePowerManagement';
 
 // Zéro Cloud Logs: Assurez-vous qu'aucun service tiers n'est importé/activé ici pour les PHI.
-// import * as Sentry from 'sentry-expo'; // BLOQUÉ POUR RGPD/DPDPA OFFLINE FIRST
 
 export const App = () => {
   const powerState = usePowerManagement();
