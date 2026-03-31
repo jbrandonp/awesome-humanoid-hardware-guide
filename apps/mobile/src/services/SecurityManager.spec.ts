@@ -28,6 +28,12 @@ vi.mock('expo-crypto', () => ({
   getRandomBytes: vi.fn(),
 }));
 
+vi.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios'
+  }
+}));
+
 import { SecurityManager } from './SecurityManager';
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
@@ -105,7 +111,7 @@ describe('SecurityManager', () => {
     });
 
     it('should not attempt to delete database files if they do not exist', async () => {
-      Platform.OS = 'ios';
+      Platform.OS = 'ios'; // OS doesn't matter much here, just testing non-existence path
 
       // Mock file non-existence
       vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (path: string) => {
