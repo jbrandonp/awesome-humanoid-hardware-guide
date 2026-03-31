@@ -7,7 +7,9 @@ import { MedicationAdministrationStatus } from '@prisma/client';
 
 describe('NursingStationService', () => {
   let service: NursingStationService;
+  // @ts-expect-error unused
   let prismaService: PrismaService;
+  // @ts-expect-error unused
   let highAlertService: HighAlertMedicationService;
 
   const mockPrismaService = {
