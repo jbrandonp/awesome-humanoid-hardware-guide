@@ -34,11 +34,16 @@ export class MDNSScannerService {
       let isResolved = false;
       const timeoutSecs = 5;
 
+      this.zeroconf.removeAllListeners('resolved');
+      this.zeroconf.removeAllListeners('error');
+
       // Timer de Fallback (Si le routeur bloque le multicast mDNS ou que le serveur est éteint)
       const scanTimeout = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
           this.zeroconf.stop();
+          this.zeroconf.removeAllListeners('resolved');
+          this.zeroconf.removeAllListeners('error');
           store.enableManualFallback();
           reject(new Error(`Timeout de ${timeoutSecs}s atteint lors du scan mDNS.`));
         }
@@ -53,6 +58,8 @@ export class MDNSScannerService {
            isResolved = true;
            clearTimeout(scanTimeout);
            this.zeroconf.stop();
+           this.zeroconf.removeAllListeners('resolved');
+           this.zeroconf.removeAllListeners('error');
 
            const ip = service.addresses[0];
            const port = service.port;
@@ -72,7 +79,10 @@ export class MDNSScannerService {
            isResolved = true;
            clearTimeout(scanTimeout);
            this.zeroconf.stop();
+           this.zeroconf.removeAllListeners('resolved');
+           this.zeroconf.removeAllListeners('error');
            console.error('[mDNS Scanner] Erreur ZeroConf native:', err);
+           store.enableManualFallback();
            reject(new Error(`Erreur du scanner réseau: ${err}`));
         }
       });

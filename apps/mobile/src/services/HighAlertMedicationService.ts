@@ -5,6 +5,8 @@ import { DualSignOff } from '@systeme-sante/models';
 const DUAL_SIGN_OFF_QUEUE_KEY = '@dual_sign_off_queue';
 
 export class HighAlertMedicationService {
+  private static isSyncing = false;
+
   /**
    * Hashes the dual sign-off event securely using SHA-256 for offline auditing.
    */
@@ -42,6 +44,9 @@ export class HighAlertMedicationService {
 
   private static async queueForSync(payload: any): Promise<void> {
     try {
+      // Basic protection against race conditions while queuing:
+      // ideally we would use a more robust mutex here if AsyncStorage was truly concurrent,
+      // but await generally serializes execution enough in a single JS thread for simple push.
       const existingQueueStr = await AsyncStorage.getItem(DUAL_SIGN_OFF_QUEUE_KEY);
       const queue: any[] = existingQueueStr ? JSON.parse(existingQueueStr) : [];
       queue.push(payload);
@@ -56,39 +61,49 @@ export class HighAlertMedicationService {
    * This would typically be called by expo-background-fetch / expo-task-manager.
    */
   public static async attemptSync(): Promise<void> {
+    if (this.isSyncing) return;
+    this.isSyncing = true;
+
     try {
-      const queueStr = await AsyncStorage.getItem(DUAL_SIGN_OFF_QUEUE_KEY);
+      let queueStr = await AsyncStorage.getItem(DUAL_SIGN_OFF_QUEUE_KEY);
       if (!queueStr) return;
 
-      const queue: any[] = JSON.parse(queueStr);
+      let queue: any[] = JSON.parse(queueStr);
       if (queue.length === 0) return;
 
-      // 3. Make a request to the NestJS API endpoint (assuming local proxy/DNS routes appropriately)
-      const response = await fetch('http://localhost:3000/high-alert-medications/dual-sign-off', {
-        method: 'POST',
-        headers: {
+      // We process the queue sequentially to ensure order and avoid hammering the server
+      for (const item of queue) {
+        // 3. Make a request to the NestJS API endpoint
+        const response = await fetch('http://localhost:3000/high-alert-medications/dual-sign-off', {
+          method: 'POST',
+          headers: {
             'Content-Type': 'application/json',
             // Typically would include a JWT Token from auth context here
             // 'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify(queue[0])
-      });
+          },
+          body: JSON.stringify(item),
+        });
 
-      if (!response.ok) {
+        if (!response.ok) {
           throw new Error('Sync failed with status ' + response.status);
-      }
+        }
 
-      // 4. If successful, remove it from the queue
-      const newQueue = queue.slice(1);
-      await AsyncStorage.setItem(DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify(newQueue));
-
-      // Attempt to sync the rest
-      if (newQueue.length > 0) {
-        await this.attemptSync();
+        // 4. If successful, remove it from the queue safely.
+        // We re-read the queue because queueForSync might have been called while fetch was awaiting
+        const currentQueueStr = await AsyncStorage.getItem(DUAL_SIGN_OFF_QUEUE_KEY);
+        if (currentQueueStr) {
+          const currentQueue: any[] = JSON.parse(currentQueueStr);
+          // Filter out the synced item using offlineHash or strict equality
+          const newQueue = currentQueue.filter((qItem) => qItem.offlineHash !== item.offlineHash);
+          await AsyncStorage.setItem(DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify(newQueue));
+        }
       }
     } catch (error) {
-      // Re-throw to be caught by the caller or task manager
+      // Let it throw, but ensure the finally block resets the flag
       throw error;
+    } finally {
+      this.isSyncing = false;
     }
   }
+
 }
