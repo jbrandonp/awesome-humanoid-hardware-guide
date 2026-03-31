@@ -80,6 +80,8 @@ export function SmartPenCanvas() {
         setHardwareError("Le pilote matériel du stylo connecté a cessé de fonctionner.");
         setIsConnected(false);
       }
+    } else {
+      // Le bloc est intentionnellement vide lors de la déconnexion
     }
 
     return () => {
