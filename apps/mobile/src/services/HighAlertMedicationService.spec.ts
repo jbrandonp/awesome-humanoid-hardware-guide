@@ -12,7 +12,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 
 // Mock expo-crypto just in case to prevent import errors in the test environment
 vi.mock('expo-crypto', () => ({
-  digestStringAsync: vi.fn(),
+  digestStringAsync: vi.fn().mockResolvedValue('mock-hash'),
   CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
 }));
 
@@ -25,6 +25,9 @@ describe('HighAlertMedicationService - attemptSync', () => {
     vi.clearAllMocks();
     fetchMock = vi.fn();
     global.fetch = fetchMock;
+
+    // reset internal state manually by re-initializing or manipulating (using any for private prop)
+    (HighAlertMedicationService as any).isSyncing = false;
   });
 
   afterEach(() => {
@@ -49,11 +52,48 @@ describe('HighAlertMedicationService - attemptSync', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('should sync a single item and remove it from the queue', async () => {
-    const queue = [{ id: 1 }];
+  it('should prevent concurrent syncing executions', async () => {
+    const queue = [{ id: 1, offlineHash: 'hash-1' }];
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue));
+
+    // Make fetch hang to simulate a slow network
+    let resolveFetch: any;
+    const fetchPromise = new Promise((resolve) => {
+      resolveFetch = resolve;
+    });
+    fetchMock.mockReturnValueOnce(fetchPromise);
+
+    // start first sync
+    const firstSync = HighAlertMedicationService.attemptSync();
+
+    // verify flag is set
+    expect((HighAlertMedicationService as any).isSyncing).toBe(true);
+
+    // start second sync
+    await HighAlertMedicationService.attemptSync();
+
+    // fetch should only be called once
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    // resolve first sync
+    resolveFetch({ ok: true });
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue)); // read current queue
+    await firstSync;
+
+    // verify flag is reset
+    expect((HighAlertMedicationService as any).isSyncing).toBe(false);
+  });
+
+  it('should sync a single item and remove it from the queue safely', async () => {
+    const queue = [{ id: 1, offlineHash: 'hash-1' }];
+
+    // First read to get the queue
     vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue));
 
     fetchMock.mockResolvedValueOnce({ ok: true });
+
+    // Second read to get current queue before removing synced item
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue));
 
     await HighAlertMedicationService.attemptSync();
 
@@ -69,30 +109,44 @@ describe('HighAlertMedicationService - attemptSync', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith(DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify([]));
   });
 
-  it('should recursively sync multiple items', async () => {
-    const queue = [{ id: 1 }, { id: 2 }, { id: 3 }];
+  it('should process multiple items sequentially and handle new items added mid-sync', async () => {
+    const queue = [{ id: 1, offlineHash: 'hash-1' }, { id: 2, offlineHash: 'hash-2' }];
 
-    // First call: [1, 2, 3]
+    // Initial read
     vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue));
-    // Second call (recursive): [2, 3]
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify([{ id: 2 }, { id: 3 }]));
-    // Third call (recursive): [3]
-    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify([{ id: 3 }]));
 
     fetchMock.mockResolvedValue({ ok: true });
 
+    // Read after syncing item 1
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify([
+      { id: 1, offlineHash: 'hash-1' },
+      { id: 2, offlineHash: 'hash-2' },
+      { id: 3, offlineHash: 'hash-3' } // added mid-sync
+    ]));
+
+    // Read after syncing item 2
+    vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify([
+      { id: 2, offlineHash: 'hash-2' },
+      { id: 3, offlineHash: 'hash-3' }
+    ]));
+
     await HighAlertMedicationService.attemptSync();
 
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     // Check setItem calls
-    expect(AsyncStorage.setItem).toHaveBeenNthCalledWith(1, DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify([{ id: 2 }, { id: 3 }]));
-    expect(AsyncStorage.setItem).toHaveBeenNthCalledWith(2, DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify([{ id: 3 }]));
-    expect(AsyncStorage.setItem).toHaveBeenNthCalledWith(3, DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify([]));
+    expect(AsyncStorage.setItem).toHaveBeenNthCalledWith(1, DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify([
+        { id: 2, offlineHash: 'hash-2' },
+        { id: 3, offlineHash: 'hash-3' }
+    ]));
+
+    expect(AsyncStorage.setItem).toHaveBeenNthCalledWith(2, DUAL_SIGN_OFF_QUEUE_KEY, JSON.stringify([
+        { id: 3, offlineHash: 'hash-3' }
+    ]));
   });
 
   it('should throw an error and stop processing if response is not ok', async () => {
-    const queue = [{ id: 1 }, { id: 2 }];
+    const queue = [{ id: 1, offlineHash: 'hash-1' }, { id: 2, offlineHash: 'hash-2' }];
     vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue));
 
     fetchMock.mockResolvedValueOnce({ ok: false, status: 500 });
@@ -101,10 +155,11 @@ describe('HighAlertMedicationService - attemptSync', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect((HighAlertMedicationService as any).isSyncing).toBe(false);
   });
 
   it('should throw an error and stop processing if fetch fails (network error)', async () => {
-    const queue = [{ id: 1 }];
+    const queue = [{ id: 1, offlineHash: 'hash-1' }];
     vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(queue));
 
     fetchMock.mockRejectedValueOnce(new Error('Network error'));
@@ -113,5 +168,6 @@ describe('HighAlertMedicationService - attemptSync', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+    expect((HighAlertMedicationService as any).isSyncing).toBe(false);
   });
 });
