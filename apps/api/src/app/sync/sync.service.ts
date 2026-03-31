@@ -14,15 +14,16 @@ export class SyncService {
 
   async pushChanges(changes: any) {
     if (changes.patients) {
-      for (const patient of changes.patients.created) {
-        await this.prisma.patient.create({
-          data: {
+      if (changes.patients.created.length > 0) {
+        await this.prisma.patient.createMany({
+          data: changes.patients.created.map((patient: any) => ({
             id: patient.id,
             firstName: patient.first_name,
             lastName: patient.last_name,
             dateOfBirth: new Date(patient.date_of_birth),
             status: 'synced',
-          }
+          })),
+          skipDuplicates: true,
         });
       }
       for (const patient of changes.patients.updated) {
@@ -45,17 +46,16 @@ export class SyncService {
     }
 
     if (changes.visits) {
-      for (const visit of changes.visits.created) {
-        // Base64 to Uint8Array for new note initialization
-        const initialNoteBuffer = visit.notes ? Buffer.from(visit.notes, 'base64') : null;
-        await this.prisma.visit.create({
-          data: {
+      if (changes.visits.created.length > 0) {
+        await this.prisma.visit.createMany({
+          data: changes.visits.created.map((visit: any) => ({
             id: visit.id,
             patientId: visit.patient_id,
             date: new Date(visit.date),
-            notes: initialNoteBuffer,
+            notes: visit.notes ? Buffer.from(visit.notes, 'base64') : null,
             status: 'synced'
-          }
+          })),
+          skipDuplicates: true,
         });
       }
 
@@ -103,10 +103,9 @@ export class SyncService {
     }
 
     if (changes.prescriptions) {
-      for (const prescription of changes.prescriptions.created) {
-        const initialBuffer = prescription.administrations ? Buffer.from(prescription.administrations, 'base64') : null;
-        await this.prisma.prescription.create({
-          data: {
+      if (changes.prescriptions.created.length > 0) {
+        await this.prisma.prescription.createMany({
+          data: changes.prescriptions.created.map((prescription: any) => ({
             id: prescription.id,
             visitId: prescription.visit_id,
             patientId: prescription.patient_id,
@@ -114,9 +113,10 @@ export class SyncService {
             dosage: prescription.dosage,
             instructions: prescription.instructions,
             prescribedAt: new Date(prescription.prescribed_at),
-            crdtAdministrations: initialBuffer,
+            crdtAdministrations: prescription.administrations ? Buffer.from(prescription.administrations, 'base64') : null,
             status: 'synced'
-          }
+          })),
+          skipDuplicates: true,
         });
       }
 
@@ -215,16 +215,17 @@ export class SyncService {
     }
 
     if (changes.vitals) {
-      for (const vital of changes.vitals.created) {
-        await this.prisma.vital.create({
-          data: {
+      if (changes.vitals.created.length > 0) {
+        await this.prisma.vital.createMany({
+          data: changes.vitals.created.map((vital: any) => ({
             id: vital.id,
             patientId: vital.patient_id,
             bloodPressure: vital.blood_pressure,
             heartRate: vital.heart_rate,
             recordedAt: new Date(vital.recorded_at),
             status: 'synced',
-          }
+          })),
+          skipDuplicates: true,
         });
       }
       for (const vital of changes.vitals.updated) {

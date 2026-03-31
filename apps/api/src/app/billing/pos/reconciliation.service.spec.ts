@@ -42,11 +42,7 @@ describe('ReconciliationService', () => {
     }).compile();
 
     service = module.get<ReconciliationService>(ReconciliationService);
-    
-    // We explicitly set prisma to the mocked object to ensure we can access the mocked methods
-    prisma = mockPrismaService;
-    // We also need to hack the service to use our mock directly because TS compilation might make module.get return something else depending on TS config
-    (service as any).prisma = mockPrismaService;
+    prisma = module.get<PrismaService>(PrismaService);
   });
 
   afterEach(() => {
