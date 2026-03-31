@@ -40,11 +40,6 @@ describe('Hl7ParserService', () => {
     prismaService = module.get(PrismaService);
     reconciliationService = module.get(Hl7ReconciliationService);
     eventEmitter = module.get(EventEmitter2);
-
-    // Overwrite the injected mock for direct spy access just in case
-    (service as any).prisma = mockPrismaService;
-    (service as any).reconciliationService = mockReconciliationService;
-    (service as any).eventEmitter = mockEventEmitter;
   });
 
   const validHl7 = `MSH|^~\\&|LAB1|DEST1|||||ORU^R01|MSG-1001|P|2.3
