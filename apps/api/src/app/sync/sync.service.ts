@@ -26,16 +26,19 @@ export class SyncService {
           skipDuplicates: true,
         });
       }
-      for (const patient of changes.patients.updated) {
-        await this.prisma.patient.update({
-          where: { id: patient.id },
-          data: {
-            firstName: patient.first_name,
-            lastName: patient.last_name,
-            dateOfBirth: new Date(patient.date_of_birth),
-            status: 'synced',
-          }
-        });
+      if (changes.patients.updated.length > 0) {
+        const updates = changes.patients.updated.map((patient: any) =>
+          this.prisma.patient.update({
+            where: { id: patient.id },
+            data: {
+              firstName: patient.first_name,
+              lastName: patient.last_name,
+              dateOfBirth: new Date(patient.date_of_birth),
+              status: 'synced',
+            }
+          })
+        );
+        await this.prisma.$transaction(updates);
       }
       if (changes.patients.deleted.length > 0) {
         await this.prisma.patient.updateMany({
@@ -228,16 +231,19 @@ export class SyncService {
           skipDuplicates: true,
         });
       }
-      for (const vital of changes.vitals.updated) {
-        await this.prisma.vital.update({
-          where: { id: vital.id },
-          data: {
-            bloodPressure: vital.blood_pressure,
-            heartRate: vital.heart_rate,
-            recordedAt: new Date(vital.recorded_at),
-            status: 'synced',
-          }
-        });
+      if (changes.vitals.updated.length > 0) {
+        const updates = changes.vitals.updated.map((vital: any) =>
+          this.prisma.vital.update({
+            where: { id: vital.id },
+            data: {
+              bloodPressure: vital.blood_pressure,
+              heartRate: vital.heart_rate,
+              recordedAt: new Date(vital.recorded_at),
+              status: 'synced',
+            }
+          })
+        );
+        await this.prisma.$transaction(updates);
       }
       if (changes.vitals.deleted.length > 0) {
         await this.prisma.vital.updateMany({
