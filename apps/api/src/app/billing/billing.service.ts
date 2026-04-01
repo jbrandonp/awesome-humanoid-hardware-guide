@@ -68,11 +68,19 @@ export class BillingService {
          let subtotalCents = 0;
 
          // A. Calcul des lignes et déduction d'inventaire
+         // ⚡ OPTIMIZATION: N+1 Query Fix
+         // Fetch all inventory items in a single query
+         const itemNames = payload.items.map(i => i.inventoryItemName);
+         const foundItemsList = await tx.inventoryItem.findMany({
+            where: { name: { in: itemNames } }
+         });
+
+         // Create a memory map for O(1) lookups
+         const itemsMap = new Map(foundItemsList.map(item => [item.name, item]));
+
          for (const item of payload.items) {
-            // Lecture du stock actuel (Pessimistic Lock simulé)
-            const foundItem = await tx.inventoryItem.findUnique({
-               where: { name: item.inventoryItemName }
-            });
+            // Lecture du stock actuel (from memory map instead of DB)
+            const foundItem = itemsMap.get(item.inventoryItemName);
 
             if (!foundItem) {
                throw new HttpException(`Article non reconnu dans l'inventaire: ${item.inventoryItemName}`, HttpStatus.BAD_REQUEST);
