@@ -1,4 +1,4 @@
-import { Worker } from 'worker_threads';
+import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
@@ -12,6 +12,25 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { Readable } from 'stream';
+
+
+if (!isMainThread) {
+  const dicomParser = require('dicom-parser');
+  try {
+    const byteArray = new Uint8Array(workerData);
+    const dataSet = dicomParser.parseDicom(byteArray);
+    if (parentPort) {
+      parentPort.postMessage({
+        patientId: dataSet.string('x00100020') || null,
+        studyInstanceUID: dataSet.string('x0020000d') || null,
+        seriesInstanceUID: dataSet.string('x0020000e') || null,
+        sopInstanceUID: dataSet.string('x00080018') || null,
+      });
+    }
+  } catch (error) {
+    throw error;
+  }
+}
 
 export interface PacsIndexerJobData {
   bucket: string;
@@ -93,23 +112,7 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
 
   private async parseDicomMetadata(buffer: Buffer): Promise<DicomMetadata> {
     return new Promise((resolve, reject) => {
-      const worker = new Worker(`
-        const { parentPort, workerData } = require('worker_threads');
-        const dicomParser = require('dicom-parser');
-
-        try {
-          const byteArray = new Uint8Array(workerData);
-          const dataSet = dicomParser.parseDicom(byteArray);
-          parentPort.postMessage({
-            patientId: dataSet.string('x00100020') || null,
-            studyInstanceUID: dataSet.string('x0020000d') || null,
-            seriesInstanceUID: dataSet.string('x0020000e') || null,
-            sopInstanceUID: dataSet.string('x00080018') || null,
-          });
-        } catch (error) {
-          throw error;
-        }
-      `, { eval: true, workerData: buffer });
+      const worker = new Worker(__filename, { workerData: buffer });
       worker.on('message', resolve);
       worker.on('error', reject);
     });
