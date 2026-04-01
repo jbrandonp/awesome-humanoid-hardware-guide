@@ -26,8 +26,8 @@ export class SyncService {
           skipDuplicates: true,
         });
       }
-      for (const patient of changes.patients.updated) {
-        await this.prisma.patient.update({
+      const patientUpdates = changes.patients.updated.map((patient: any) =>
+        this.prisma.patient.update({
           where: { id: patient.id },
           data: {
             firstName: patient.first_name,
@@ -35,11 +35,14 @@ export class SyncService {
             dateOfBirth: new Date(patient.date_of_birth),
             status: 'synced',
           }
-        });
+        })
+      );
+      if (patientUpdates.length > 0) {
+        await this.prisma.$transaction(patientUpdates);
       }
-      for (const id of changes.patients.deleted) {
-        await this.prisma.patient.update({
-          where: { id },
+      if (changes.patients.deleted.length > 0) {
+        await this.prisma.patient.updateMany({
+          where: { id: { in: changes.patients.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
         });
       }
@@ -94,9 +97,9 @@ export class SyncService {
         });
       }
 
-      for (const id of changes.visits.deleted) {
-        await this.prisma.visit.update({
-          where: { id },
+      if (changes.visits.deleted.length > 0) {
+        await this.prisma.visit.updateMany({
+          where: { id: { in: changes.visits.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
         });
       }
@@ -206,9 +209,9 @@ export class SyncService {
         });
       }
 
-      for (const id of changes.prescriptions.deleted) {
-        await this.prisma.prescription.update({
-          where: { id },
+      if (changes.prescriptions.deleted.length > 0) {
+        await this.prisma.prescription.updateMany({
+          where: { id: { in: changes.prescriptions.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
         });
       }
@@ -228,8 +231,8 @@ export class SyncService {
           skipDuplicates: true,
         });
       }
-      for (const vital of changes.vitals.updated) {
-        await this.prisma.vital.update({
+      const vitalUpdates = changes.vitals.updated.map((vital: any) =>
+        this.prisma.vital.update({
           where: { id: vital.id },
           data: {
             bloodPressure: vital.blood_pressure,
@@ -237,11 +240,14 @@ export class SyncService {
             recordedAt: new Date(vital.recorded_at),
             status: 'synced',
           }
-        });
+        })
+      );
+      if (vitalUpdates.length > 0) {
+        await this.prisma.$transaction(vitalUpdates);
       }
-      for (const id of changes.vitals.deleted) {
-        await this.prisma.vital.update({
-          where: { id },
+      if (changes.vitals.deleted.length > 0) {
+        await this.prisma.vital.updateMany({
+          where: { id: { in: changes.vitals.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
         });
       }
