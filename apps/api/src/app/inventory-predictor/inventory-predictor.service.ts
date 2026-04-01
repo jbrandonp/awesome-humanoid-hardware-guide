@@ -28,36 +28,42 @@ export class InventoryPredictorService {
     try {
       const inventoryItems = await this.prisma.inventoryItem.findMany();
 
-      for (const item of inventoryItems) {
-        // Retrieve consumption history from prescriptions over the last 90 days
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      // Retrieve consumption history from prescriptions over the last 90 days
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-        const prescriptions = await this.prisma.prescription.findMany({
-          where: {
-            medicationName: item.name,
-            prescribedAt: {
-              gte: ninetyDaysAgo
-            },
-            status: { not: 'deleted' }, // Use status instead of deletedAt for soft deletes as per standard query pattern
-            deletedAt: null
+      const itemNames = inventoryItems.map(item => item.name);
+
+      const allPrescriptions = await this.prisma.prescription.findMany({
+        where: {
+          medicationName: { in: itemNames },
+          prescribedAt: {
+            gte: ninetyDaysAgo
           },
-          orderBy: { prescribedAt: 'asc' }
-        });
+          status: { not: 'deleted' }, // Use status instead of deletedAt for soft deletes as per standard query pattern
+          deletedAt: null
+        },
+        orderBy: { prescribedAt: 'asc' }
+      });
 
-        // Group by day to get DailyConsumption
-        const consumptionMap = new Map<string, number>();
-        for (const p of prescriptions) {
-          const dateStr = p.prescribedAt.toISOString().split('T')[0];
-          // We assume quantity prescribed is numeric from dosage, but realistically if dosage is string we just count the occurrences or parse. 
-          // For simplicity and resilience, assuming each prescription counts as 1 treatment course or we parse. 
-          // Since dosage is string, we count each prescription event as 1 unit consumed for this prediction, or ideally we'd have a quantity.
-          // In absence of quantity on Prescription model, counting the prescription instances:
-          const current = consumptionMap.get(dateStr) || 0;
-          consumptionMap.set(dateStr, current + 1); 
+      // Group by medicationName, then by day to get DailyConsumption
+      const medicationConsumptionMap = new Map<string, Map<string, number>>();
+      for (const p of allPrescriptions) {
+        const dateStr = p.prescribedAt.toISOString().split('T')[0];
+        let consumptionMap = medicationConsumptionMap.get(p.medicationName);
+        if (!consumptionMap) {
+          consumptionMap = new Map<string, number>();
+          medicationConsumptionMap.set(p.medicationName, consumptionMap);
         }
 
-        const consumptionHistory: DailyConsumption[] = Array.from(consumptionMap.entries()).map(([date, quantity]) => ({
+        const current = consumptionMap.get(dateStr) || 0;
+        consumptionMap.set(dateStr, current + 1);
+      }
+
+      for (const item of inventoryItems) {
+        const itemConsumptionMap = medicationConsumptionMap.get(item.name) || new Map<string, number>();
+
+        const consumptionHistory: DailyConsumption[] = Array.from(itemConsumptionMap.entries()).map(([date, quantity]) => ({
           date,
           quantity
         }));
