@@ -36,8 +36,8 @@ export class SyncService {
             lastName: patient.last_name,
             dateOfBirth: new Date(patient.date_of_birth),
             status: 'synced',
-          }
-        })
+          },
+        }),
       );
       if (patientUpdates.length > 0) {
         await this.prisma.$transaction(patientUpdates);
@@ -45,7 +45,7 @@ export class SyncService {
       if (changes.patients.deleted.length > 0) {
         await this.prisma.patient.updateMany({
           where: { id: { in: changes.patients.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
+          data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
     }
@@ -64,14 +64,19 @@ export class SyncService {
         });
       }
 
-      for (const visit of changes.visits.updated) {
-        const existingVisit = await this.prisma.visit.findUnique({
-          where: { id: visit.id },
-        });
+      // Bulk fetch existing visits to avoid N+1 queries
+      const visitIds = changes.visits.updated.map((v: any) => v.id);
+      const existingVisits =
+        visitIds.length > 0
+          ? await this.prisma.visit.findMany({
+              where: { id: { in: visitIds } },
+            })
+          : [];
+      const existingVisitsMap = new Map(existingVisits.map((v) => [v.id, v]));
 
-        for (const visit of changes.visits.updated) {
-          const existingVisit = existingVisitsMap.get(visit.id);
-          let mergedNotesBuffer = existingVisit?.notes;
+      const visitUpdates = changes.visits.updated.map((visit: any) => {
+        const existingVisit = existingVisitsMap.get(visit.id);
+        let mergedNotesBuffer = existingVisit?.notes;
 
           // CRDT Merge Logic for clinical notes using Yjs
           if (visit.notes) {
@@ -95,7 +100,7 @@ export class SyncService {
             );
           }
 
-        await this.prisma.visit.update({
+        return this.prisma.visit.update({
           where: { id: visit.id },
           data: {
             date: new Date(visit.date),
@@ -103,12 +108,16 @@ export class SyncService {
             status: 'synced',
           },
         });
+      });
+
+      if (visitUpdates.length > 0) {
+        await this.prisma.$transaction(visitUpdates);
       }
 
       if (changes.visits.deleted.length > 0) {
         await this.prisma.visit.updateMany({
           where: { id: { in: changes.visits.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
+          data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
     }
@@ -133,11 +142,23 @@ export class SyncService {
         });
       }
 
-      for (const prescription of changes.prescriptions.updated) {
-        const existingPrescription = await this.prisma.prescription.findUnique({
-          where: { id: prescription.id },
-        });
+      const prescIds = changes.prescriptions.updated.map((p: any) => p.id);
+      const existingPrescriptions =
+        prescIds.length > 0
+          ? await this.prisma.prescription.findMany({
+              where: { id: { in: prescIds } },
+            })
+          : [];
+      const existingPrescriptionsMap = new Map(
+        existingPrescriptions.map((p) => [p.id, p]),
+      );
 
+      const prescriptionUpdates = [];
+
+      for (const prescription of changes.prescriptions.updated) {
+        const existingPrescription = existingPrescriptionsMap.get(
+          prescription.id,
+        );
         let mergedAdministrationsBuffer =
           existingPrescription?.crdtAdministrations;
 
@@ -166,16 +187,6 @@ export class SyncService {
             Y.applyUpdate(serverDoc, clientUpdate);
             const serverArray = serverDoc.getArray('administrations');
 
-            // Overdose detection: Same administration event logged multiple times
-            // This happens if array length increased by more than 1 in an update and entries look duplicated,
-            // or simply if length > expected based on the prescription dosage. We'll simplify:
-            // For the sake of the eMAR conflict, if the client sends an update that pushes a new administration,
-            // and the server *also* had a new administration offline, the merged array might have 2 events
-            // for the same timestamp/dosage.
-            // If the merged array has duplicate entries (same timestamp +/- 5 mins), it's a conflict.
-
-            // To be thorough, we can check if length of merged array is greater than the sum of
-            // unique events, but an easier check for CRDT conflict overdose is just finding duplicates.
             const events = serverArray.toArray() as {
               timestamp: string | number | Date;
             }[];
@@ -232,23 +243,29 @@ export class SyncService {
             );
           }
 
-        await this.prisma.prescription.update({
-          where: { id: prescription.id },
-          data: {
-            medicationName: prescription.medication_name,
-            dosage: prescription.dosage,
-            instructions: prescription.instructions,
-            prescribedAt: new Date(prescription.prescribed_at),
-            crdtAdministrations: mergedAdministrationsBuffer,
-            status: 'synced',
-          },
-        });
+        prescriptionUpdates.push(
+          this.prisma.prescription.update({
+            where: { id: prescription.id },
+            data: {
+              medicationName: prescription.medication_name,
+              dosage: prescription.dosage,
+              instructions: prescription.instructions,
+              prescribedAt: new Date(prescription.prescribed_at),
+              crdtAdministrations: mergedAdministrationsBuffer,
+              status: 'synced',
+            },
+          }),
+        );
+      }
+
+      if (prescriptionUpdates.length > 0) {
+        await this.prisma.$transaction(prescriptionUpdates);
       }
 
       if (changes.prescriptions.deleted.length > 0) {
         await this.prisma.prescription.updateMany({
           where: { id: { in: changes.prescriptions.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
+          data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
     }
@@ -275,8 +292,8 @@ export class SyncService {
             heartRate: vital.heart_rate,
             recordedAt: new Date(vital.recorded_at),
             status: 'synced',
-          }
-        })
+          },
+        }),
       );
       if (vitalUpdates.length > 0) {
         await this.prisma.$transaction(vitalUpdates);
@@ -284,7 +301,7 @@ export class SyncService {
       if (changes.vitals.deleted.length > 0) {
         await this.prisma.vital.updateMany({
           where: { id: { in: changes.vitals.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
+          data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
     }
