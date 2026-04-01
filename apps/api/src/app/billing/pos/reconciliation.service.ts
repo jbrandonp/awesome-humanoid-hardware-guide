@@ -1,5 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { calculatePercentageCents } from '../billing.utils';
 import { RegisterStatus, TransactionType, PaymentMethod } from '@prisma/client';
 
 export interface OpenSessionPayload {
@@ -257,7 +258,7 @@ export class ReconciliationService {
     const discrepancyCents = actualTotalAmountCents - expectedTotalAmountCents;
     
     // Si l'écart dépasse 2% du total attendu, PENDING_APPROVAL
-    const twoPercentCents = Math.round(expectedTotalAmountCents * 0.02);
+    const twoPercentCents = calculatePercentageCents(expectedTotalAmountCents, 0.02, 'INR');
     const requiresApproval = Math.abs(discrepancyCents) > twoPercentCents;
     
     const finalStatus = requiresApproval ? RegisterStatus.PENDING_APPROVAL : RegisterStatus.CLOSED;

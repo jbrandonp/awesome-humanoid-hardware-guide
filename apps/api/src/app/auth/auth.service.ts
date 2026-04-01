@@ -38,11 +38,19 @@ export class AuthService {
   async login(userId: string, role: string) {
     const payload = { sub: userId, role };
 
+    if (!process.env.JWT_SECRET) {
+      throw new Error('CRITICAL SECURITY ERROR: JWT_SECRET is not defined in environment variables.');
+    }
+
     // Access Token: 15 minutes
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: '15m',
       secret: process.env.JWT_SECRET,
     });
+
+    if (!process.env.JWT_REFRESH_SECRET) {
+      throw new Error('CRITICAL SECURITY ERROR: JWT_REFRESH_SECRET is not defined in environment variables.');
+    }
 
     // Refresh Token: 7 days
     const rawRefreshToken = this.jwtService.sign(payload, {
