@@ -58,6 +58,24 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
+    it('should throw if JWT_SECRET is missing at runtime', async () => {
+      const orig = process.env.JWT_SECRET;
+      delete process.env.JWT_SECRET;
+      await expect(service.login('user123', 'DOCTOR')).rejects.toThrow(
+        'CRITICAL SECURITY ERROR: JWT_SECRET is not defined in environment variables.'
+      );
+      process.env.JWT_SECRET = orig;
+    });
+
+    it('should throw if JWT_REFRESH_SECRET is missing at runtime', async () => {
+      const orig = process.env.JWT_REFRESH_SECRET;
+      delete process.env.JWT_REFRESH_SECRET;
+      await expect(service.login('user123', 'DOCTOR')).rejects.toThrow(
+        'CRITICAL SECURITY ERROR: JWT_REFRESH_SECRET is not defined in environment variables.'
+      );
+      process.env.JWT_REFRESH_SECRET = orig;
+    });
+
     it('should generate an access token and an encrypted refresh token', async () => {
       const result = await service.login('user123', 'DOCTOR');
 
