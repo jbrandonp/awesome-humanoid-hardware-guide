@@ -1,86 +1,41 @@
-<<<<<<< SEARCH
-model InventoryItem {
-  id             String   @id @default(uuid())
-  name           String   @unique
-  quantity       Int      @default(0)
-  unitPriceCents Int      @map("unit_price_cents") // Prix de vente unitaire
-  updatedAt      DateTime @updatedAt
+--- apps/api/src/app/clinical-record/clinical-record.service.ts
++++ apps/api/src/app/clinical-record/clinical-record.service.ts
+@@ -48,6 +48,7 @@
+     this.logger.warn(`[DPDPA] ANONYMISATION ASYNCHRONE des dossiers dynamiques MongoDB pour le patient ${patientId}`);
+     const records = await this.recordModel.find({ patientId }).exec();
+     let updatedCount = 0;
++    const operations = [];
 
-  @@map("inventory_items")
-}
-=======
-model Supplier {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  contactEmail    String?  @map("contact_email")
-  contactPhone    String?  @map("contact_phone")
-  leadTimeDays    Int      @default(7) @map("lead_time_days") // Délai de livraison habituel
-  isActive        Boolean  @default(true) @map("is_active")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+     for (const record of records) {
+       if (!record.data) continue;
+@@ -70,14 +71,25 @@
+       }
 
-  inventoryItems  InventoryItem[]
-  purchaseOrders  PurchaseOrder[]
+       if (hasModifications) {
+-        record.data = dataObj;
+-        record.markModified('data');
+-        record.status = 'deleted';
+-        record.deletedAt = new Date();
+-        await record.save();
++        operations.push({
++          updateOne: {
++            filter: { _id: record._id },
++            update: {
++              $set: {
++                data: dataObj,
++                status: 'deleted',
++                deletedAt: new Date()
++              }
++            }
++          }
++        });
+         updatedCount++;
+       }
+     }
++
++    if (operations.length > 0) {
++      await this.recordModel.bulkWrite(operations as any);
++    }
 
-  @@map("suppliers")
-}
-
-model PurchaseOrder {
-  id              String   @id @default(uuid())
-  supplierId      String   @map("supplier_id")
-  status          String   @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, SENT, RECEIVED
-  idempotencyKey  String?  @unique @map("idempotency_key")
-  totalCents      Int      @default(0) @map("total_cents")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  supplier        Supplier             @relation(fields: [supplierId], references: [id])
-  items           PurchaseOrderItem[]
-
-  @@map("purchase_orders")
-}
-
-model PurchaseOrderItem {
-  id               String   @id @default(uuid())
-  purchaseOrderId  String   @map("purchase_order_id")
-  inventoryItemId  String   @map("inventory_item_id")
-  quantity         Int
-  unitPriceCents   Int      @map("unit_price_cents") // Prix d'achat au moment de la commande
-
-  purchaseOrder    PurchaseOrder  @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
-  inventoryItem    InventoryItem  @relation(fields: [inventoryItemId], references: [id])
-
-  @@map("purchase_order_items")
-}
-
-model InventoryItem {
-  id                String   @id @default(uuid())
-  name              String   @unique
-  category          String   @default("GENERAL") // ANTI_MALARIAL, ANTIBIOTIC, ANALGESIC, GENERAL
-  currentQuantity   Int      @default(0) @map("current_quantity")
-  unitPriceCents    Int      @map("unit_price_cents") // Prix de vente unitaire
-  supplierId        String?  @map("supplier_id")
-  moq               Int      @default(1) // Minimum Order Quantity
-  leadTimeDays      Int?     @map("lead_time_days")
-  isActive          Boolean  @default(true) @map("is_active")
-  updatedAt         DateTime @updatedAt
-
-  supplier          Supplier?           @relation(fields: [supplierId], references: [id])
-  purchaseOrderItems PurchaseOrderItem[]
-  transactions      InventoryTransaction[]
-
-  @@map("inventory_items")
-}
-
-model InventoryTransaction {
-  id             String   @id @default(uuid())
-  itemId         String   @map("item_id")
-  type           String   // DISPENSE, RECEIPT, ADJUSTMENT
-  quantityChange Int      @map("quantity_change")
-  timestamp      DateTime @default(now())
-
-  item           InventoryItem @relation(fields: [itemId], references: [id])
-
-  @@map("inventory_transactions")
-}
->>>>>>> REPLACE
+     return updatedCount;
+   }
