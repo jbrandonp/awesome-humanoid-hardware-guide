@@ -13,6 +13,8 @@ export class SyncService {
   ) {}
 
   async pushChanges(changes: any) {
+    const transactionOps = [];
+
     if (changes.patients) {
       if (changes.patients.created.length > 0) {
         await this.prisma.patient.createMany({
@@ -76,15 +78,15 @@ export class SyncService {
         const existingVisit = existingVisitsMap.get(visit.id);
         let mergedNotesBuffer = existingVisit?.notes;
 
-        // CRDT Merge Logic for clinical notes using Yjs
-        if (visit.notes) {
-          const clientUpdate = Buffer.from(visit.notes, 'base64');
-          const serverDoc = new Y.Doc();
+          // CRDT Merge Logic for clinical notes using Yjs
+          if (visit.notes) {
+            const clientUpdate = Buffer.from(visit.notes, 'base64');
+            const serverDoc = new Y.Doc();
 
-          if (existingVisit?.notes) {
-            // Load existing server state
-            Y.applyUpdate(serverDoc, existingVisit.notes);
-          }
+            if (existingVisit?.notes) {
+              // Load existing server state
+              Y.applyUpdate(serverDoc, existingVisit.notes);
+            }
 
           // Apply client update on top
           try {
@@ -97,7 +99,6 @@ export class SyncService {
               e,
             );
           }
-        }
 
         return this.prisma.visit.update({
           where: { id: visit.id },
@@ -241,7 +242,6 @@ export class SyncService {
               e,
             );
           }
-        }
 
         prescriptionUpdates.push(
           this.prisma.prescription.update({
@@ -304,6 +304,10 @@ export class SyncService {
           data: { deletedAt: new Date(), status: 'deleted' },
         });
       }
+    }
+
+    if (transactionOps.length > 0) {
+      await this.prisma.$transaction(transactionOps);
     }
   }
 

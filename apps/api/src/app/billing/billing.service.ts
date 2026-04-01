@@ -1,5 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { calculateLineTotalCents, calculatePercentageCents } from './billing.utils';
 
 // ============================================================================
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Production-Ready Financial Engine)
@@ -84,8 +85,8 @@ export class BillingService {
                );
             }
 
-            // Calcul du total de la ligne (Toujours arrondi en ENTIERS / Cents pour éviter les bugs Float Javascript type 10.1 * 10 = 101.00000000000001)
-            const lineTotalCents = Math.round(foundItem.unitPriceCents * item.quantity);
+            // Calcul du total de la ligne utilisant Dinero.js
+            const lineTotalCents = calculateLineTotalCents(foundItem.unitPriceCents, item.quantity, payload.currency || 'INR');
             subtotalCents += lineTotalCents;
 
             // Déduction atomique du stock (Empêche les stocks négatifs en cas de concurrence)
@@ -105,9 +106,9 @@ export class BillingService {
             }
          }
 
-         // B. Calcul des Taxes (Multiplication d'entiers puis arrondi)
+         // B. Calcul des Taxes (Utilisation de Dinero.js)
          const taxRate = payload.taxRatePercent !== undefined ? payload.taxRatePercent : 0.05;
-         const taxCents = Math.round(subtotalCents * taxRate);
+         const taxCents = calculatePercentageCents(subtotalCents, taxRate, payload.currency || 'INR');
          const totalCents = subtotalCents + taxCents;
 
          // C. Création de la facture
