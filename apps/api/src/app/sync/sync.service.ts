@@ -9,10 +9,12 @@ export class SyncService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly epiTickerService: EpiTickerService
+    private readonly epiTickerService: EpiTickerService,
   ) {}
 
   async pushChanges(changes: any) {
+    const transactionOps = [];
+
     if (changes.patients) {
       const promises: Promise<any>[] = [];
       if (changes.patients.created.length > 0) {
@@ -280,6 +282,10 @@ export class SyncService {
       promises.push(...deletePromises);
       await Promise.all(promises);
     }
+
+    if (transactionOps.length > 0) {
+      await this.prisma.$transaction(transactionOps);
+    }
   }
 
   async pullChanges(lastPulledAt: number) {
@@ -287,7 +293,7 @@ export class SyncService {
 
     // PATIENTS
     const rawPatients = await this.prisma.patient.findMany({
-      where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdPatients = [];
@@ -304,7 +310,7 @@ export class SyncService {
           last_name: p.lastName,
           date_of_birth: p.dateOfBirth.getTime(),
           _status: p.status,
-          deleted_at: null
+          deleted_at: null,
         });
       } else {
         updatedPatients.push({
@@ -313,14 +319,14 @@ export class SyncService {
           last_name: p.lastName,
           date_of_birth: p.dateOfBirth.getTime(),
           _status: p.status,
-          deleted_at: null
+          deleted_at: null,
         });
       }
     }
 
     // VISITS (With Yjs Sync payload)
     const rawVisits = await this.prisma.visit.findMany({
-       where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdVisits = [];
@@ -334,29 +340,29 @@ export class SyncService {
       if (v.deletedAt) {
         deletedVisits.push(v.id);
       } else if (v.createdAt.getTime() > lastPulledDate.getTime()) {
-         createdVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+        createdVisits.push({
+          id: v.id,
+          patient_id: v.patientId,
+          date: v.date.getTime(),
+          notes: notesBase64,
+          _status: v.status,
+          deleted_at: null,
+        });
       } else {
-         updatedVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+        updatedVisits.push({
+          id: v.id,
+          patient_id: v.patientId,
+          date: v.date.getTime(),
+          notes: notesBase64,
+          _status: v.status,
+          deleted_at: null,
+        });
       }
     }
 
     // PRESCRIPTIONS (eMAR CRDT Sync payload)
     const rawPrescriptions = await this.prisma.prescription.findMany({
-       where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdPrescriptions = [];
@@ -364,42 +370,44 @@ export class SyncService {
     const deletedPrescriptions = [];
 
     for (const p of rawPrescriptions) {
-      const administrationsBase64 = p.crdtAdministrations ? p.crdtAdministrations.toString('base64') : '';
+      const administrationsBase64 = p.crdtAdministrations
+        ? p.crdtAdministrations.toString('base64')
+        : '';
 
       if (p.deletedAt) {
         deletedPrescriptions.push(p.id);
       } else if (p.createdAt.getTime() > lastPulledDate.getTime()) {
-         createdPrescriptions.push({
-           id: p.id,
-           visit_id: p.visitId,
-           patient_id: p.patientId,
-           medication_name: p.medicationName,
-           dosage: p.dosage,
-           instructions: p.instructions,
-           prescribed_at: p.prescribedAt.getTime(),
-           administrations: administrationsBase64,
-           _status: p.status,
-           deleted_at: null
-         });
+        createdPrescriptions.push({
+          id: p.id,
+          visit_id: p.visitId,
+          patient_id: p.patientId,
+          medication_name: p.medicationName,
+          dosage: p.dosage,
+          instructions: p.instructions,
+          prescribed_at: p.prescribedAt.getTime(),
+          administrations: administrationsBase64,
+          _status: p.status,
+          deleted_at: null,
+        });
       } else {
-         updatedPrescriptions.push({
-           id: p.id,
-           visit_id: p.visitId,
-           patient_id: p.patientId,
-           medication_name: p.medicationName,
-           dosage: p.dosage,
-           instructions: p.instructions,
-           prescribed_at: p.prescribedAt.getTime(),
-           administrations: administrationsBase64,
-           _status: p.status,
-           deleted_at: null
-         });
+        updatedPrescriptions.push({
+          id: p.id,
+          visit_id: p.visitId,
+          patient_id: p.patientId,
+          medication_name: p.medicationName,
+          dosage: p.dosage,
+          instructions: p.instructions,
+          prescribed_at: p.prescribedAt.getTime(),
+          administrations: administrationsBase64,
+          _status: p.status,
+          deleted_at: null,
+        });
       }
     }
 
     // VITALS
     const rawVitals = await this.prisma.vital.findMany({
-      where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdVitals = [];
@@ -417,7 +425,7 @@ export class SyncService {
           heart_rate: v.heartRate,
           recorded_at: v.recordedAt.getTime(),
           _status: v.status,
-          deleted_at: null
+          deleted_at: null,
         });
       } else {
         updatedVitals.push({
@@ -427,7 +435,7 @@ export class SyncService {
           heart_rate: v.heartRate,
           recorded_at: v.recordedAt.getTime(),
           _status: v.status,
-          deleted_at: null
+          deleted_at: null,
         });
       }
     }
@@ -436,22 +444,22 @@ export class SyncService {
       patients: {
         created: createdPatients,
         updated: updatedPatients,
-        deleted: deletedPatients
+        deleted: deletedPatients,
       },
       visits: {
         created: createdVisits,
         updated: updatedVisits,
-        deleted: deletedVisits
+        deleted: deletedVisits,
       },
       vitals: {
         created: createdVitals,
         updated: updatedVitals,
-        deleted: deletedVitals
+        deleted: deletedVitals,
       },
       prescriptions: {
         created: createdPrescriptions,
         updated: updatedPrescriptions,
-        deleted: deletedPrescriptions
+        deleted: deletedPrescriptions,
       },
     };
   }
