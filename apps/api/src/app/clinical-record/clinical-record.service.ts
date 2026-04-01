@@ -47,6 +47,7 @@ export class ClinicalRecordService {
     this.logger.warn(`[DPDPA] ANONYMISATION ASYNCHRONE des dossiers dynamiques MongoDB pour le patient ${patientId}`);
     const records = await this.recordModel.find({ patientId }).exec();
     let updatedCount = 0;
+    const operations = [];
 
     for (const record of records) {
       if (!record.data) continue;
@@ -70,13 +71,24 @@ export class ClinicalRecordService {
       }
 
       if (hasModifications) {
-        record.data = dataObj;
-        record.markModified('data');
-        record.status = 'deleted';
-        record.deletedAt = new Date();
-        await record.save();
+        operations.push({
+          updateOne: {
+            filter: { _id: record._id },
+            update: {
+              $set: {
+                data: dataObj,
+                status: 'deleted',
+                deletedAt: new Date()
+              }
+            }
+          }
+        });
         updatedCount++;
       }
+    }
+
+    if (operations.length > 0) {
+      await this.recordModel.bulkWrite(operations as any);
     }
 
     return updatedCount;

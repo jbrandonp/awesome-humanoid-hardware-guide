@@ -9,22 +9,27 @@ export class SyncService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly epiTickerService: EpiTickerService
+    private readonly epiTickerService: EpiTickerService,
   ) {}
 
   async pushChanges(changes: any) {
+    const transactionOps = [];
+
     if (changes.patients) {
+      const promises: Promise<any>[] = [];
       if (changes.patients.created.length > 0) {
-        await this.prisma.patient.createMany({
-          data: changes.patients.created.map((patient: any) => ({
-            id: patient.id,
-            firstName: patient.first_name,
-            lastName: patient.last_name,
-            dateOfBirth: new Date(patient.date_of_birth),
-            status: 'synced',
-          })),
-          skipDuplicates: true,
-        });
+        promises.push(
+          this.prisma.patient.createMany({
+            data: changes.patients.created.map((patient: any) => ({
+              id: patient.id,
+              firstName: patient.first_name,
+              lastName: patient.last_name,
+              dateOfBirth: new Date(patient.date_of_birth),
+              status: 'synced',
+            })),
+            skipDuplicates: true,
+          })
+        );
       }
       if (changes.patients.updated.length > 0) {
         await this.prisma.$transaction(
@@ -45,22 +50,27 @@ export class SyncService {
         await this.prisma.patient.updateMany({
           where: { id: { in: changes.patients.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }
+        })
+      );
+      promises.push(...deletePromises);
+      await Promise.all(promises);
     }
 
     if (changes.visits) {
+      const promises: Promise<any>[] = [];
       if (changes.visits.created.length > 0) {
-        await this.prisma.visit.createMany({
-          data: changes.visits.created.map((visit: any) => ({
-            id: visit.id,
-            patientId: visit.patient_id,
-            date: new Date(visit.date),
-            notes: visit.notes ? Buffer.from(visit.notes, 'base64') : null,
-            status: 'synced'
-          })),
-          skipDuplicates: true,
-        });
+        promises.push(
+          this.prisma.visit.createMany({
+            data: changes.visits.created.map((visit: any) => ({
+              id: visit.id,
+              patientId: visit.patient_id,
+              date: new Date(visit.date),
+              notes: visit.notes ? Buffer.from(visit.notes, 'base64') : null,
+              status: 'synced'
+            })),
+            skipDuplicates: true,
+          })
+        );
       }
 
       if (changes.visits.updated.length > 0) {
@@ -111,26 +121,31 @@ export class SyncService {
         await this.prisma.visit.updateMany({
           where: { id: { in: changes.visits.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }
+        })
+      );
+      promises.push(...deletePromises);
+      await Promise.all(promises);
     }
 
     if (changes.prescriptions) {
+      const promises: Promise<any>[] = [];
       if (changes.prescriptions.created.length > 0) {
-        await this.prisma.prescription.createMany({
-          data: changes.prescriptions.created.map((prescription: any) => ({
-            id: prescription.id,
-            visitId: prescription.visit_id,
-            patientId: prescription.patient_id,
-            medicationName: prescription.medication_name,
-            dosage: prescription.dosage,
-            instructions: prescription.instructions,
-            prescribedAt: new Date(prescription.prescribed_at),
-            crdtAdministrations: prescription.administrations ? Buffer.from(prescription.administrations, 'base64') : null,
-            status: 'synced'
-          })),
-          skipDuplicates: true,
-        });
+        promises.push(
+          this.prisma.prescription.createMany({
+            data: changes.prescriptions.created.map((prescription: any) => ({
+              id: prescription.id,
+              visitId: prescription.visit_id,
+              patientId: prescription.patient_id,
+              medicationName: prescription.medication_name,
+              dosage: prescription.dosage,
+              instructions: prescription.instructions,
+              prescribedAt: new Date(prescription.prescribed_at),
+              crdtAdministrations: prescription.administrations ? Buffer.from(prescription.administrations, 'base64') : null,
+              status: 'synced'
+            })),
+            skipDuplicates: true,
+          })
+        );
       }
 
       if (changes.prescriptions.updated.length > 0) {
@@ -223,23 +238,28 @@ export class SyncService {
         await this.prisma.prescription.updateMany({
           where: { id: { in: changes.prescriptions.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }
+        })
+      );
+      promises.push(...deletePromises);
+      await Promise.all(promises);
     }
 
     if (changes.vitals) {
+      const promises: Promise<any>[] = [];
       if (changes.vitals.created.length > 0) {
-        await this.prisma.vital.createMany({
-          data: changes.vitals.created.map((vital: any) => ({
-            id: vital.id,
-            patientId: vital.patient_id,
-            bloodPressure: vital.blood_pressure,
-            heartRate: vital.heart_rate,
-            recordedAt: new Date(vital.recorded_at),
-            status: 'synced',
-          })),
-          skipDuplicates: true,
-        });
+        promises.push(
+          this.prisma.vital.createMany({
+            data: changes.vitals.created.map((vital: any) => ({
+              id: vital.id,
+              patientId: vital.patient_id,
+              bloodPressure: vital.blood_pressure,
+              heartRate: vital.heart_rate,
+              recordedAt: new Date(vital.recorded_at),
+              status: 'synced',
+            })),
+            skipDuplicates: true,
+          })
+        );
       }
       if (changes.vitals.updated.length > 0) {
         await this.prisma.$transaction(
@@ -260,8 +280,14 @@ export class SyncService {
         await this.prisma.vital.updateMany({
           where: { id: { in: changes.vitals.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }
+        })
+      );
+      promises.push(...deletePromises);
+      await Promise.all(promises);
+    }
+
+    if (transactionOps.length > 0) {
+      await this.prisma.$transaction(transactionOps);
     }
   }
 
@@ -270,7 +296,7 @@ export class SyncService {
 
     // PATIENTS
     const rawPatients = await this.prisma.patient.findMany({
-      where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdPatients = [];
@@ -287,7 +313,7 @@ export class SyncService {
           last_name: p.lastName,
           date_of_birth: p.dateOfBirth.getTime(),
           _status: p.status,
-          deleted_at: null
+          deleted_at: null,
         });
       } else {
         updatedPatients.push({
@@ -296,14 +322,14 @@ export class SyncService {
           last_name: p.lastName,
           date_of_birth: p.dateOfBirth.getTime(),
           _status: p.status,
-          deleted_at: null
+          deleted_at: null,
         });
       }
     }
 
     // VISITS (With Yjs Sync payload)
     const rawVisits = await this.prisma.visit.findMany({
-       where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdVisits = [];
@@ -317,29 +343,29 @@ export class SyncService {
       if (v.deletedAt) {
         deletedVisits.push(v.id);
       } else if (v.createdAt.getTime() > lastPulledDate.getTime()) {
-         createdVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+        createdVisits.push({
+          id: v.id,
+          patient_id: v.patientId,
+          date: v.date.getTime(),
+          notes: notesBase64,
+          _status: v.status,
+          deleted_at: null,
+        });
       } else {
-         updatedVisits.push({
-           id: v.id,
-           patient_id: v.patientId,
-           date: v.date.getTime(),
-           notes: notesBase64,
-           _status: v.status,
-           deleted_at: null
-         });
+        updatedVisits.push({
+          id: v.id,
+          patient_id: v.patientId,
+          date: v.date.getTime(),
+          notes: notesBase64,
+          _status: v.status,
+          deleted_at: null,
+        });
       }
     }
 
     // PRESCRIPTIONS (eMAR CRDT Sync payload)
     const rawPrescriptions = await this.prisma.prescription.findMany({
-       where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdPrescriptions = [];
@@ -347,42 +373,44 @@ export class SyncService {
     const deletedPrescriptions = [];
 
     for (const p of rawPrescriptions) {
-      const administrationsBase64 = p.crdtAdministrations ? p.crdtAdministrations.toString('base64') : '';
+      const administrationsBase64 = p.crdtAdministrations
+        ? p.crdtAdministrations.toString('base64')
+        : '';
 
       if (p.deletedAt) {
         deletedPrescriptions.push(p.id);
       } else if (p.createdAt.getTime() > lastPulledDate.getTime()) {
-         createdPrescriptions.push({
-           id: p.id,
-           visit_id: p.visitId,
-           patient_id: p.patientId,
-           medication_name: p.medicationName,
-           dosage: p.dosage,
-           instructions: p.instructions,
-           prescribed_at: p.prescribedAt.getTime(),
-           administrations: administrationsBase64,
-           _status: p.status,
-           deleted_at: null
-         });
+        createdPrescriptions.push({
+          id: p.id,
+          visit_id: p.visitId,
+          patient_id: p.patientId,
+          medication_name: p.medicationName,
+          dosage: p.dosage,
+          instructions: p.instructions,
+          prescribed_at: p.prescribedAt.getTime(),
+          administrations: administrationsBase64,
+          _status: p.status,
+          deleted_at: null,
+        });
       } else {
-         updatedPrescriptions.push({
-           id: p.id,
-           visit_id: p.visitId,
-           patient_id: p.patientId,
-           medication_name: p.medicationName,
-           dosage: p.dosage,
-           instructions: p.instructions,
-           prescribed_at: p.prescribedAt.getTime(),
-           administrations: administrationsBase64,
-           _status: p.status,
-           deleted_at: null
-         });
+        updatedPrescriptions.push({
+          id: p.id,
+          visit_id: p.visitId,
+          patient_id: p.patientId,
+          medication_name: p.medicationName,
+          dosage: p.dosage,
+          instructions: p.instructions,
+          prescribed_at: p.prescribedAt.getTime(),
+          administrations: administrationsBase64,
+          _status: p.status,
+          deleted_at: null,
+        });
       }
     }
 
     // VITALS
     const rawVitals = await this.prisma.vital.findMany({
-      where: { updatedAt: { gt: lastPulledDate } }
+      where: { updatedAt: { gt: lastPulledDate } },
     });
 
     const createdVitals = [];
@@ -400,7 +428,7 @@ export class SyncService {
           heart_rate: v.heartRate,
           recorded_at: v.recordedAt.getTime(),
           _status: v.status,
-          deleted_at: null
+          deleted_at: null,
         });
       } else {
         updatedVitals.push({
@@ -410,7 +438,7 @@ export class SyncService {
           heart_rate: v.heartRate,
           recorded_at: v.recordedAt.getTime(),
           _status: v.status,
-          deleted_at: null
+          deleted_at: null,
         });
       }
     }
@@ -419,22 +447,22 @@ export class SyncService {
       patients: {
         created: createdPatients,
         updated: updatedPatients,
-        deleted: deletedPatients
+        deleted: deletedPatients,
       },
       visits: {
         created: createdVisits,
         updated: updatedVisits,
-        deleted: deletedVisits
+        deleted: deletedVisits,
       },
       vitals: {
         created: createdVitals,
         updated: updatedVitals,
-        deleted: deletedVitals
+        deleted: deletedVitals,
       },
       prescriptions: {
         created: createdPrescriptions,
         updated: updatedPrescriptions,
-        deleted: deletedPrescriptions
+        deleted: deletedPrescriptions,
       },
     };
   }
