@@ -94,9 +94,9 @@ export class SyncService {
         });
       }
 
-      for (const id of changes.visits.deleted) {
-        await this.prisma.visit.update({
-          where: { id },
+      if (changes.visits.deleted.length > 0) {
+        await this.prisma.visit.updateMany({
+          where: { id: { in: changes.visits.deleted } },
           data: { deletedAt: new Date(), status: 'deleted' }
         });
       }
