@@ -324,8 +324,14 @@ export function useBleScanner(): BleScannerState & {
    */
   const decodeHeartRate = (base64Payload: string, hardwareId: string): MedicalVitalMeasurement => {
     const buffer = Buffer.from(base64Payload, 'base64');
+
+    if (buffer.length < 1) throw new Error("Payload Heart Rate corrompu ou trop court.");
+
     const flags = buffer.readUInt8(0);
     const is16Bit = (flags & 0x01) !== 0;
+
+    const expectedLength = is16Bit ? 3 : 2;
+    if (buffer.length < expectedLength) throw new Error("Payload Heart Rate corrompu ou trop court.");
 
     const bpm = is16Bit ? buffer.readUInt16LE(1) : buffer.readUInt8(1);
 
