@@ -5,14 +5,17 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { ActionType, DicomStudyStatus } from '@prisma/client';
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  GetObjectCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
 
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { Readable } from 'stream';
-
 
 if (!isMainThread) {
   const dicomParser = require('dicom-parser');
@@ -68,7 +71,9 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     const secretAccessKey = process.env.S3_SECRET_KEY;
 
     if (!accessKeyId || !secretAccessKey) {
-      this.logger.error('CRITICAL: S3 credentials (S3_ACCESS_KEY, S3_SECRET_KEY) are missing. PACS Indexing will fail.');
+      this.logger.error(
+        'CRITICAL: S3 credentials (S3_ACCESS_KEY, S3_SECRET_KEY) are missing. PACS Indexing will fail.',
+      );
       return;
     }
 
@@ -87,7 +92,10 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
    * Downloads only the first 2MB of the DICOM file to extract the header,
    * avoiding full file download into RAM.
    */
-  private async downloadDicomHeader(bucket: string, key: string): Promise<Buffer> {
+  private async downloadDicomHeader(
+    bucket: string,
+    key: string,
+  ): Promise<Buffer> {
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -122,13 +130,22 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     this.logger.log(`Processing job ${job.id} for key ${job.data.objectKey}`);
     try {
       // Step 1: DICOM S3 Download and Parsing Logic
-      const buffer = await this.downloadDicomHeader(job.data.bucket, job.data.objectKey);
+      const buffer = await this.downloadDicomHeader(
+        job.data.bucket,
+        job.data.objectKey,
+      );
       const metadata = await this.parseDicomMetadata(buffer);
 
       this.logger.log(`Parsed metadata: ${JSON.stringify(metadata)}`);
 
-      if (!metadata.studyInstanceUID || !metadata.seriesInstanceUID || !metadata.sopInstanceUID) {
-        throw new Error('Incomplete DICOM hierarchy identifiers in file header');
+      if (
+        !metadata.studyInstanceUID ||
+        !metadata.seriesInstanceUID ||
+        !metadata.sopInstanceUID
+      ) {
+        throw new Error(
+          'Incomplete DICOM hierarchy identifiers in file header',
+        );
       }
 
       // Step 2: Prisma Upserts and Patient Reconciliation
@@ -136,7 +153,7 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
       let status: DicomStudyStatus = DicomStudyStatus.ORPHANED;
 
       if (metadata.patientId) {
-        // Assume patientId from DICOM matches our Patient ID (UUID) or an external ID that we would search by. 
+        // Assume patientId from DICOM matches our Patient ID (UUID) or an external ID that we would search by.
         // We will try finding the patient by ID directly.
         const patient = await this.prisma.patient.findUnique({
           where: { id: metadata.patientId },
@@ -146,10 +163,14 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
           dbPatientId = patient.id;
           status = DicomStudyStatus.MATCHED;
         } else {
-          this.logger.warn(`PatientID ${metadata.patientId} from DICOM not found in database. Marking as ORPHANED.`);
+          this.logger.warn(
+            `PatientID ${metadata.patientId} from DICOM not found in database. Marking as ORPHANED.`,
+          );
         }
       } else {
-        this.logger.warn(`No PatientID found in DICOM file. Marking as ORPHANED.`);
+        this.logger.warn(
+          `No PatientID found in DICOM file. Marking as ORPHANED.`,
+        );
       }
 
       if (status === DicomStudyStatus.ORPHANED && dbPatientId === null) {
@@ -163,10 +184,10 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
               event: 'DICOM_ORPHANED',
               studyInstanceUID: metadata.studyInstanceUID,
               dicomPatientId: metadata.patientId,
-              message: 'Manual reconciliation required for new DICOM study.'
+              message: 'Manual reconciliation required for new DICOM study.',
             }),
-            status: 'QUEUED'
-          }
+            status: 'QUEUED',
+          },
         });
       }
 
@@ -214,7 +235,7 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
       const systemUserId = '00000000-0000-0000-0000-000000000000'; // Replace with a configured system user if needed
       await this.auditService.logAudit({
         userId: systemUserId,
-        patientId: dbPatientId || 'ORPHANED',
+        patientId: dbPatientId,
         actionType: ActionType.CREATE,
         resourceId: instance.id,
         phiDataAccessed: {
@@ -229,20 +250,29 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
       // Extract first frame and upload to pacs-thumbnails
       // Due to the complexity of DICOM pixel data parsing, we use a lightweight external tool like `dcmjs` or a child process (e.g. ImageMagick/dcmtk)
       // We'll write a mock child process function using dcmjs or assuming dcmj2pnm is available in our docker.
-      const thumbnailUrl = await this.generateThumbnail(job.data.bucket, job.data.objectKey, instance.id);
+      const thumbnailUrl = await this.generateThumbnail(
+        job.data.bucket,
+        job.data.objectKey,
+        instance.id,
+      );
 
       if (thumbnailUrl) {
         await this.prisma.dicomInstance.update({
           where: { id: instance.id },
-          data: { thumbnailUrl }
+          data: { thumbnailUrl },
         });
       }
-
     } catch (error) {
       this.logger.error(`Error processing job ${job.id}: ${error}`);
-      if (job.attemptsMade && job.opts.attempts && job.attemptsMade >= job.opts.attempts - 1) {
+      if (
+        job.attemptsMade &&
+        job.opts.attempts &&
+        job.attemptsMade >= job.opts.attempts - 1
+      ) {
         // Entering Dead Letter Queue (DLQ) state on final failure
-        this.logger.error(`CRITICAL ALERT: Job ${job.id} for ${job.data.objectKey} has failed all retries and is now in DLQ.`);
+        this.logger.error(
+          `CRITICAL ALERT: Job ${job.id} for ${job.data.objectKey} has failed all retries and is now in DLQ.`,
+        );
         await this.prisma.notificationStatus.create({
           data: {
             patientId: '00000000-0000-0000-0000-000000000000', // system user or general admin alert bucket
@@ -251,10 +281,10 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
               event: 'DICOM_DLQ_CRITICAL',
               jobId: job.id,
               objectKey: job.data.objectKey,
-              error: error instanceof Error ? error.message : String(error)
+              error: error instanceof Error ? error.message : String(error),
             }),
-            status: 'QUEUED'
-          }
+            status: 'QUEUED',
+          },
         });
       }
       // BullMQ will handle the retry logic via exponential backoff.
@@ -267,7 +297,11 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
    * For production, we prefer not to load the whole DICOM pixel data into RAM in Node.js.
    * A child process with bounded resources is safer.
    */
-  private async generateThumbnail(bucket: string, objectKey: string, instanceId: string): Promise<string | null> {
+  private async generateThumbnail(
+    bucket: string,
+    objectKey: string,
+    instanceId: string,
+  ): Promise<string | null> {
     const tempDicomPath = path.join(os.tmpdir(), `${instanceId}.dcm`);
     const tempJpegPath = path.join(os.tmpdir(), `${instanceId}.jpg`);
 
@@ -296,39 +330,50 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
         // If dcmtk is not installed, this will fail. We use it as the "industrial grade" approach.
         // You could also use an npm package like dcmjs-dimse or python integration.
         const pnm = spawn('dcmj2pnm', [
-          '+oj', '+Wn', // output jpeg, window level
-          '+Sxi', '256', // max size 256
-          tempDicomPath, tempJpegPath
+          '+oj',
+          '+Wn', // output jpeg, window level
+          '+Sxi',
+          '256', // max size 256
+          tempDicomPath,
+          tempJpegPath,
         ]);
         pnm.on('close', (code) => {
           if (code === 0) resolve();
           else reject(new Error(`dcmj2pnm exited with code ${code}`));
         });
         pnm.on('error', (err) => {
-          this.logger.warn(`dcmj2pnm not found or failed, falling back or skipping thumbnail: ${err.message}`);
+          this.logger.warn(
+            `dcmj2pnm not found or failed, falling back or skipping thumbnail: ${err.message}`,
+          );
           reject(err);
         });
-      }).catch((_e) => { /* ignore */ }); // Ignore error and skip thumbnail if tool missing
+      }).catch((_e) => {
+        /* ignore */
+      }); // Ignore error and skip thumbnail if tool missing
 
       if (fs.existsSync(tempJpegPath)) {
         const jpegBuffer = fs.readFileSync(tempJpegPath);
         const thumbKey = `${instanceId}.jpg`;
 
-        await this.s3Client.send(new PutObjectCommand({
-          Bucket: 'pacs-thumbnails',
-          Key: thumbKey,
-          Body: jpegBuffer,
-          ContentType: 'image/jpeg'
-        }));
+        await this.s3Client.send(
+          new PutObjectCommand({
+            Bucket: 'pacs-thumbnails',
+            Key: thumbKey,
+            Body: jpegBuffer,
+            ContentType: 'image/jpeg',
+          }),
+        );
 
         const s3Endpoint = process.env.S3_ENDPOINT || 'http://localhost:9000';
         return `${s3Endpoint}/pacs-thumbnails/${thumbKey}`;
       }
 
       return null;
-
     } catch (e) {
-      this.logger.error(`Thumbnail generation failed for instance ${instanceId}`, e);
+      this.logger.error(
+        `Thumbnail generation failed for instance ${instanceId}`,
+        e,
+      );
       return null;
     } finally {
       // Robust cleanup to prevent disk leaks (using try-catch for safety)

@@ -136,7 +136,7 @@ model Vital {
   status        String    @default("created") @map("_status")
   deletedAt     DateTime? @map("deleted_at")
 
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
 }
 
 model Prescription {
@@ -208,7 +208,7 @@ model ClinicalIncident {
 model AuditLog {
   id              String      @id @default(uuid())
   userId          String      @map("user_id")
-  patientId       String      @map("patient_id")
+  patientId       String?     @map("patient_id")
   // Formal audit (used by AuditService via AuditRepository)
   actionType      ActionType? @map("action_type")
   resourceId      String?     @map("resource_id")
@@ -220,7 +220,7 @@ model AuditLog {
   timestamp       DateTime    @default(now())
 
   user    User    @relation(fields: [userId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
 
   @@index([patientId, timestamp])
   @@index([userId, timestamp])
@@ -237,7 +237,7 @@ model DpdpaConsent {
   version     Int      @default(1)
   consentHash String?  @map("consent_hash")
 
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
   @@map("dpdpa_consents")
@@ -259,7 +259,7 @@ model Invoice {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
   financialTransactions FinancialTransaction[]
 
   @@map("invoices")
@@ -384,7 +384,7 @@ model NotificationStatus {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
 
   @@map("notification_statuses")
 }
