@@ -124,3 +124,6 @@ Thumbs.db
 *.sw?
 
 test-output
+
+.claude/worktrees
+.claude/settings.local.json
