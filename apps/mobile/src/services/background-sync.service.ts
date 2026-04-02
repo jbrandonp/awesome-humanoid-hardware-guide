@@ -2,6 +2,7 @@ import * as BackgroundFetch from 'expo-background-fetch';
 import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as Crypto from 'expo-crypto';
 // (Note: En environnement complet, on utiliserait le Sync de WatermelonDB ou une vraie DB SQLite,
 // mais AsyncStorage est adéquat pour une queue d'urgence/fallback simple structurée).
 
@@ -162,7 +163,7 @@ export class BackgroundSyncService {
    */
   static async enqueueTransaction(priority: SyncPriorityLevel, endpoint: string, payload: any): Promise<void> {
     try {
-      const transactionId = `SYNC-TXN-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const transactionId = `SYNC-TXN-${Date.now()}-${Crypto.randomUUID()}`;
 
       // Sérialisation sécurisée en Base64 (Évite la corruption de JSON complexes contenant des buffers CRDT)
       const payloadString = JSON.stringify(payload);

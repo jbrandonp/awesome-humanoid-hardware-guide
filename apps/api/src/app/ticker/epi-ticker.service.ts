@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { Subject, Observable } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
@@ -139,7 +140,7 @@ export class EpiTickerService {
       // ========================================================================
       for (const anomaly of statsResult) {
         const alert: TickerAlert = {
-          id: `EPI-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+          id: `EPI-${Date.now()}-${randomUUID()}`,
           type: 'EPIDEMIOLOGY',
           message: `🚨 ALERTE SANITAIRE : Pic épidémique suspect de '${anomaly.icd10Code}'. ${anomaly.casesToday} cas enregistrés aujourd'hui (Moy. normale: ${anomaly.averageCasesLast14Days.toFixed(1)}/jour).`,
           timestamp: new Date()
