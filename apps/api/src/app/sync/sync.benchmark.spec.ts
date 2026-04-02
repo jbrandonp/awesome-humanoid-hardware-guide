@@ -14,9 +14,7 @@ const mockPrismaService = {
   }
 } as any;
 
-const mockEpiTickerService = {} as any;
-
-const syncService = new SyncService(mockPrismaService, mockEpiTickerService);
+const syncService = new SyncService(mockPrismaService);
 
 async function runBenchmark() {
   const changes = {

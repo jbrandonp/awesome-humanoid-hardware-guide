@@ -32,17 +32,10 @@ class MockPrismaService {
   }
 }
 
-class MockEpiTickerService {
-  async broadcastAlert() {
-    return Promise.resolve();
-  }
-}
-
 async function runBenchmark() {
   const prisma = new MockPrismaService();
-  const epiTickerService = new MockEpiTickerService();
 
-  const syncService = new SyncService(prisma as any, epiTickerService as any);
+  const syncService = new SyncService(prisma as any);
 
   const NUM_UPDATES = 100;
 

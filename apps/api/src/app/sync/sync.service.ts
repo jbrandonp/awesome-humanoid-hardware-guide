@@ -1,19 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EpiTickerService } from '../ticker/epi-ticker.service';
-import * as Y from 'yjs';
 
 @Injectable()
 export class SyncService {
-  private readonly logger = new Logger(SyncService.name);
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly epiTickerService: EpiTickerService,
   ) {}
 
   async pushChanges(changes: any) {
-    const transactionOps = [];
+    const transactionOps: any[] = [];
 
     if (changes.patients) {
       const promises: Promise<any>[] = [];
@@ -109,10 +104,10 @@ export class SyncService {
               id: prescription.id,
               patientId: prescription.patient_id,
               visitId: prescription.visit_id,
-              medication: prescription.medication,
+              medicationName: prescription.medication,
               dosage: prescription.dosage,
               instructions: prescription.instructions,
-              createdAt: new Date(prescription.created_at),
+              prescribedAt: new Date(prescription.created_at),
               status: 'synced',
             })),
             skipDuplicates: true,
@@ -125,7 +120,7 @@ export class SyncService {
             this.prisma.prescription.update({
               where: { id: prescription.id },
               data: {
-                medication: prescription.medication,
+                medicationName: prescription.medication,
                 dosage: prescription.dosage,
                 instructions: prescription.instructions,
                 status: 'synced',
