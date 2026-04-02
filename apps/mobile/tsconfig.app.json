@@ -24,7 +24,9 @@
     "**/*.spec.js",
     "**/*.test.jsx",
     "**/*.spec.jsx",
-    "src/test-setup.ts"
+    "src/test-setup.ts",
+    "../../libs/models/src/**/*.spec.ts",
+    "../../libs/models/src/**/*.test.ts"
   ],
   "include": [
     "**/*.ts",
