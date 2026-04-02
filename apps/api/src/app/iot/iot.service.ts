@@ -177,6 +177,7 @@ export class IotMedicalService implements OnModuleInit {
     } catch (dbError: unknown) {
       // 6. GESTION DES PANNES EXTRÊMES (Out Of Memory, Disque Plein, Lock DB)
       this.logger.error(`[CRITICAL] Le moteur Postgres a rejeté la transaction IoT (Surcharge ?). Sauvetage en RAM.`, dbError);
+      this.enqueueForLater('BLE', payload);
 
       return {
          status: 'QUEUED',
@@ -225,6 +226,7 @@ export class IotMedicalService implements OnModuleInit {
       return { status: 'SUCCESS', vitalRecordId: newVisit.id, message: 'Ordonnance manuscrite (Smart Pen) sauvegardée avec succès.' };
     } catch (dbError) {
       this.logger.error(`[CRITICAL] Échec d'écriture du tracé vectoriel Smart Pen.`, dbError);
+      this.enqueueForLater('PEN', payload);
       return { status: 'QUEUED', message: 'Surcharge base de données. Le tracé SVG est mis en attente en RAM.' };
     }
   }
