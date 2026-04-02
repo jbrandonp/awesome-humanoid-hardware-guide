@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { ClinicalRecord, ClinicalRecordDocument } from './clinical-record.schema';
@@ -58,7 +59,7 @@ export class ClinicalRecordService {
       // Anonymisation des données dynamiques (noms et dates)
       for (const key of Object.keys(dataObj)) {
         if (key.toLowerCase().includes('name') || key.toLowerCase().includes('firstname') || key.toLowerCase().includes('lastname')) {
-          dataObj[key] = `ANON-${Math.random().toString(36).substring(7)}`;
+          dataObj[key] = `ANON-${randomUUID()}`;
           hasModifications = true;
         } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('dob') || key.toLowerCase().includes('birth')) {
           const dateVal = new Date(dataObj[key] as string | number);

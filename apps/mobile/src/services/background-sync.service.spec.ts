@@ -1,3 +1,4 @@
+vi.mock('expo-crypto', () => ({ randomUUID: vi.fn().mockReturnValue('1234abcd-1234-abcd-1234-abcd1234abcd') }));
 // Define __DEV__ to fix expo/src/async-require/setup.ts missing __DEV__ issue
 if (typeof global.__DEV__ === 'undefined') {
   (global as any).__DEV__ = true;
@@ -39,17 +40,17 @@ describe('BackgroundSyncService.enqueueTransaction', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // 2. Mock Date.now() and Math.random() for deterministic transaction IDs
+    // 2. Mock Date.now() and expo-crypto for deterministic transaction IDs
     // We will use standard mock implementations to ensure predictability.
     const fixedTime = new Date('2023-01-01T12:00:00.000Z').getTime();
     vi.spyOn(Date, 'now').mockReturnValue(fixedTime);
     vi.useFakeTimers();
     vi.setSystemTime(fixedTime);
 
-    // Math.random() returns something predictable
-    // Math.random().toString(36).substring(7) -> we need enough characters so substring(7) returns something
+    // Crypto.randomUUID() mocked
+    //
     // let's use a number like 0.1234567890123456
-    vi.spyOn(Math, 'random').mockReturnValue(0.1234567890123456);
+
 
     // Suppress console.error in tests to avoid cluttering output when testing error branches
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -89,7 +90,7 @@ describe('BackgroundSyncService.enqueueTransaction', () => {
 
     // Check Transaction ID format
     // SYNC-TXN-timestamp-randomString
-    expect(task.transactionId).toMatch(/^SYNC-TXN-1672574400000-[a-z0-9]+$/);
+    expect(task.transactionId).toMatch(/^SYNC-TXN-1672574400000-.*$/);
   });
 
   it('should append a task to an existing queue', async () => {
@@ -117,9 +118,8 @@ describe('BackgroundSyncService.enqueueTransaction', () => {
   });
 
   it('should not enqueue a transaction if its ID already exists (idempotency)', async () => {
-    // We mock Math.random and Date.now so the generated transactionId will be exactly
-    // "SYNC-TXN-1672574400000-" + (0.1234567890123456).toString(36).substring(7)
-    const mockTransactionId = `SYNC-TXN-1672574400000-${(0.1234567890123456).toString(36).substring(7)}`;
+    // We mock expo-crypto and Date.now so the generated transactionId will be exactly
+    const mockTransactionId = `SYNC-TXN-1672574400000-1234abcd-1234-abcd-1234-abcd1234abcd`;
 
     const existingQueue: BackgroundSyncTask[] = [
       {

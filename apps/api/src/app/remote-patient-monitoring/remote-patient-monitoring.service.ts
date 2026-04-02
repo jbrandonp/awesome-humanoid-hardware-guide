@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { OnEvent } from '@nestjs/event-emitter';
 import type { BleBloodPressurePayload } from '../iot/iot.service';
 import { EpiTickerService, TickerAlert } from '../ticker/epi-ticker.service';
@@ -55,7 +56,7 @@ export class RemotePatientMonitoringService {
     this.logger.error(`[CRITICAL ALERT] Constantes vitales dangereuses détectées (Tension Systolique > ${this.SYSTOLIC_THRESHOLD_MMHG} mmHg) pour le patient ${payload.patientId}`);
 
     const alert: TickerAlert = {
-      id: `RPM-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      id: `RPM-${Date.now()}-${randomUUID()}`,
       type: 'SYSTEM', // Using SYSTEM to force high priority/red banner in the UI
       message: `🚨 ALERTE CLINIQUE (HAUTE PRIORITÉ) : Le patient a une Tension Systolique critique de ${payload.systolicMmHg} mmHg sur 2 mesures consécutives.`,
       timestamp: new Date()

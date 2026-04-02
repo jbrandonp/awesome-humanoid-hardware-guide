@@ -2,6 +2,7 @@ import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { randomUUID } from 'crypto';
 import { stat } from 'fs/promises';
 import { SemanticParser, SemanticExtractionResult } from './semantic-parser';
 
@@ -79,7 +80,7 @@ export class WhisperService {
       }
 
       // 3. MISE EN FILE D'ATTENTE
-      const taskId = `AI-DICTATION-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const taskId = `AI-DICTATION-${Date.now()}-${randomUUID()}`;
       const task: WhisperTask = {
         id: taskId,
         filePath,
