@@ -123,6 +123,27 @@ Thumbs.db
 *.sln
 *.sw?
 
+# ------------------------------------------------------------------------------
+# 8. FICHIERS TEMPORAIRES & ARTEFACTS TECHNIQUES
+# Exclude files generated during development, conflict resolution, and patching
+# ------------------------------------------------------------------------------
+# Backup files from merges and conflicts
+*.bak
+*.rej
+*.orig
+# Temporary files
+temp_*.txt
+temp_*.md
+bugs_*.txt
+final*.txt
+remaining_*.txt
+*_mobile.txt
+*_desktop.txt
+# Patch and diff files (should be applied, not committed)
+*.patch
+*.diff
+*.mpa
+
 test-output
 
 .claude/worktrees
