@@ -1,10 +1,9 @@
 /* eslint-disable jsx-a11y/accessible-emoji */
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, StatusBar } from 'react-native';
+import { StyleSheet, View, Text, StatusBar, ActivityIndicator } from 'react-native';
 import { Omnibox } from '../components/Omnibox';
 import { initializeDatabase } from '../database';
 import { usePowerManagement } from '../hooks/usePowerManagement';
-import { initializeDatabase } from '../database';
 
 // Zéro Cloud Logs: Assurez-vous qu'aucun service tiers n'est importé/activé ici pour les PHI.
 
@@ -20,6 +19,7 @@ export const App = () => {
       })
       .catch((err) => {
         console.error('Database initialization failed:', err);
+        // Depending on app logic, you might want to show an error screen instead
       });
     return () => {
       isMounted = false;
@@ -29,33 +29,9 @@ export const App = () => {
   if (!isDbReady) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator size="large" color="#0000ff" />
-      </View>
-    );
-  }
-
-  const [isDbReady, setIsDbReady] = useState(false);
-
-  useEffect(() => {
-    initializeDatabase()
-      .then(() => {
-        setIsDbReady(true);
-      })
-      .catch((err) => {
-        console.error('Database initialization failed:', err);
-        // Depending on app logic, you might want to show an error screen instead
-      });
-  }, []);
-
-  if (!isDbReady) {
-    return (
-      <View style={styles.container}>
         <StatusBar barStyle="dark-content" />
-        <View
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-        >
-          <Text>Initialisation de la base de données...</Text>
-        </View>
+        <ActivityIndicator size="large" color="#0000ff" />
+        <Text style={{ marginTop: 10 }}>Initialisation de la base de données...</Text>
       </View>
     );
   }
@@ -79,6 +55,7 @@ export const App = () => {
     </View>
   );
 };
+
 const styles = StyleSheet.create({
   centered: {
     justifyContent: 'center',
