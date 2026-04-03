@@ -15,6 +15,7 @@ sudo apt-get install -y \
   libgtk-3-dev \
   libayatana-appindicator3-dev \
   librsvg2-dev \
-  libudev-dev
+  libudev-dev \
+  libglib2.0-dev
 
 echo "Dependencies installed successfully!"
