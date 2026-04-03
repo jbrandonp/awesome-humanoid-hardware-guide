@@ -63,11 +63,13 @@ const ALL_MEDICAL_SERVICES = [
 // LOGIQUE DE PRODUCTION : GESTION DES ERREURS EXTRÊMES & CONNEXION
 // ============================================================================
 
-export function useBleScanner(): BleScannerState & {
+export function useBleScanner(patientId?: string): BleScannerState & {
   startScan: () => Promise<void>;
   stopScanAndDisconnect: () => Promise<void>;
 } {
   const managerRef = useRef<BleManager | null>(null);
+  const isScanningRef = useRef<boolean>(false);
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -133,7 +135,12 @@ export function useBleScanner(): BleScannerState & {
     if (!managerRef.current) return;
 
     managerRef.current.stopDeviceScan();
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+      scanTimeoutRef.current = null;
+    }
     setIsScanning(false);
+    isScanningRef.current = false;
 
     if (activeDevice) {
       try {
@@ -182,6 +189,7 @@ export function useBleScanner(): BleScannerState & {
 
     await stopScanAndDisconnect();
     setIsScanning(true);
+    isScanningRef.current = true;
 
     try {
       manager.startDeviceScan(
@@ -192,12 +200,22 @@ export function useBleScanner(): BleScannerState & {
             handleBleError(scanError, 'Erreur pendant le scan du spectre BLE');
             manager.stopDeviceScan();
             setIsScanning(false);
+            isScanningRef.current = false;
+            if (scanTimeoutRef.current) {
+              clearTimeout(scanTimeoutRef.current);
+              scanTimeoutRef.current = null;
+            }
             return;
           }
 
           if (scannedDevice && scannedDevice.name) {
             manager.stopDeviceScan();
             setIsScanning(false);
+            isScanningRef.current = false;
+            if (scanTimeoutRef.current) {
+              clearTimeout(scanTimeoutRef.current);
+              scanTimeoutRef.current = null;
+            }
 
             await connectAndSubscribe(scannedDevice, manager);
           }
@@ -208,16 +226,25 @@ export function useBleScanner(): BleScannerState & {
         `Crash de la pile Bluetooth: ${(criticalError as Error).message}`,
       );
       setIsScanning(false);
+      isScanningRef.current = false;
     }
 
     // Watchdog Timeout (15 secondes max pour éviter le drain batterie)
-    setTimeout(() => {
-      if (isScanning) {
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current);
+    }
+    scanTimeoutRef.current = setTimeout(() => {
+      if (isScanningRef.current) {
         manager.stopDeviceScan();
         setIsScanning(false);
+        isScanningRef.current = false;
+        if (scanTimeoutRef.current) {
+          clearTimeout(scanTimeoutRef.current);
+          scanTimeoutRef.current = null;
+        }
         setSystemError('TIMEOUT : Aucun appareil médical détecté à proximité.');
       }
-    }, 15000);
+    }, 15000) as unknown as NodeJS.Timeout;
   };
 
   /**
@@ -388,8 +415,14 @@ export function useBleScanner(): BleScannerState & {
     hardwareId: string,
   ): MedicalVitalMeasurement => {
     const buffer = Buffer.from(base64Payload, 'base64');
+
+    if (buffer.length < 1) throw new Error("Payload Heart Rate corrompu ou trop court.");
+
     const flags = buffer.readUInt8(0);
     const is16Bit = (flags & 0x01) !== 0;
+
+    const expectedLength = is16Bit ? 3 : 2;
+    if (buffer.length < expectedLength) throw new Error("Payload Heart Rate corrompu ou trop court.");
 
     const bpm = is16Bit ? buffer.readUInt16LE(1) : buffer.readUInt8(1);
 
@@ -425,9 +458,11 @@ export function useBleScanner(): BleScannerState & {
   // ============================================================================
   // ÉCRITURE HORS-LIGNE & RÉSILIENCE BASE DE DONNÉES (WATERMELON DB)
   // ============================================================================
-  const saveVitalDataOfflineSecurely = async (
-    vitalData: MedicalVitalMeasurement,
-  ): Promise<void> => {
+  const saveVitalDataOfflineSecurely = async (vitalData: MedicalVitalMeasurement): Promise<void> => {
+    if (!patientId) {
+      setSystemError("Alerte: Aucun dossier patient sélectionné. La donnée lue n'a pas été sauvegardée.");
+      return;
+    }
     try {
       // S'assurer que la base est initialisée même si le hook est appelé très tôt
       await initializeDatabase();
@@ -436,7 +471,7 @@ export function useBleScanner(): BleScannerState & {
         const vitalsCollection = database.get('vitals');
         await vitalsCollection.create((vital: any) => {
           // Idéalement, patientId proviendrait d'un Contexte React sélectionné par le médecin
-          vital.patient.id = 'dummy-patient-uuid';
+          vital.patient.id = patientId;
           vital.recordedAt = new Date(vitalData.timestampIso);
           vital.status = 'created';
 
@@ -454,25 +489,9 @@ export function useBleScanner(): BleScannerState & {
     } catch (dbError: unknown) {
       // Gestion des pannes de base de données (ex: mémoire insuffisante, disque Windows 7 plein)
       // L'application NE CRASHE PAS. Le hook attrape l'erreur et affiche un message.
-      const errorMessage = (dbError as Error).message || '';
-      if (
-        errorMessage.includes(
-          'Database accessed before initialization completed',
-        )
-      ) {
-        console.error(
-          '[BLE] Initialisation de la base toujours en cours, tentative annulée.',
-          dbError,
-        );
-        setSystemError(
-          "Alerte: Base de données non prête. La donnée lue n'a pas été sauvegardée.",
-        );
-      } else {
-        console.error("[BLE] Erreur d'écriture dans la base:", dbError);
-        setSystemError(
-          "Alerte: L'espace de stockage de la tablette est plein ou corrompu. La donnée lue n'a pas été sauvegardée.",
-        );
-      }
+      setSystemError(
+        "Alerte: L'espace de stockage de la tablette est plein ou corrompu. La donnée lue n'a pas été sauvegardée.",
+      );
     }
   };
 
