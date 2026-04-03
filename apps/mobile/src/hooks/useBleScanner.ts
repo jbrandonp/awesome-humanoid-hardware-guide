@@ -63,7 +63,7 @@ const ALL_MEDICAL_SERVICES = [
 // LOGIQUE DE PRODUCTION : GESTION DES ERREURS EXTRÊMES & CONNEXION
 // ============================================================================
 
-export function useBleScanner(): BleScannerState & {
+export function useBleScanner(patientId?: string): BleScannerState & {
   startScan: () => Promise<void>;
   stopScanAndDisconnect: () => Promise<void>;
 } {
@@ -415,8 +415,14 @@ export function useBleScanner(): BleScannerState & {
     hardwareId: string,
   ): MedicalVitalMeasurement => {
     const buffer = Buffer.from(base64Payload, 'base64');
+
+    if (buffer.length < 1) throw new Error("Payload Heart Rate corrompu ou trop court.");
+
     const flags = buffer.readUInt8(0);
     const is16Bit = (flags & 0x01) !== 0;
+
+    const expectedLength = is16Bit ? 3 : 2;
+    if (buffer.length < expectedLength) throw new Error("Payload Heart Rate corrompu ou trop court.");
 
     const bpm = is16Bit ? buffer.readUInt16LE(1) : buffer.readUInt8(1);
 
@@ -452,15 +458,17 @@ export function useBleScanner(): BleScannerState & {
   // ============================================================================
   // ÉCRITURE HORS-LIGNE & RÉSILIENCE BASE DE DONNÉES (WATERMELON DB)
   // ============================================================================
-  const saveVitalDataOfflineSecurely = async (
-    vitalData: MedicalVitalMeasurement,
-  ): Promise<void> => {
+  const saveVitalDataOfflineSecurely = async (vitalData: MedicalVitalMeasurement): Promise<void> => {
+    if (!patientId) {
+      setSystemError("Alerte: Aucun dossier patient sélectionné. La donnée lue n'a pas été sauvegardée.");
+      return;
+    }
     try {
       await database.write(async () => {
         const vitalsCollection = database.get('vitals');
         await vitalsCollection.create((vital: any) => {
           // Idéalement, patientId proviendrait d'un Contexte React sélectionné par le médecin
-          vital.patient.id = 'dummy-patient-uuid';
+          vital.patient.id = patientId;
           vital.recordedAt = new Date(vitalData.timestampIso);
           vital.status = 'created';
 
