@@ -36,17 +36,18 @@ export function useKioskConnection(serverUrl: string) {
   useEffect(() => {
     if (!socket) return;
 
-    let reconnectTimer: NodeJS.Timeout;
-    let heartbeatInterval: NodeJS.Timeout;
+    let reconnectTimer: NodeJS.Timeout | null = null;
+    let heartbeatInterval: NodeJS.Timeout | null = null;
 
     const connect = () => {
+      reconnectTimer = null;
       if (!socket.connected) {
          socket.connect();
       }
     };
 
     const scheduleReconnect = () => {
-      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (reconnectTimer) return;
       reconnectAttempt.current += 1;
       // Exponential backoff: 1s, 2s, 4s, 8s... capped at maxDelay
       const delay = Math.min(Math.pow(2, reconnectAttempt.current - 1) * 1000, maxDelay);
@@ -74,7 +75,7 @@ export function useKioskConnection(serverUrl: string) {
     socket.on('disconnect', (reason: string) => {
       console.warn(`[Kiosk] Déconnecté (${reason})`);
       setIsConnected(false);
-      clearInterval(heartbeatInterval);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
       if (reason === 'io server disconnect') {
         // La déconnexion a été initiée par le serveur, on doit se reconnecter manuellement
         scheduleReconnect();
@@ -108,8 +109,8 @@ export function useKioskConnection(serverUrl: string) {
     connect();
 
     return () => {
-      clearTimeout(reconnectTimer);
-      clearInterval(heartbeatInterval);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
