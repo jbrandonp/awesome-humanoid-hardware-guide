@@ -270,10 +270,24 @@ export class IotMedicalService implements OnModuleInit {
     );
 
     // Simplification DPDPA Check pour ce mock (voir BLE pour la version complète exhaustive)
-    const hasConsent = await this.consentManager.checkConsent(
-      payload.practitionerId,
-      payload.patientId,
-    );
+    let hasConsent = false;
+    try {
+      hasConsent = await this.consentManager.checkConsent(
+        payload.practitionerId,
+        payload.patientId,
+      );
+    } catch (consentError: unknown) {
+      this.logger.error(
+        `[CRITICAL] Échec de la vérification DPDPA. Erreur BD ou Timeout. Ajout à la Queue Locale.`,
+        consentError,
+      );
+      this.enqueueForLater('PEN', payload);
+      throw new HttpException(
+        'Le système DPDPA est hors-ligne. La donnée est sécurisée en RAM.',
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
     if (!hasConsent) {
       await this.logSecurityEvent(
         payload.practitionerId,
