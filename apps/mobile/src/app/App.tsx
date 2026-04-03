@@ -4,11 +4,35 @@ import { StyleSheet, View, Text, StatusBar } from 'react-native';
 import { Omnibox } from '../components/Omnibox';
 import { initializeDatabase } from '../database';
 import { usePowerManagement } from '../hooks/usePowerManagement';
+import { initializeDatabase } from '../database';
 
 // Zéro Cloud Logs: Assurez-vous qu'aucun service tiers n'est importé/activé ici pour les PHI.
 
 export const App = () => {
   const powerState = usePowerManagement();
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    initializeDatabase()
+      .then(() => {
+        if (isMounted) setIsDbReady(true);
+      })
+      .catch((err) => {
+        console.error('Database initialization failed:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  if (!isDbReady) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
 
   const [isDbReady, setIsDbReady] = useState(false);
 
@@ -56,6 +80,10 @@ export const App = () => {
   );
 };
 const styles = StyleSheet.create({
+  centered: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
