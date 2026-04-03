@@ -98,6 +98,11 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     bucket: string,
     key: string,
   ): Promise<Buffer> {
+    if (!this.s3Client) {
+      throw new Error(
+        'S3Client is not initialized. Cannot download DICOM header.',
+      );
+    }
     const command = new GetObjectCommand({
       Bucket: bucket,
       Key: key,
@@ -129,6 +134,11 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
   }
 
   async process(job: Job<PacsIndexerJobData, void, string>): Promise<void> {
+    if (!this.s3Client) {
+      throw new Error(
+        'S3Client is not initialized. Please configure S3_ACCESS_KEY and S3_SECRET_KEY.',
+      );
+    }
     this.logger.log(`Processing job ${job.id} for key ${job.data.objectKey}`);
     try {
       // Step 1: DICOM S3 Download and Parsing Logic
@@ -304,6 +314,10 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     objectKey: string,
     instanceId: string,
   ): Promise<string | null> {
+    if (!this.s3Client) {
+      this.logger.error('S3Client is not initialized.');
+      return null;
+    }
     const tempDicomPath = path.join(os.tmpdir(), `${instanceId}.dcm`);
     const tempJpegPath = path.join(os.tmpdir(), `${instanceId}.jpg`);
 
