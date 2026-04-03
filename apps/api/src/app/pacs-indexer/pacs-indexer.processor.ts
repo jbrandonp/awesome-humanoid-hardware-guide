@@ -74,7 +74,9 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
       this.logger.error(
         'CRITICAL: S3 credentials (S3_ACCESS_KEY, S3_SECRET_KEY) are missing. PACS Indexing will fail.',
       );
-      return;
+      throw new Error(
+        'CRITICAL: S3 credentials (S3_ACCESS_KEY, S3_SECRET_KEY) are missing. PACS Indexing will fail.',
+      );
     }
 
     this.s3Client = new S3Client({
