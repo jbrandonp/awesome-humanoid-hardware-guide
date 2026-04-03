@@ -208,7 +208,7 @@ model ClinicalIncident {
 model AuditLog {
   id              String      @id @default(uuid())
   userId          String      @map("user_id")
-  patientId       String      @map("patient_id")
+  patientId       String?     @map("patient_id")
   // Formal audit (used by AuditService via AuditRepository)
   actionType      ActionType? @map("action_type")
   resourceId      String?     @map("resource_id")
@@ -220,7 +220,7 @@ model AuditLog {
   timestamp       DateTime    @default(now())
 
   user    User    @relation(fields: [userId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient Patient? @relation(fields: [patientId], references: [id])
 
   @@index([patientId, timestamp])
   @@index([userId, timestamp])

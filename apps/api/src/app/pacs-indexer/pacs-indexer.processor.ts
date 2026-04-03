@@ -237,7 +237,7 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
       const systemUserId = '00000000-0000-0000-0000-000000000000'; // Replace with a configured system user if needed
       await this.auditService.logAudit({
         userId: systemUserId,
-        patientId: dbPatientId || 'ORPHANED',
+        patientId: dbPatientId || undefined,
         actionType: ActionType.CREATE,
         resourceId: instance.id,
         phiDataAccessed: {
