@@ -46,6 +46,7 @@ export function useKioskConnection(serverUrl: string) {
     };
 
     const scheduleReconnect = () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       reconnectAttempt.current += 1;
       // Exponential backoff: 1s, 2s, 4s, 8s... capped at maxDelay
       const delay = Math.min(Math.pow(2, reconnectAttempt.current - 1) * 1000, maxDelay);

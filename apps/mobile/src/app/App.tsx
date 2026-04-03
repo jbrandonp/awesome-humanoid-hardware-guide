@@ -1,13 +1,8 @@
 /* eslint-disable jsx-a11y/accessible-emoji */
 import React, { useState, useEffect } from 'react';
-import {
-  ActivityIndicator,
-  StyleSheet,
-  View,
-  Text,
-  StatusBar,
-} from 'react-native';
+import { StyleSheet, View, Text, StatusBar } from 'react-native';
 import { Omnibox } from '../components/Omnibox';
+import { initializeDatabase } from '../database';
 import { usePowerManagement } from '../hooks/usePowerManagement';
 import { initializeDatabase } from '../database';
 
@@ -35,6 +30,32 @@ export const App = () => {
     return (
       <View style={[styles.container, styles.centered]}>
         <ActivityIndicator size="large" color="#0000ff" />
+      </View>
+    );
+  }
+
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  useEffect(() => {
+    initializeDatabase()
+      .then(() => {
+        setIsDbReady(true);
+      })
+      .catch((err) => {
+        console.error('Database initialization failed:', err);
+        // Depending on app logic, you might want to show an error screen instead
+      });
+  }, []);
+
+  if (!isDbReady) {
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" />
+        <View
+          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+        >
+          <Text>Initialisation de la base de données...</Text>
+        </View>
       </View>
     );
   }
