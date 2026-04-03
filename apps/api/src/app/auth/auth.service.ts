@@ -31,7 +31,7 @@ export class AuthService {
     }
     if (
       process.env.TOKEN_ENCRYPTION_KEY &&
-      Buffer.byteLength(process.env.TOKEN_ENCRYPTION_KEY, 'utf8') < 32
+      process.env.TOKEN_ENCRYPTION_KEY.length < 32
     ) {
       throw new Error(
         'CRITICAL SECURITY ERROR: TOKEN_ENCRYPTION_KEY must be at least 32 characters long.',
@@ -168,11 +168,16 @@ export class AuthService {
 
   // --- Utility Methods for Encryption ---
 
+  private getEncryptionSecret(): Buffer {
+    // Generate a consistent 32-byte key using SHA-256 to support multi-byte characters safely
+    return crypto
+      .createHash('sha256')
+      .update(process.env.TOKEN_ENCRYPTION_KEY || '')
+      .digest();
+  }
+
   private encryptToken(token: string): string {
-    const secret = Buffer.from(
-      process.env.TOKEN_ENCRYPTION_KEY!,
-      'utf8',
-    ).subarray(0, 32);
+    const secret = this.getEncryptionSecret();
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
     let encrypted = cipher.update(token, 'utf8', 'hex');
@@ -183,10 +188,7 @@ export class AuthService {
   private decryptToken(encryptedData: string): string {
     const parts = encryptedData.split(':');
     if (parts.length !== 2) throw new Error('Invalid encrypted token format');
-    const secret = Buffer.from(
-      process.env.TOKEN_ENCRYPTION_KEY!,
-      'utf8',
-    ).subarray(0, 32);
+    const secret = this.getEncryptionSecret();
     const iv = Buffer.from(parts[0], 'hex');
     const encryptedText = parts[1];
     const decipher = crypto.createDecipheriv('aes-256-cbc', secret, iv);

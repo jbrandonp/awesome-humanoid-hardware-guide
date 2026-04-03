@@ -15,7 +15,9 @@ describe('AuthService', () => {
 
     const mockJwtService = {
       sign: jest.fn().mockReturnValue('mock-jwt-token'),
-      decode: jest.fn().mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600 }),
+      decode: jest
+        .fn()
+        .mockReturnValue({ exp: Math.floor(Date.now() / 1000) + 3600 }),
       verify: jest.fn(),
     };
 
@@ -29,7 +31,7 @@ describe('AuthService', () => {
     service = new AuthService(
       mockJwtService as any,
       mockBlacklistService as any,
-      mockPrismaService as any
+      mockPrismaService as any,
     );
     jwtService = mockJwtService as any;
     blacklistService = mockBlacklistService as any;
@@ -43,7 +45,7 @@ describe('AuthService', () => {
     it('should throw error if JWT_SECRET is missing', () => {
       delete process.env.JWT_SECRET;
       expect(() => new AuthService({} as any, {} as any, {} as any)).toThrow(
-        'CRITICAL SECURITY ERROR: JWT_SECRET is not defined'
+        'CRITICAL SECURITY ERROR: JWT_SECRET is not defined',
       );
     });
 
@@ -52,7 +54,7 @@ describe('AuthService', () => {
       process.env.JWT_REFRESH_SECRET = 'refresh';
       process.env.TOKEN_ENCRYPTION_KEY = 'short';
       expect(() => new AuthService({} as any, {} as any, {} as any)).toThrow(
-        'CRITICAL SECURITY ERROR: TOKEN_ENCRYPTION_KEY must be at least 32 characters long'
+        'CRITICAL SECURITY ERROR: TOKEN_ENCRYPTION_KEY must be at least 32 characters long',
       );
     });
   });
@@ -62,7 +64,7 @@ describe('AuthService', () => {
       const orig = process.env.JWT_SECRET;
       delete process.env.JWT_SECRET;
       await expect(service.login('user123', 'DOCTOR')).rejects.toThrow(
-        'CRITICAL SECURITY ERROR: JWT_SECRET is not defined in environment variables.'
+        'CRITICAL SECURITY ERROR: JWT_SECRET is not defined in environment variables.',
       );
       process.env.JWT_SECRET = orig;
     });
@@ -71,7 +73,7 @@ describe('AuthService', () => {
       const orig = process.env.JWT_REFRESH_SECRET;
       delete process.env.JWT_REFRESH_SECRET;
       await expect(service.login('user123', 'DOCTOR')).rejects.toThrow(
-        'CRITICAL SECURITY ERROR: JWT_REFRESH_SECRET is not defined in environment variables.'
+        'CRITICAL SECURITY ERROR: JWT_REFRESH_SECRET is not defined in environment variables.',
       );
       process.env.JWT_REFRESH_SECRET = orig;
     });
@@ -93,7 +95,10 @@ describe('AuthService', () => {
     it('should invalidate the decrypted refresh token via blacklist service', async () => {
       // Manually encrypt a token to test decryption and invalidation
       const rawToken = 'raw-refresh-token';
-      const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32));
+      const secret = crypto
+        .createHash('sha256')
+        .update(process.env.TOKEN_ENCRYPTION_KEY!)
+        .digest();
       const iv = crypto.randomBytes(16);
       const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
       let encrypted = cipher.update(rawToken, 'utf8', 'hex');
@@ -108,34 +113,40 @@ describe('AuthService', () => {
   });
 
   describe('isRefreshTokenValid', () => {
-     it('should return false if the token is blacklisted', async () => {
-        (blacklistService.isTokenBlacklisted as any).mockResolvedValue(true);
-        const rawToken = 'raw-refresh-token';
-        const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32));
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
-        let encrypted = cipher.update(rawToken, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
-        const encryptedToken = iv.toString('hex') + ':' + encrypted;
+    it('should return false if the token is blacklisted', async () => {
+      (blacklistService.isTokenBlacklisted as any).mockResolvedValue(true);
+      const rawToken = 'raw-refresh-token';
+      const secret = crypto
+        .createHash('sha256')
+        .update(process.env.TOKEN_ENCRYPTION_KEY!)
+        .digest();
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+      let encrypted = cipher.update(rawToken, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      const encryptedToken = iv.toString('hex') + ':' + encrypted;
 
-        const isValid = await service.isRefreshTokenValid(encryptedToken);
+      const isValid = await service.isRefreshTokenValid(encryptedToken);
 
-        expect(isValid).toBe(false);
-     });
+      expect(isValid).toBe(false);
+    });
 
-     it('should return true if token is valid and not blacklisted', async () => {
-        (blacklistService.isTokenBlacklisted as any).mockResolvedValue(false);
-        const rawToken = 'raw-refresh-token';
-        const secret = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY!.substring(0, 32));
-        const iv = crypto.randomBytes(16);
-        const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
-        let encrypted = cipher.update(rawToken, 'utf8', 'hex');
-        encrypted += cipher.final('hex');
-        const encryptedToken = iv.toString('hex') + ':' + encrypted;
+    it('should return true if token is valid and not blacklisted', async () => {
+      (blacklistService.isTokenBlacklisted as any).mockResolvedValue(false);
+      const rawToken = 'raw-refresh-token';
+      const secret = crypto
+        .createHash('sha256')
+        .update(process.env.TOKEN_ENCRYPTION_KEY!)
+        .digest();
+      const iv = crypto.randomBytes(16);
+      const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+      let encrypted = cipher.update(rawToken, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      const encryptedToken = iv.toString('hex') + ':' + encrypted;
 
-        const isValid = await service.isRefreshTokenValid(encryptedToken);
+      const isValid = await service.isRefreshTokenValid(encryptedToken);
 
-        expect(isValid).toBe(true);
-     });
+      expect(isValid).toBe(true);
+    });
   });
 });
