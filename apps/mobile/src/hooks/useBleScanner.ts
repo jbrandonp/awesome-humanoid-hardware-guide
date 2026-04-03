@@ -8,7 +8,7 @@ import {
   Characteristic,
 } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
-import { database } from '../database';
+import { database, initializeDatabase } from '../database';
 
 // ============================================================================
 // INTERFACES TYPÉES STRICTES (ZÉRO 'ANY' POLICY)
@@ -464,6 +464,9 @@ export function useBleScanner(patientId?: string): BleScannerState & {
       return;
     }
     try {
+      // S'assurer que la base est initialisée même si le hook est appelé très tôt
+      await initializeDatabase();
+
       await database.write(async () => {
         const vitalsCollection = database.get('vitals');
         await vitalsCollection.create((vital: any) => {
