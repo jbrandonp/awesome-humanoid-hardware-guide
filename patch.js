@@ -1,65 +1,29 @@
 const fs = require('fs');
+const file = 'apps/api/src/app/auth/auth.service.ts';
+let code = fs.readFileSync(file, 'utf8');
 
-let fileContent = fs.readFileSync('apps/api/src/app/sync/sync.service.ts', 'utf8');
-
-fileContent = fileContent.replace(
-`      for (const id of changes.patients.deleted) {
-        await this.prisma.patient.update({
-          where: { id },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`,
-`      if (changes.patients.deleted.length > 0) {
-        await this.prisma.patient.updateMany({
-          where: { id: { in: changes.patients.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`
+code = code.replace(
+    /Buffer\.byteLength\(process\.env\.TOKEN_ENCRYPTION_KEY, 'utf8'\) < 32/,
+    "process.env.TOKEN_ENCRYPTION_KEY.length < 32"
 );
 
-fileContent = fileContent.replace(
-`      for (const id of changes.visits.deleted) {
-        await this.prisma.visit.update({
-          where: { id },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`,
-`      if (changes.visits.deleted.length > 0) {
-        await this.prisma.visit.updateMany({
-          where: { id: { in: changes.visits.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`
+code = code.replace(
+    /private encryptToken\(token: string\): string \{[\s\S]*?const secret = Buffer\.from\([\s\S]*?process\.env\.TOKEN_ENCRYPTION_KEY!,[\s\S]*?'utf8',[\s\S]*?\)\.subarray\(0, 32\);/,
+    `private getEncryptionSecret(): Buffer {
+    // Generate a consistent 32-byte key using SHA-256 to support multi-byte characters safely
+    return crypto.createHash('sha256').update(process.env.TOKEN_ENCRYPTION_KEY || '').digest();
+  }
+
+  private encryptToken(token: string): string {
+    const secret = this.getEncryptionSecret();`
 );
 
-fileContent = fileContent.replace(
-`      for (const id of changes.prescriptions.deleted) {
-        await this.prisma.prescription.update({
-          where: { id },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`,
-`      if (changes.prescriptions.deleted.length > 0) {
-        await this.prisma.prescription.updateMany({
-          where: { id: { in: changes.prescriptions.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`
+code = code.replace(
+    /private decryptToken\(encryptedData: string\): string \{[\s\S]*?const parts = encryptedData\.split\(':'\);[\s\S]*?if \(parts\.length !== 2\) throw new Error\('Invalid encrypted token format'\);[\s\S]*?const secret = Buffer\.from\([\s\S]*?process\.env\.TOKEN_ENCRYPTION_KEY!,[\s\S]*?'utf8',[\s\S]*?\)\.subarray\(0, 32\);/,
+    `private decryptToken(encryptedData: string): string {
+    const parts = encryptedData.split(':');
+    if (parts.length !== 2) throw new Error('Invalid encrypted token format');
+    const secret = this.getEncryptionSecret();`
 );
 
-fileContent = fileContent.replace(
-`      for (const id of changes.vitals.deleted) {
-        await this.prisma.vital.update({
-          where: { id },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`,
-`      if (changes.vitals.deleted.length > 0) {
-        await this.prisma.vital.updateMany({
-          where: { id: { in: changes.vitals.deleted } },
-          data: { deletedAt: new Date(), status: 'deleted' }
-        });
-      }`
-);
-
-fs.writeFileSync('apps/api/src/app/sync/sync.service.ts', fileContent, 'utf8');
+fs.writeFileSync(file, code);

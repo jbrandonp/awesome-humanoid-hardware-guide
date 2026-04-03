@@ -132,10 +132,9 @@ Thumbs.db
 *.rej
 *.orig
 # Temporary files
-temp_*.txt
-temp_*.md
-bugs_*.txt
-final*.txt
+temp_*
+bugs_*
+final*
 remaining_*.txt
 *_mobile.txt
 *_desktop.txt
