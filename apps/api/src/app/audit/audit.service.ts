@@ -14,7 +14,11 @@ export class AuditService {
   /**
    * Obfuscates PHI data for HIPAA Safe Harbor compliance.
    */
-  obfuscatePhiData(data: Record<string, any> | any[], depth = 0, seen = new WeakSet()): Record<string, any> | any[] {
+  obfuscatePhiData(
+    data: Record<string, any> | any[],
+    depth = 0,
+    seen = new WeakSet(),
+  ): Record<string, any> | any[] {
     if (depth > 10) return Array.isArray(data) ? [] : {}; // Prevent stack overflow
     if (typeof data === 'object' && data !== null) {
       if (seen.has(data)) return Array.isArray(data) ? [] : {}; // Prevent circular references
@@ -29,20 +33,31 @@ export class AuditService {
 
       if (typeof val === 'string') {
         if (lowerKey.includes('phone')) {
-          (obfuscated as any)[key] = val.replace(/\d/g, (match, offset) => (offset < 5 ? '*' : match));
+          (obfuscated as any)[key] = val.replace(/\d/g, (match, offset) =>
+            offset < 5 ? '*' : match,
+          );
         } else if (lowerKey.includes('email')) {
           const [user, domain] = val.split('@');
-          (obfuscated as any)[key] = domain ? `${user.charAt(0)}***@${domain}` : '***';
+          (obfuscated as any)[key] = domain
+            ? `${user.charAt(0)}***@${domain}`
+            : '***';
         } else if (
-          lowerKey.includes('name') || 
-          lowerKey.includes('firstname') || 
+          lowerKey.includes('name') ||
+          lowerKey.includes('firstname') ||
           lowerKey.includes('lastname') ||
           lowerKey.includes('address') ||
           lowerKey.includes('aadhar') ||
           lowerKey.includes('nationalid')
         ) {
-          (obfuscated as any)[key] = val.length > 2 ? `${val.charAt(0)}***${val.charAt(val.length - 1)}` : '***';
-        } else if (lowerKey.includes('date') || lowerKey.includes('dob') || lowerKey.includes('birth')) {
+          (obfuscated as any)[key] =
+            val.length > 2
+              ? `${val.charAt(0)}***${val.charAt(val.length - 1)}`
+              : '***';
+        } else if (
+          lowerKey.includes('date') ||
+          lowerKey.includes('dob') ||
+          lowerKey.includes('birth')
+        ) {
           (obfuscated as any)[key] = '****-**-**';
         }
       } else if (typeof val === 'object' && val !== null) {
@@ -55,13 +70,20 @@ export class AuditService {
 
   async logAudit(params: {
     userId: string;
-    patientId: string;
+    patientId?: string | null;
     actionType: ActionType;
     resourceId: string;
     phiDataAccessed: Record<string, any>;
     ipAddress?: string;
   }) {
-    const { userId, patientId, actionType, resourceId, phiDataAccessed, ipAddress } = params;
+    const {
+      userId,
+      patientId,
+      actionType,
+      resourceId,
+      phiDataAccessed,
+      ipAddress,
+    } = params;
 
     const obfuscatedPhiData = this.obfuscatePhiData(phiDataAccessed);
 
