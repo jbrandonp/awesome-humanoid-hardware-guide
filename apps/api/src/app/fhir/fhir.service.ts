@@ -66,28 +66,28 @@ export class FhirService {
 
     // B. Mapper les Constantes Vitales (Observations IoT/BLE)
     for (const vital of patient.vitals) {
-      if (vital.temperature != null) {
+      if (vital.temperature) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-temp`,
           resource: this.fhirMapper.toFhirObservation(vital, 'temperature')
         });
       }
 
-      if (vital.heartRate != null) {
+      if (vital.heartRate) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-hr`,
           resource: this.fhirMapper.toFhirObservation(vital, 'heartRate')
         });
       }
 
-      if (vital.bloodPressure != null) {
+      if (vital.bloodPressure) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-bp`,
           resource: this.fhirMapper.toFhirObservation(vital, 'bloodPressure')
         });
       }
 
-      if (vital.glucose != null) {
+      if (vital.glucose) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-glucose`,
           resource: this.fhirMapper.toFhirObservation(vital, 'glucose')
@@ -188,25 +188,25 @@ export class FhirService {
     const entries: z.infer<typeof FhirBundleSchema>['entry'] = [];
 
     for (const vital of vitals) {
-      if (vital.temperature != null) {
+      if (vital.temperature) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-temp`,
           resource: this.fhirMapper.toFhirObservation(vital, 'temperature')
         });
       }
-      if (vital.heartRate != null) {
+      if (vital.heartRate) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-hr`,
           resource: this.fhirMapper.toFhirObservation(vital, 'heartRate')
         });
       }
-      if (vital.bloodPressure != null) {
+      if (vital.bloodPressure) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-bp`,
           resource: this.fhirMapper.toFhirObservation(vital, 'bloodPressure')
         });
       }
-      if (vital.glucose != null) {
+      if (vital.glucose) {
         entries.push({
           fullUrl: `urn:uuid:${vital.id}-glucose`,
           resource: this.fhirMapper.toFhirObservation(vital, 'glucose')

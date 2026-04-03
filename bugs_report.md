@@ -103,6 +103,3 @@
   - La vérification du code de l'application de bureau Rust avec `cargo check` a réussi. Certaines librairies système (`libwebkit2gtk-4.1-dev`, `libudev-dev`, etc.) manquaient lors de la première itération et ont été résolues avec succès via apt-get pour permettre l'exécution complète du check.
 
 **Fin du rapport.**
-## 8. Résolution de l'Environnement de Compilation Rust (Tauri)
-- **Dépendances Système Manquantes** : L'échec de `cargo check` dans `apps/desktop/src-tauri` (qui semblait être une erreur 403) était dû à des dépendances système Linux manquantes pour la compilation de Tauri.
-- **Solution Appliquée** : Un script `install_rust_deps.sh` a été créé dans `apps/desktop/src-tauri`. Il installe les bibliothèques requises (`libwebkit2gtk-4.1-dev`, `libudev-dev`, etc.) via `apt-get`, ce qui permet au `cargo check` de s'exécuter avec succès.

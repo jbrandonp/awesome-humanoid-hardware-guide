@@ -53,12 +53,6 @@ export class MDNSScannerService {
       this.zeroconf.on('resolved', (service: any) => {
         if (isResolved) return;
 
-        // Guard clause contre les payloads malformés renvoyés par les modules natifs
-        if (!service || !Array.isArray(service.addresses)) {
-          console.warn('[mDNS Scanner] Payload service ignoré (malformé):', service);
-          return;
-        }
-
         // On vérifie le type de service pour ignorer les imprimantes et les Apple TV
         if (service.type === 'medical-api' && service.addresses.length > 0) {
            isResolved = true;
