@@ -35,6 +35,8 @@ vi.mock('@react-native-async-storage/async-storage', () => {
 });
 
 const QUEUE_STORAGE_KEY = '@resilient_health_sync_queue';
+vi.mock('axios');
+
 
 describe('BackgroundSyncService.enqueueTransaction', () => {
   beforeEach(() => {
