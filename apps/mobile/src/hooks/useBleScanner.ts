@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer';
 import { useState, useEffect, useRef } from 'react';
 import { PermissionsAndroid, Platform } from 'react-native';
 import {
