@@ -24,6 +24,11 @@ export class QueueService {
   ) {}
 
   async addPatientToQueue(patientId: string, input: TriageInput): Promise<QueueEntry> {
+    // 0. Prevent duplicates
+    if (this.queue.some((entry) => entry.patientId === patientId)) {
+      throw new BadRequestException(`Patient with ID ${patientId} is already in the triage queue.`);
+    }
+
     // 1. Validate Input (Zod)
     const parseResult = TriageInputSchema.safeParse(input);
     if (!parseResult.success) {
