@@ -11,6 +11,7 @@
     "@nozbe/watermelondb": "^0.28.0",
     "@nozbe/with-observables": "^1.6.0",
     "@testing-library/react-native": "*",
+    "buffer": "^6.0.3",
     "expo": "*",
     "expo-background-fetch": "~14.0.9",
     "expo-barcode-scanner": "^13.0.1",
