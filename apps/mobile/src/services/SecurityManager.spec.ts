@@ -9,6 +9,7 @@ vi.mock('expo-secure-store', () => ({
 vi.mock('expo-file-system', () => ({
   documentDirectory: 'file:///app/documents/',
   getInfoAsync: vi.fn(),
+  readDirectoryAsync: vi.fn(),
   deleteAsync: vi.fn(),
 }));
 
@@ -60,8 +61,15 @@ describe('SecurityManager', () => {
 
       // Mock file existence
       vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (path: string) => {
-        return { exists: true, isDirectory: false, uri: path, size: 100 };
+        return { exists: true, isDirectory: true, uri: path, size: 100 };
       });
+      vi.mocked(FileSystem.readDirectoryAsync).mockResolvedValue([
+        'systeme_sante.db',
+        'systeme_sante-shm',
+        'systeme_sante-wal',
+        'systeme_sante?key=123.db',
+        'other_file.txt'
+      ]);
 
       await SecurityManager.wipeData();
 
@@ -70,14 +78,15 @@ describe('SecurityManager', () => {
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(AUTH_ATTEMPTS_STORAGE_KEY);
 
       // Check FileSystem existence checks
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(dbPath);
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(dbPathShm);
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(dbPathWal);
+      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(basePath);
+      expect(FileSystem.readDirectoryAsync).toHaveBeenCalledWith(basePath);
 
       // Check FileSystem deletions
       expect(FileSystem.deleteAsync).toHaveBeenCalledWith(dbPath, { idempotent: true });
-      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(dbPathShm, { idempotent: true });
-      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(dbPathWal, { idempotent: true });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(`${basePath}systeme_sante-shm`, { idempotent: true });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(`${basePath}systeme_sante-wal`, { idempotent: true });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(`${basePath}systeme_sante?key=123.db`, { idempotent: true });
+      expect(FileSystem.deleteAsync).not.toHaveBeenCalledWith(`${basePath}other_file.txt`, { idempotent: true });
     });
 
     it('should delete secure store items and database files for Android when they exist', async () => {
@@ -90,8 +99,15 @@ describe('SecurityManager', () => {
 
       // Mock file existence
       vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (path: string) => {
-        return { exists: true, isDirectory: false, uri: path, size: 100 };
+        return { exists: true, isDirectory: true, uri: path, size: 100 };
       });
+      vi.mocked(FileSystem.readDirectoryAsync).mockResolvedValue([
+        'systeme_sante.db',
+        'systeme_sante-shm',
+        'systeme_sante-wal',
+        'systeme_sante?key=123.db',
+        'other_file.txt'
+      ]);
 
       await SecurityManager.wipeData();
 
@@ -100,20 +116,21 @@ describe('SecurityManager', () => {
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(AUTH_ATTEMPTS_STORAGE_KEY);
 
       // Check FileSystem existence checks
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(dbPath);
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(dbPathShm);
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(dbPathWal);
+      expect(FileSystem.getInfoAsync).toHaveBeenCalledWith(basePath);
+      expect(FileSystem.readDirectoryAsync).toHaveBeenCalledWith(basePath);
 
       // Check FileSystem deletions
       expect(FileSystem.deleteAsync).toHaveBeenCalledWith(dbPath, { idempotent: true });
-      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(dbPathShm, { idempotent: true });
-      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(dbPathWal, { idempotent: true });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(`${basePath}systeme_sante-shm`, { idempotent: true });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(`${basePath}systeme_sante-wal`, { idempotent: true });
+      expect(FileSystem.deleteAsync).toHaveBeenCalledWith(`${basePath}systeme_sante?key=123.db`, { idempotent: true });
+      expect(FileSystem.deleteAsync).not.toHaveBeenCalledWith(`${basePath}other_file.txt`, { idempotent: true });
     });
 
-    it('should not attempt to delete database files if they do not exist', async () => {
+    it('should not attempt to delete database files if directory does not exist', async () => {
       Platform.OS = 'ios'; // OS doesn't matter much here, just testing non-existence path
 
-      // Mock file non-existence
+      // Mock directory non-existence
       vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (path: string) => {
         return { exists: false, isDirectory: false, uri: path, size: 0 };
       });
@@ -125,7 +142,34 @@ describe('SecurityManager', () => {
       expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(AUTH_ATTEMPTS_STORAGE_KEY);
 
       // FileSystem existence checks should happen
-      expect(FileSystem.getInfoAsync).toHaveBeenCalledTimes(3);
+      expect(FileSystem.getInfoAsync).toHaveBeenCalledTimes(1);
+      expect(FileSystem.readDirectoryAsync).not.toHaveBeenCalled();
+
+      // FileSystem deletions should NOT happen
+      expect(FileSystem.deleteAsync).not.toHaveBeenCalled();
+    });
+
+    it('should not attempt to delete database files if no matching files exist', async () => {
+      Platform.OS = 'ios';
+
+      // Mock directory existence but no matching files
+      vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (path: string) => {
+        return { exists: true, isDirectory: true, uri: path, size: 0 };
+      });
+      vi.mocked(FileSystem.readDirectoryAsync).mockResolvedValue([
+        'other_file.txt',
+        'random.db'
+      ]);
+
+      await SecurityManager.wipeData();
+
+      // SecureStore items should still be deleted
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(ENCRYPTION_KEY_STORAGE_KEY);
+      expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith(AUTH_ATTEMPTS_STORAGE_KEY);
+
+      // FileSystem existence checks should happen
+      expect(FileSystem.getInfoAsync).toHaveBeenCalledTimes(1);
+      expect(FileSystem.readDirectoryAsync).toHaveBeenCalledTimes(1);
 
       // FileSystem deletions should NOT happen
       expect(FileSystem.deleteAsync).not.toHaveBeenCalled();
@@ -134,10 +178,13 @@ describe('SecurityManager', () => {
     it('should silently ignore errors during file deletion', async () => {
       Platform.OS = 'ios';
 
-      // Mock file existence
+      // Mock directory existence
       vi.mocked(FileSystem.getInfoAsync).mockImplementation(async (path: string) => {
-        return { exists: true, isDirectory: false, uri: path, size: 100 };
+        return { exists: true, isDirectory: true, uri: path, size: 100 };
       });
+      vi.mocked(FileSystem.readDirectoryAsync).mockResolvedValue([
+        'systeme_sante.db'
+      ]);
 
       // Force an error on delete
       vi.mocked(FileSystem.deleteAsync).mockRejectedValue(new Error('Deletion failed due to permission or lock'));
