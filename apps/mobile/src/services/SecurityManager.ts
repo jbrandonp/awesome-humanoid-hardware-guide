@@ -39,24 +39,16 @@ export class SecurityManager {
       ? `${documentDirectory}../databases/`
       : `${documentDirectory}../Library/Application Support/`;
 
-    const dbPath = `${basePath}${DB_NAME}`;
-    const dbPathShm = `${basePath}${DB_NAME}-shm`;
-    const dbPathWal = `${basePath}${DB_NAME}-wal`;
-
     try {
-      const fileInfo = await FileSystem.getInfoAsync(dbPath);
-      if (fileInfo.exists) {
-        await FileSystem.deleteAsync(dbPath, { idempotent: true });
-      }
+      const dirInfo = await FileSystem.getInfoAsync(basePath);
+      if (dirInfo.exists && dirInfo.isDirectory) {
+        const files = await FileSystem.readDirectoryAsync(basePath);
+        const dbFiles = files.filter(f => f.startsWith('systeme_sante'));
 
-      const fileInfoShm = await FileSystem.getInfoAsync(dbPathShm);
-      if (fileInfoShm.exists) {
-        await FileSystem.deleteAsync(dbPathShm, { idempotent: true });
-      }
-
-      const fileInfoWal = await FileSystem.getInfoAsync(dbPathWal);
-      if (fileInfoWal.exists) {
-        await FileSystem.deleteAsync(dbPathWal, { idempotent: true });
+        for (const file of dbFiles) {
+          const filePath = `${basePath}${file}`;
+          await FileSystem.deleteAsync(filePath, { idempotent: true });
+        }
       }
     } catch (e) {
       // Ignore errors silently as per zero-logs rule
