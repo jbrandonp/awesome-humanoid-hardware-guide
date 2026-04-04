@@ -8,7 +8,7 @@ export default defineConfig({
       deps: {
         // This tells Vite not to try and process/transform the react-native package
         // which contains non-standard Flow syntax (import typeof)
-        external: ['react-native']
+        external: ['react-native', 'expo-modules-core']
       }
     }
   },
