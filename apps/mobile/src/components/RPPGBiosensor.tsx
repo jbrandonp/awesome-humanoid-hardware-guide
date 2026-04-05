@@ -13,6 +13,7 @@ export function RPPGBiosensor() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const cameraRef = useRef<CameraView>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Constants for Signal Processing
   const MIN_HR_HZ = 0.8; // 48 BPM
@@ -56,6 +57,15 @@ export function RPPGBiosensor() {
         return prev - 1;
       });
     }, 1000);
+    timerRef.current = interval;
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, []);
 
   const applyBandpassFilter = (
