@@ -72,7 +72,7 @@ describe('DrugInteractionChecker', () => {
           }),
         );
 
-        expect(result).toEqual({ status: 'success', risks: mockRisks });
+        expect(result).toEqual(mockRisks);
         expect(consoleErrorSpy).not.toHaveBeenCalled();
         expect(consoleWarnSpy).not.toHaveBeenCalled();
       });
@@ -94,14 +94,14 @@ describe('DrugInteractionChecker', () => {
         );
 
         expect(mockedAxios.post).toHaveBeenCalledTimes(1);
-        expect(result).toEqual({ status: 'success', risks: [] });
+        expect(result).toEqual([]);
         expect(consoleErrorSpy).not.toHaveBeenCalled();
         expect(consoleWarnSpy).not.toHaveBeenCalled();
       });
     });
 
     describe('Error handling (Zero-Crash Policy)', () => {
-      it('should return error status and log error on 403 Forbidden (DPDPA Revoked)', async () => {
+      it('should return empty array and log error on 403 Forbidden (DPDPA Revoked)', async () => {
         const error = new AxiosError('Forbidden');
         error.response = { status: 403 } as any;
         error.isAxiosError = true;
@@ -116,23 +116,16 @@ describe('DrugInteractionChecker', () => {
           defaultPractitionerId,
         );
 
-        expect(result).toEqual({
-          status: 'error',
-          message:
-            "Le Patient a révoqué l'accès (DPDPA). Interactions inaccessibles.",
-        });
+        expect(result).toEqual([]);
         expect(consoleErrorSpy).toHaveBeenCalledWith(
           "Le Patient a révoqué l'accès (DPDPA). Interactions inaccessibles.",
         );
         expect(consoleWarnSpy).not.toHaveBeenCalled();
       });
 
-      it('should return error status and log warning on ECONNABORTED (Timeout)', async () => {
+      it('should return empty array and log warning on ECONNABORTED (Timeout)', async () => {
         // Crée l'erreur de manière à ce que l'instance ait bien la propriété code définie
-        const error = new AxiosError(
-          'timeout of 2000ms exceeded',
-          'ECONNABORTED',
-        );
+        const error = new AxiosError('timeout of 2000ms exceeded', 'ECONNABORTED');
         error.isAxiosError = true;
         error.code = 'ECONNABORTED'; // Force le code
 
@@ -146,18 +139,14 @@ describe('DrugInteractionChecker', () => {
           defaultPractitionerId,
         );
 
-        expect(result).toEqual({
-          status: 'error',
-          message:
-            'Le serveur IA clinique est inaccessible (Hors-Ligne) ou a expiré.',
-        });
+        expect(result).toEqual([]);
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           "Timeout réseau. L'Intelligence Artificielle est trop lente.",
         );
         expect(consoleErrorSpy).not.toHaveBeenCalled();
       });
 
-      it('should return error status and log warning on generic Axios error (Offline/Server Down)', async () => {
+      it('should return empty array and log warning on generic Axios error (Offline/Server Down)', async () => {
         // S'assure que le message est bien défini dans l'objet d'erreur
         const error = new AxiosError('Network Error');
         error.isAxiosError = true;
@@ -173,11 +162,7 @@ describe('DrugInteractionChecker', () => {
           defaultPractitionerId,
         );
 
-        expect(result).toEqual({
-          status: 'error',
-          message:
-            'Le serveur IA clinique est inaccessible (Hors-Ligne) ou a expiré.',
-        });
+        expect(result).toEqual([]);
         expect(consoleWarnSpy).toHaveBeenCalledWith(
           'Le serveur IA clinique est inaccessible (Hors-Ligne).',
           'Network Error',
@@ -185,7 +170,7 @@ describe('DrugInteractionChecker', () => {
         expect(consoleErrorSpy).not.toHaveBeenCalled();
       });
 
-      it('should return error status and not log specific Axios errors if non-Axios error is thrown', async () => {
+      it('should return empty array and not log specific Axios errors if non-Axios error is thrown', async () => {
         const error = new Error('Some unexpected internal parsing error');
 
         mockedAxios.isAxiosError.mockReturnValueOnce(false);
@@ -198,11 +183,7 @@ describe('DrugInteractionChecker', () => {
           defaultPractitionerId,
         );
 
-        expect(result).toEqual({
-          status: 'error',
-          message:
-            'Le serveur IA clinique est inaccessible (Hors-Ligne) ou a expiré.',
-        });
+        expect(result).toEqual([]);
         // Non-Axios errors silently return empty array based on current implementation
         expect(consoleErrorSpy).not.toHaveBeenCalled();
         expect(consoleWarnSpy).not.toHaveBeenCalled();

@@ -11,7 +11,10 @@ import {
 } from 'react-native';
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
-import { CatalogMedication, CatalogDiagnostic } from '@systeme-sante/models';
+import {
+  CatalogMedication,
+  CatalogDiagnostic,
+} from '@systeme-sante/models';
 import { DrugInteractionChecker } from '../services/drug-interaction.service';
 import { useDebounce } from '../hooks/useDebounce';
 
@@ -127,28 +130,21 @@ export function Omnibox() {
         const patientId = 'dummy-patient-uuid';
 
         try {
-          const response = await DrugInteractionChecker.checkInteractionsLive(
-            item.name,
-            currentMeds,
-            patientId,
-            'dummy-practitioner-uuid',
-          );
-
-          if (response.status === 'error') {
-            showCustomAlert(
-              `🚨 MOTEUR D'INTERACTIONS INDISPONIBLE\n\nLe service de vérification des interactions médicamenteuses est hors-ligne.\n\nVeuillez vérifier manuellement les risques d'interaction pour ${item.name}.\n\nDétail: ${response.message}`,
+          const interactions =
+            await DrugInteractionChecker.checkInteractionsLive(
+              item.name,
+              currentMeds,
+              patientId,
+              'dummy-practitioner-uuid',
             );
-          } else if (response.status === 'success') {
-            const interactions = response.risks;
-            if (interactions.length > 0) {
-              const severityEmoji =
-                interactions[0].severityLevel === 'CRITICAL'
-                  ? '💀 CONTRE-INDICATION ABSOLUE'
-                  : '⚠️ AVERTISSEMENT MAJEUR';
-              showCustomAlert(
-                `${severityEmoji} !\n\n${item.name} interagit avec : ${interactions.map((i) => i.interactingDrugB).join(', ')}.\n\nDescription : ${interactions[0].medicalDescription}`,
-              );
-            }
+          if (interactions.length > 0) {
+            const severityEmoji =
+              interactions[0].severityLevel === 'CRITICAL'
+                ? '💀 CONTRE-INDICATION ABSOLUE'
+                : '⚠️ AVERTISSEMENT MAJEUR';
+            showCustomAlert(
+              `${severityEmoji} !\n\n${item.name} interagit avec : ${interactions.map((i) => i.interactingDrugB).join(', ')}.\n\nDescription : ${interactions[0].medicalDescription}`,
+            );
           }
         } catch (e) {
           console.warn("[Omnibox] Impossible de vérifier l'interaction.");

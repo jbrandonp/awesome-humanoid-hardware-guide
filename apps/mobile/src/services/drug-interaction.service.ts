@@ -21,10 +21,6 @@ export interface ClinicalRisk {
   recommendationAction: string;
 }
 
-export type InteractionCheckResponse =
-  | { status: 'success'; risks: ClinicalRisk[] }
-  | { status: 'error'; message: string };
-
 export interface DrugInteractionResult {
   status: 'SAFE' | 'WARNING' | 'ERROR';
   risksFound: ClinicalRisk[];
@@ -44,7 +40,7 @@ export class DrugInteractionChecker {
     currentMedications: string[],
     patientId: string,
     practitionerId: string,
-  ): Promise<InteractionCheckResponse> {
+  ): Promise<ClinicalRisk[]> {
     const requestPayload: DrugInteractionRequest = {
       patientId,
       practitionerId,
@@ -70,10 +66,10 @@ export class DrugInteractionChecker {
       );
 
       if (response.data && response.data.risksFound) {
-        return { status: 'success', risks: response.data.risksFound };
+        return response.data.risksFound;
       }
 
-      return { status: 'success', risks: [] };
+      return [];
     } catch (networkError: unknown) {
       // Gestion Extrême des Erreurs (Zero-Crash Policy)
       // Si l'API est down (Coupure de courant) ou si la DB a crashé
@@ -94,15 +90,8 @@ export class DrugInteractionChecker {
         }
       }
 
-      // On retourne explicitement une erreur pour avertir le prescripteur
-      return {
-        status: 'error',
-        message:
-          (networkError as any)?.isAxiosError &&
-          (networkError as any)?.response?.status === 403
-            ? "Le Patient a révoqué l'accès (DPDPA). Interactions inaccessibles."
-            : 'Le serveur IA clinique est inaccessible (Hors-Ligne) ou a expiré.',
-      };
+      // Par précaution médicale, on ne retourne pas de fausses données
+      return [];
     }
   }
 }
