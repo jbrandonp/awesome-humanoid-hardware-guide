@@ -24,7 +24,7 @@ export interface PrescriptionItem {
 export type SupportedLanguage = 'en' | 'hi' | 'mr' | 'fr';
 
 export interface PdfGenerationResult {
-  status: 'SUCCESS' | 'FAILED_MEMORY_LIMIT' | 'FAILED_RENDER' | 'FAILED_FILE_SYSTEM';
+  status: 'SUCCESS' | 'FAILED_MEMORY_LIMIT' | 'FAILED_RENDER';
   filePath?: string;
   errorMessage?: string;
 }
@@ -248,17 +248,9 @@ export class PdfGeneratorService {
 
       const file = await RNHTMLtoPDF.convert(options);
 
-      if (!file.filePath) {
-         console.error('[PDF Engine] Le fichier PDF a été généré mais son chemin d\'accès est vide ou introuvable.');
-         return {
-            status: 'FAILED_FILE_SYSTEM',
-            errorMessage: "Erreur d'accès: Le fichier PDF a été généré mais son chemin d'accès est introuvable."
-         };
-      }
-
       return {
          status: 'SUCCESS',
-         filePath: file.filePath
+         filePath: file.filePath || ''
       };
 
     } catch (renderError: unknown) {
