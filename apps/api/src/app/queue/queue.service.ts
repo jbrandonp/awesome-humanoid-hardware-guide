@@ -61,7 +61,7 @@ export class QueueService {
     // 5. Re-sort the queue (Highest severity first [Lowest ESI number], then by arrival time)
     this.sortQueue();
 
-    return structuredClone(entry);
+    return entry;
   }
 
   async overrideTriageScore(
@@ -116,11 +116,11 @@ export class QueueService {
     // Sort queue again
     this.sortQueue();
 
-    return structuredClone(entry);
+    return entry;
   }
 
   getQueue(): QueueEntry[] {
-    return structuredClone(this.queue);
+    return [...this.queue];
   }
 
   private sortQueue() {
