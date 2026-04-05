@@ -13,6 +13,20 @@ vi.mock('expo-task-manager', () => ({
   isTaskRegisteredAsync: vi.fn(),
 }));
 
+
+vi.mock('axios', () => {
+  return {
+    default: {
+      post: vi.fn()
+    }
+  };
+});
+
+
+vi.mock('expo-modules-core', () => {
+  return {};
+});
+
 import { BackgroundSyncService, BackgroundSyncTask } from './background-sync.service';
 
 // Provide a mock for Buffer since we might be in an environment where it's not global
