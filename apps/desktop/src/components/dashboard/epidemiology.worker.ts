@@ -22,37 +22,19 @@ export interface ChartDataResult {
   totalCases: number;
 }
 
-// Extracted processing function for testability
-export const processEpidemiologyData = (
-  records: EpidemiologyRecord[],
-  filters: FilterCriteria,
-): ChartDataResult => {
-  // Pre-process date filters for optimization and correct day boundary inclusion using UTC to avoid timezone shift bugs
-  let startDateFilter: Date | null = null;
-  let endDateFilter: Date | null = null;
-
-  if (filters.startDate) {
-    startDateFilter = new Date(filters.startDate);
-    startDateFilter.setUTCHours(0, 0, 0, 0);
-  }
-  if (filters.endDate) {
-    endDateFilter = new Date(filters.endDate);
-    endDateFilter.setUTCHours(23, 59, 59, 999);
-  }
+self.onmessage = (event: MessageEvent<{ records: EpidemiologyRecord[]; filters: FilterCriteria }>) => {
+  const { records, filters } = event.data;
 
   // 1. Filter the data
-  const filteredRecords = records.filter((record) => {
+  const filteredRecords = records.filter(record => {
     let isValid = true;
-    const recordDate = new Date(record.date);
 
-    if (startDateFilter && recordDate < startDateFilter) isValid = false;
-    if (endDateFilter && recordDate > endDateFilter) isValid = false;
+    if (filters.startDate && new Date(record.date) < new Date(filters.startDate)) isValid = false;
+    if (filters.endDate && new Date(record.date) > new Date(filters.endDate)) isValid = false;
     if (filters.minAge !== null && record.age < filters.minAge) isValid = false;
     if (filters.maxAge !== null && record.age > filters.maxAge) isValid = false;
-    if (filters.specialty && record.specialty !== filters.specialty)
-      isValid = false;
-    if (filters.icd10 && !record.icd10.startsWith(filters.icd10))
-      isValid = false; // Simple prefix match for ICD-10
+    if (filters.specialty && record.specialty !== filters.specialty) isValid = false;
+    if (filters.icd10 && !record.icd10.startsWith(filters.icd10)) isValid = false; // Simple prefix match for ICD-10
 
     return isValid;
   });
@@ -62,7 +44,7 @@ export const processEpidemiologyData = (
   const icd10Map = new Map<string, number>();
   const specialtyMap = new Map<string, number>();
 
-  filteredRecords.forEach((record) => {
+  filteredRecords.forEach(record => {
     // Timeline aggregation (group by day)
     const dateKey = record.date.split('T')[0];
     timelineMap.set(dateKey, (timelineMap.get(dateKey) || 0) + 1);
@@ -71,10 +53,7 @@ export const processEpidemiologyData = (
     icd10Map.set(record.icd10, (icd10Map.get(record.icd10) || 0) + 1);
 
     // Specialty aggregation
-    specialtyMap.set(
-      record.specialty,
-      (specialtyMap.get(record.specialty) || 0) + 1,
-    );
+    specialtyMap.set(record.specialty, (specialtyMap.get(record.specialty) || 0) + 1);
   });
 
   // 3. Format output
@@ -94,21 +73,12 @@ export const processEpidemiologyData = (
     .sort((a, b) => b.value - a.value)
     .slice(0, 10);
 
-  return {
+  const result: ChartDataResult = {
     timelineData,
     icd10Data,
     specialtyData,
     totalCases: filteredRecords.length,
   };
-};
 
-// Use typeof self !== 'undefined' to safely access self in both worker and node environments
-if (typeof self !== 'undefined') {
-  self.onmessage = (
-    event: MessageEvent<{ records: EpidemiologyRecord[]; filters: FilterCriteria }>,
-  ) => {
-    const { records, filters } = event.data;
-    const result = processEpidemiologyData(records, filters);
-    self.postMessage(result);
-  };
-}
+  self.postMessage(result);
+};
