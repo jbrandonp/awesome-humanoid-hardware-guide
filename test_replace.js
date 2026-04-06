@@ -1,4 +1,11 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+const fs = require('fs');
+const filePath = 'apps/mobile/src/services/HighAlertMedicationService.spec.ts';
+let content = fs.readFileSync(filePath, 'utf8');
+
+// The error "Cannot use import statement outside a module" points out we can't add an `import` lower in the file after CommonJS-style mocks, or similar issues in Vitest.
+// So let's add `import { useConnectionStore } from '../stores/connection.store';` at the very top.
+
+const newContent = `import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useConnectionStore } from '../stores/connection.store';
 
 // We must mock expo-crypto before importing the service since it fails with rollup/vitest
@@ -108,8 +115,8 @@ describe('HighAlertMedicationService', () => {
     });
 
     it('should fetch endpoint and update queue on successful sync of single item', async () => {
-      const mockQueue = [{ primaryUserId: 'user1', medicationName: 'MedA', offlineHash: 'hash1' }];
-      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(mockQueue)).mockResolvedValueOnce(JSON.stringify(mockQueue));
+      const mockQueue = [{ primaryUserId: 'user1', medicationName: 'MedA' }];
+      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(mockQueue));
 
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
@@ -132,17 +139,13 @@ describe('HighAlertMedicationService', () => {
 
     it('should fetch recursively for multiple items in queue until empty', async () => {
       const mockQueue = [
-        { primaryUserId: 'user1', medicationName: 'MedA', offlineHash: 'hash1' },
-        { primaryUserId: 'user2', medicationName: 'MedB', offlineHash: 'hash2' },
+        { primaryUserId: 'user1', medicationName: 'MedA' },
+        { primaryUserId: 'user2', medicationName: 'MedB' },
       ];
 
       // Initial queue
       vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(mockQueue));
-      // Re-read after 1st fetch
-      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(mockQueue));
-      // Next iteration read
-      vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify([mockQueue[1]]));
-      // Re-read after 2nd fetch
+      // Recursively called queue
       vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify([mockQueue[1]]));
 
       vi.mocked(global.fetch).mockResolvedValue({
@@ -183,8 +186,8 @@ describe('HighAlertMedicationService', () => {
 
     it('should throw an error and abort sync if fetch fails', async () => {
       const mockQueue = [
-        { primaryUserId: 'user1', medicationName: 'MedA', offlineHash: 'hash1' },
-        { primaryUserId: 'user2', medicationName: 'MedB', offlineHash: 'hash2' },
+        { primaryUserId: 'user1', medicationName: 'MedA' },
+        { primaryUserId: 'user2', medicationName: 'MedB' },
       ];
       vi.mocked(AsyncStorage.getItem).mockResolvedValueOnce(JSON.stringify(mockQueue));
 
@@ -201,3 +204,6 @@ describe('HighAlertMedicationService', () => {
     });
   });
 });
+`;
+
+fs.writeFileSync(filePath, newContent);

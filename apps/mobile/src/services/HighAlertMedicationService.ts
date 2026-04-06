@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { DualSignOff } from '@systeme-sante/models';
+import { useConnectionStore } from '../stores/connection.store';
 
 const DUAL_SIGN_OFF_QUEUE_KEY = '@dual_sign_off_queue';
 
@@ -64,6 +65,12 @@ export class HighAlertMedicationService {
     if (this.isSyncing) return;
     this.isSyncing = true;
 
+    const connectionState = useConnectionStore.getState();
+    if (connectionState.status !== 'CONNECTED' || !connectionState.serverUrl) {
+      this.isSyncing = false;
+      return;
+    }
+
     try {
       let queueStr = await AsyncStorage.getItem(DUAL_SIGN_OFF_QUEUE_KEY);
       if (!queueStr) return;
@@ -74,7 +81,7 @@ export class HighAlertMedicationService {
       // We process the queue sequentially to ensure order and avoid hammering the server
       for (const item of queue) {
         // 3. Make a request to the NestJS API endpoint
-        const response = await fetch('http://localhost:3000/high-alert-medications/dual-sign-off', {
+        const response = await fetch(`${connectionState.serverUrl}/high-alert-medications/dual-sign-off`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

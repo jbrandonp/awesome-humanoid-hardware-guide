@@ -1,29 +1,20 @@
 const fs = require('fs');
-const file = 'apps/api/src/app/auth/auth.service.ts';
-let code = fs.readFileSync(file, 'utf8');
+const filePath = 'apps/mobile/src/services/HighAlertMedicationService.ts';
+let content = fs.readFileSync(filePath, 'utf8');
 
-code = code.replace(
-    /Buffer\.byteLength\(process\.env\.TOKEN_ENCRYPTION_KEY, 'utf8'\) < 32/,
-    "process.env.TOKEN_ENCRYPTION_KEY.length < 32"
+content = content.replace(
+  "import { DualSignOff } from '@systeme-sante/models';",
+  "import { DualSignOff } from '@systeme-sante/models';\nimport { useConnectionStore } from '../stores/connection.store';"
 );
 
-code = code.replace(
-    /private encryptToken\(token: string\): string \{[\s\S]*?const secret = Buffer\.from\([\s\S]*?process\.env\.TOKEN_ENCRYPTION_KEY!,[\s\S]*?'utf8',[\s\S]*?\)\.subarray\(0, 32\);/,
-    `private getEncryptionSecret(): Buffer {
-    // Generate a consistent 32-byte key using SHA-256 to support multi-byte characters safely
-    return crypto.createHash('sha256').update(process.env.TOKEN_ENCRYPTION_KEY || '').digest();
-  }
-
-  private encryptToken(token: string): string {
-    const secret = this.getEncryptionSecret();`
+content = content.replace(
+  "    if (this.isSyncing) return;\n    this.isSyncing = true;",
+  "    if (this.isSyncing) return;\n    this.isSyncing = true;\n\n    const connectionState = useConnectionStore.getState();\n    if (connectionState.status !== 'CONNECTED' || !connectionState.serverUrl) {\n      this.isSyncing = false;\n      return;\n    }"
 );
 
-code = code.replace(
-    /private decryptToken\(encryptedData: string\): string \{[\s\S]*?const parts = encryptedData\.split\(':'\);[\s\S]*?if \(parts\.length !== 2\) throw new Error\('Invalid encrypted token format'\);[\s\S]*?const secret = Buffer\.from\([\s\S]*?process\.env\.TOKEN_ENCRYPTION_KEY!,[\s\S]*?'utf8',[\s\S]*?\)\.subarray\(0, 32\);/,
-    `private decryptToken(encryptedData: string): string {
-    const parts = encryptedData.split(':');
-    if (parts.length !== 2) throw new Error('Invalid encrypted token format');
-    const secret = this.getEncryptionSecret();`
+content = content.replace(
+  "const response = await fetch('http://localhost:3000/high-alert-medications/dual-sign-off', {",
+  "const response = await fetch(`${connectionState.serverUrl}/high-alert-medications/dual-sign-off`, {"
 );
 
-fs.writeFileSync(file, code);
+fs.writeFileSync(filePath, content);
