@@ -1,0 +1,48 @@
+# Builder stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package*.json ./
+COPY nx.json ./
+COPY tsconfig*.json ./
+COPY apps/portail-pwa/package.json ./apps/portail-pwa/
+COPY libs/models/package.json ./libs/models/
+
+# Install dependencies
+RUN npm ci
+
+# Copy all source code
+COPY . .
+
+# Build the PWA
+RUN npx nx build portail-pwa --prod
+
+# Production stage
+FROM node:20-alpine
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Copy package.json for production dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy built application
+COPY --from=builder /app/dist/apps/portail-pwa/.next/standalone ./
+COPY --from=builder /app/dist/apps/portail-pwa/.next/static ./.next/static
+COPY --from=builder /app/dist/apps/portail-pwa/public ./public
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    chown -R nextjs:nodejs /app
+USER nextjs
+
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "const http = require('http'); const options = { hostname: 'localhost', port: 3001, path: '/health', method: 'GET', timeout: 5000 }; const req = http.request(options, (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); }); req.on('error', () => process.exit(1)); req.end();"
+
+CMD ["node", "server.js"]

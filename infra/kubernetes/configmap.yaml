@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: systeme-sante-config
+  namespace: default
+  labels:
+    app: systeme-sante
+    component: configuration
+data:
+  # Application settings
+  NODE_ENV: "production"
+  PORT: "3000"
+  WEB_PORT: "3001"
+  
+  # Database connection settings (without credentials)
+  POSTGRES_DB: "medical_db"
+  MONGO_DB: "medical_db"
+  REDIS_PORT: "6379"
+  
+  # API rate limiting
+  API_RATE_LIMIT_WINDOW_MS: "900000"
+  API_RATE_LIMIT_MAX_REQUESTS: "100"
+  
+  # External service endpoints (development defaults)
+  ABDM_BASE_URL: "https://healthidsbx.abdm.gov.in/api"
+  WHATSAPP_BUSINESS_API_URL: "https://graph.facebook.com/v18.0"
+  
+  # PACS configuration
+  DCM4CHEE_AE_TITLE: "SYSTEME_SANTE"
+  DCM4CHEE_HOST: "dicom-service"
+  DCM4CHEE_PORT: "11112"
+  
+  # mDNS/Bonjour configuration
+  MDNS_ENABLED: "true"
+  MDNS_SERVICE_NAME: "systeme-sante-emr"
+  MDNS_SERVICE_TYPE: "_http._tcp"
+  MDNS_SERVICE_PORT: "80"
+  
+  # Logging
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"

@@ -66,7 +66,7 @@ model User {
   mfaEnabled  Boolean  @default(false) @map("mfa_enabled")
   backupCodes String[] @map("backup_codes")
   // Dual Sign-Off fields (High Alert Medication)
-  pin         String?  // Hashed PIN for secondary sign-off
+  pin         String? // Hashed PIN for secondary sign-off
   badgeId     String?  @unique @map("badge_id") // Physical badge identifier
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -77,21 +77,21 @@ model User {
 }
 
 model Patient {
-  id            String    @id @default(uuid())
-  firstName     String
-  lastName      String
-  dateOfBirth   DateTime
+  id           String    @id @default(uuid())
+  firstName    String
+  lastName     String
+  dateOfBirth  DateTime
   // OTP-based authentication fields (Auth Service)
-  phone         String?   @unique
-  otp           String?
-  otpExpiresAt  DateTime? @map("otp_expires_at")
+  phone        String?   @unique
+  otp          String?
+  otpExpiresAt DateTime? @map("otp_expires_at")
   // Epidemiology/HIPAA fields
-  zipCode       String?   @map("zip_code")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  zipCode      String?   @map("zip_code")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
   // Sync Status Fields
-  status        String    @default("created") @map("_status")
-  deletedAt     DateTime? @map("deleted_at")
+  status       String    @default("created") @map("_status")
+  deletedAt    DateTime? @map("deleted_at")
 
   auditLogs     AuditLog[]
   dpdpaConsent  DpdpaConsent[]
@@ -155,10 +155,10 @@ model Prescription {
   status         String    @default("created") @map("_status")
   deletedAt      DateTime? @map("deleted_at")
 
-  visit           Visit                      @relation(fields: [visitId], references: [id])
-  patient         Patient                    @relation(fields: [patientId], references: [id])
-  administrations MedicationAdministration[]
-  crdtAdministrations Bytes?                 @map("crdt_administrations")
+  visit               Visit                      @relation(fields: [visitId], references: [id])
+  patient             Patient                    @relation(fields: [patientId], references: [id])
+  administrations     MedicationAdministration[]
+  crdtAdministrations Bytes?                     @map("crdt_administrations")
 }
 
 model MedicationAdministration {
@@ -197,7 +197,7 @@ model Diagnosis {
 model ClinicalIncident {
   id          String   @id @default(uuid())
   patientId   String   @map("patient_id")
-  type        String   // e.g., DOSAGE_ANOMALY, VITAL_OUT_OF_RANGE
+  type        String // e.g., DOSAGE_ANOMALY, VITAL_OUT_OF_RANGE
   severity    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, CRITICAL
   description String
   metadata    Json?
@@ -219,12 +219,12 @@ model AuditLog {
   resourceId      String?     @map("resource_id")
   phiDataAccessed Json?       @map("phi_data_accessed")
   // Flexible audit (used by interceptor and direct tx.auditLog.create calls)
-  action          String?     // Free-form action string (e.g., 'DPDPA_CONSENT_GRANTED')
-  metadata        Json?       // Flexible metadata for contextual info
+  action          String? // Free-form action string (e.g., 'DPDPA_CONSENT_GRANTED')
+  metadata        Json? // Flexible metadata for contextual info
   ipAddress       String?     @map("ip_address")
   timestamp       DateTime    @default(now())
 
-  user    User?   @relation(fields: [userId], references: [id])
+  user    User?    @relation(fields: [userId], references: [id])
   patient Patient? @relation(fields: [patientId], references: [id])
 
   @@index([patientId, timestamp])
@@ -265,28 +265,28 @@ model Invoice {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  patient Patient @relation(fields: [patientId], references: [id])
+  patient               Patient                @relation(fields: [patientId], references: [id])
   financialTransactions FinancialTransaction[]
 
   @@map("invoices")
 }
 
 model InventoryItem {
-  id               String    @id @default(uuid())
-  name             String    @unique
-  quantity         Int       @default(0)
-  unitPriceCents   Int       @map("unit_price_cents")
-  category         String    @default("GENERAL") // ANTI_MALARIAL, ANTIBIOTIC, ANALGESIC, ANTI_DENGUE, ANTI_PYRETIC, GENERAL
-  isActive         Boolean   @default(true) @map("is_active")
-  leadTimeDays     Int?      @map("lead_time_days")
-  moq              Int       @default(1) // Minimum Order Quantity
+  id                String   @id @default(uuid())
+  name              String   @unique
+  quantity          Int      @default(0)
+  unitPriceCents    Int      @map("unit_price_cents")
+  category          String   @default("GENERAL") // ANTI_MALARIAL, ANTIBIOTIC, ANALGESIC, ANTI_DENGUE, ANTI_PYRETIC, GENERAL
+  isActive          Boolean  @default(true) @map("is_active")
+  leadTimeDays      Int?     @map("lead_time_days")
+  moq               Int      @default(1) // Minimum Order Quantity
   criticalThreshold Int      @default(10) @map("critical_threshold") // Used by inventory predictor
-  supplierId       String?   @map("supplier_id")
-  updatedAt        DateTime  @updatedAt
+  supplierId        String?  @map("supplier_id")
+  updatedAt         DateTime @updatedAt
 
-  supplier             Supplier?             @relation(fields: [supplierId], references: [id])
-  transactions         InventoryTransaction[]
-  purchaseOrderItems   PurchaseOrderItem[]
+  supplier           Supplier?              @relation(fields: [supplierId], references: [id])
+  transactions       InventoryTransaction[]
+  purchaseOrderItems PurchaseOrderItem[]
 
   @@map("inventory_items")
 }
@@ -295,7 +295,7 @@ model InventoryTransaction {
   id             String   @id @default(uuid())
   itemId         String   @map("item_id")
   quantityChange Int      @map("quantity_change") // Negative for DISPENSE, Positive for RESTOCK
-  type           String   // DISPENSE, RESTOCK, ADJUSTMENT
+  type           String // DISPENSE, RESTOCK, ADJUSTMENT
   timestamp      DateTime @default(now())
 
   item InventoryItem @relation(fields: [itemId], references: [id])
@@ -433,6 +433,7 @@ model DicomStudy {
   studyInstanceUID String           @unique @map("study_instance_uid")
   dicomPatientId   String?          @map("dicom_patient_id")
   patientId        String?          @map("patient_id")
+  patient          Patient?         @relation(fields: [patientId], references: [id])
   status           DicomStudyStatus @default(ORPHANED)
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
@@ -448,18 +449,18 @@ model DicomSeries {
   studyId           String   @map("study_id")
   createdAt         DateTime @default(now())
 
-  study     DicomStudy     @relation(fields: [studyId], references: [id])
+  study     DicomStudy      @relation(fields: [studyId], references: [id])
   instances DicomInstance[]
 
   @@map("dicom_series")
 }
 
 model DicomInstance {
-  id              String   @id @default(uuid())
-  sopInstanceUID  String   @unique @map("sop_instance_uid")
-  seriesId        String   @map("series_id")
-  thumbnailUrl    String?  @map("thumbnail_url")
-  createdAt       DateTime @default(now())
+  id             String   @id @default(uuid())
+  sopInstanceUID String   @unique @map("sop_instance_uid")
+  seriesId       String   @map("series_id")
+  thumbnailUrl   String?  @map("thumbnail_url")
+  createdAt      DateTime @default(now())
 
   series DicomSeries @relation(fields: [seriesId], references: [id])
 
@@ -490,38 +491,38 @@ enum PaymentMethod {
 }
 
 model CashRegisterSession {
-  id                       String                 @id @default(uuid())
-  terminalId               String                 @map("terminal_id")
-  cashierId                String                 @map("cashier_id")
-  openingFloatCents        Int                    @map("opening_float_cents")
-  expectedCloseAmountCents Int?                   @map("expected_close_amount_cents")
-  actualCloseAmountCents   Int?                   @map("actual_close_amount_cents")
-  discrepancyCents         Int?                   @map("discrepancy_cents")
-  status                   RegisterStatus         @default(OPEN)
-  closedAt                 DateTime?              @map("closed_at")
-  createdAt                DateTime               @default(now())
-  updatedAt                DateTime               @updatedAt
+  id                       String         @id @default(uuid())
+  terminalId               String         @map("terminal_id")
+  cashierId                String         @map("cashier_id")
+  openingFloatCents        Int            @map("opening_float_cents")
+  expectedCloseAmountCents Int?           @map("expected_close_amount_cents")
+  actualCloseAmountCents   Int?           @map("actual_close_amount_cents")
+  discrepancyCents         Int?           @map("discrepancy_cents")
+  status                   RegisterStatus @default(OPEN)
+  closedAt                 DateTime?      @map("closed_at")
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 
-  financialTransactions    FinancialTransaction[]
+  financialTransactions FinancialTransaction[]
 
   @@map("cash_register_sessions")
 }
 
 model FinancialTransaction {
-  id                    String              @id @default(uuid())
-  sessionId             String              @map("session_id")
-  invoiceId             String              @map("invoice_id")
-  type                  TransactionType     
-  amountCents           Int                 @map("amount_cents")
-  paymentMethod         PaymentMethod       @map("payment_method")
-  idempotencyKey        String              @unique @map("idempotency_key")
-  supervisorId          String?             @map("supervisor_id")
-  metadata              Json?               
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  id             String          @id @default(uuid())
+  sessionId      String          @map("session_id")
+  invoiceId      String          @map("invoice_id")
+  type           TransactionType
+  amountCents    Int             @map("amount_cents")
+  paymentMethod  PaymentMethod   @map("payment_method")
+  idempotencyKey String          @unique @map("idempotency_key")
+  supervisorId   String?         @map("supervisor_id")
+  metadata       Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
-  cashRegisterSession   CashRegisterSession @relation(fields: [sessionId], references: [id])
-  invoice               Invoice             @relation(fields: [invoiceId], references: [id])
+  cashRegisterSession CashRegisterSession @relation(fields: [sessionId], references: [id])
+  invoice             Invoice             @relation(fields: [invoiceId], references: [id])
 
   @@map("financial_transactions")
 }
