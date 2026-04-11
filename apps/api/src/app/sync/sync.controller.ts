@@ -4,6 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuditLog } from '../audit/audit.decorator';
 import type { FastifyReply } from 'fastify';
 import { z, ZodError } from 'zod';
+import { PatientSchema, VisitSchema, VitalsSchema, PrescriptionSchema } from '@systeme-sante/models';
 
 @Controller('sync')
 @UseGuards(AuthGuard('jwt'))
@@ -37,23 +38,23 @@ export class SyncController {
       // Validate changes against SyncPushPayload schema
       const SyncPushPayloadSchema = z.object({
         patients: z.object({
-          created: z.array(z.any()).optional(),
-          updated: z.array(z.any()).optional(),
+          created: z.array(PatientSchema).optional(),
+          updated: z.array(PatientSchema).optional(),
           deleted: z.array(z.string()).optional(),
         }).optional(),
         visits: z.object({
-          created: z.array(z.any()).optional(),
-          updated: z.array(z.any()).optional(),
+          created: z.array(VisitSchema).optional(),
+          updated: z.array(VisitSchema).optional(),
           deleted: z.array(z.string()).optional(),
         }).optional(),
         prescriptions: z.object({
-          created: z.array(z.any()).optional(),
-          updated: z.array(z.any()).optional(),
+          created: z.array(PrescriptionSchema).optional(),
+          updated: z.array(PrescriptionSchema).optional(),
           deleted: z.array(z.string()).optional(),
         }).optional(),
         vitals: z.object({
-          created: z.array(z.any()).optional(),
-          updated: z.array(z.any()).optional(),
+          created: z.array(VitalsSchema).optional(),
+          updated: z.array(VitalsSchema).optional(),
           deleted: z.array(z.string()).optional(),
         }).optional(),
       }).optional();

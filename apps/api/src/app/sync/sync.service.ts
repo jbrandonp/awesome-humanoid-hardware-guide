@@ -2,10 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 // Typed sync payload structures (WatermelonDB format)
-export interface SyncedPatient { id: string; first_name: string; last_name: string; date_of_birth: string; }
-export interface SyncedVisit { id: string; patient_id: string; date: string; notes?: string; }
-export interface SyncedPrescription { id: string; patient_id: string; visit_id: string; medication_name: string; dosage: string; instructions?: string; prescribed_at: string; }
-export interface SyncedVital { id: string; patient_id: string; blood_pressure?: string; heart_rate?: number; recorded_at: string; }
+export interface SyncedPatient { id: string; first_name: string; last_name: string; date_of_birth: string; _status?: string; deleted_at?: string | null; }
+export interface SyncedVisit { id: string; patient_id: string; date: string; notes?: string; _status?: string; deleted_at?: string | null; }
+export interface SyncedPrescription { id: string; patient_id: string; visit_id: string; medication_name: string; dosage: string; instructions?: string; prescribed_at: string; _status?: string; deleted_at?: string | null; }
+export interface SyncedVital { id: string; patient_id: string; blood_pressure?: string; heart_rate?: number; recorded_at: string; _status?: string; deleted_at?: string | null; }
 export interface SyncChangeset<T> { created: T[]; updated: T[]; deleted: string[]; }
 
 export interface SyncPushPayload {
@@ -225,7 +225,7 @@ export class SyncService {
           id: p.id,
           first_name: p.firstName,
           last_name: p.lastName,
-          date_of_birth: p.dateOfBirth.getTime(),
+          date_of_birth: p.dateOfBirth.toISOString(),
           _status: p.status,
           deleted_at: null,
         });
@@ -234,7 +234,7 @@ export class SyncService {
           id: p.id,
           first_name: p.firstName,
           last_name: p.lastName,
-          date_of_birth: p.dateOfBirth.getTime(),
+          date_of_birth: p.dateOfBirth.toISOString(),
           _status: p.status,
           deleted_at: null,
         });
@@ -260,7 +260,7 @@ export class SyncService {
         createdVisits.push({
           id: v.id,
           patient_id: v.patientId,
-          date: v.date.getTime(),
+          date: v.date.toISOString(),
           notes: notesBase64,
           _status: v.status,
           deleted_at: null,
@@ -269,7 +269,7 @@ export class SyncService {
         updatedVisits.push({
           id: v.id,
           patient_id: v.patientId,
-          date: v.date.getTime(),
+          date: v.date.toISOString(),
           notes: notesBase64,
           _status: v.status,
           deleted_at: null,
@@ -300,8 +300,8 @@ export class SyncService {
           patient_id: p.patientId,
           medication_name: p.medicationName,
           dosage: p.dosage,
-          instructions: p.instructions,
-          prescribed_at: p.prescribedAt.getTime(),
+          instructions: p.instructions ?? undefined,
+          prescribed_at: p.prescribedAt.toISOString(),
           administrations: administrationsBase64,
           _status: p.status,
           deleted_at: null,
@@ -313,8 +313,8 @@ export class SyncService {
           patient_id: p.patientId,
           medication_name: p.medicationName,
           dosage: p.dosage,
-          instructions: p.instructions,
-          prescribed_at: p.prescribedAt.getTime(),
+          instructions: p.instructions ?? undefined,
+          prescribed_at: p.prescribedAt.toISOString(),
           administrations: administrationsBase64,
           _status: p.status,
           deleted_at: null,
@@ -338,9 +338,9 @@ export class SyncService {
         createdVitals.push({
           id: v.id,
           patient_id: v.patientId,
-          blood_pressure: v.bloodPressure,
-          heart_rate: v.heartRate,
-          recorded_at: v.recordedAt.getTime(),
+          blood_pressure: v.bloodPressure ?? undefined,
+          heart_rate: v.heartRate ?? undefined,
+          recorded_at: v.recordedAt.toISOString(),
           _status: v.status,
           deleted_at: null,
         });
@@ -348,9 +348,9 @@ export class SyncService {
         updatedVitals.push({
           id: v.id,
           patient_id: v.patientId,
-          blood_pressure: v.bloodPressure,
-          heart_rate: v.heartRate,
-          recorded_at: v.recordedAt.getTime(),
+          blood_pressure: v.bloodPressure ?? undefined,
+          heart_rate: v.heartRate ?? undefined,
+          recorded_at: v.recordedAt.toISOString(),
           _status: v.status,
           deleted_at: null,
         });

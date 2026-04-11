@@ -101,7 +101,7 @@ export class KeyRotationService {
     const errors: Error[] = [];
 
     for await (const doc of cursor) {
-         const docRecord = doc as Record<string, unknown>;
+         const docRecord = doc as unknown as Record<string, unknown>;
       const encryptedField = docRecord[fieldName] as unknown;
 
       if (!this.isEncryptedPayload(encryptedField)) {
@@ -133,7 +133,7 @@ export class KeyRotationService {
         if (process.env.NODE_ENV !== 'test') {
           this.logger.error(`Failed to rotate keys for document ${String(docRecord['_id'])}: ${errorMsg}`);
         }
-        errors.push(_err instanceof Error ? _err : new Error(errorMsg));
+        errors.push(_err instanceof Error ? _err as Error : new Error(errorMsg));
       }
     }
 

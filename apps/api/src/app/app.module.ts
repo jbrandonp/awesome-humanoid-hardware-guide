@@ -45,7 +45,13 @@ import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
 
 @Module({
   imports: [
-    MongooseModule.forRoot(process.env.MONGO_URL || 'mongodb://mongo_admin:mongo_password@localhost:27017/medical_db?authSource=admin'),
+    MongooseModule.forRoot(
+      process.env.MONGO_URL || 
+      (process.env.NODE_ENV === 'production' 
+        ? (() => { throw new Error('MONGO_URL is required in production'); })()
+        : 'mongodb://localhost:27017/medical_db'
+      )
+    ),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     BullModule.forRoot({

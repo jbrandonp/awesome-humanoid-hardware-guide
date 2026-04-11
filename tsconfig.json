@@ -26,6 +26,9 @@
     },
     {
       "path": "./libs/insurance-engine"
+    },
+    {
+      "path": "./libs/cornerstone-integration"
     }
   ]
 }

@@ -27,6 +27,33 @@ export const VisitSchema = z.object({
 
 export type VisitDto = z.infer<typeof VisitSchema>;
 
+export const VitalsSchema = z.object({
+  id: z.string().uuid(),
+  patientId: z.string().uuid(),
+  bloodPressure: z.string().optional().nullable(),
+  heartRate: z.number().optional().nullable(),
+  temperature: z.number().optional().nullable(),
+  recordedAt: DateOrStringSchema,
+  _status: z.enum(['synced', 'created', 'updated', 'deleted']),
+  deleted_at: DateOrStringSchema.nullable(),
+});
+
+export type VitalsDto = z.infer<typeof VitalsSchema>;
+
+export const PrescriptionSchema = z.object({
+  id: z.string().uuid(),
+  visitId: z.string().uuid(),
+  patientId: z.string().uuid(),
+  medicationName: z.string().min(1),
+  dosage: z.string().min(1),
+  instructions: z.string().optional().nullable(),
+  prescribedAt: DateOrStringSchema,
+  _status: z.enum(['synced', 'created', 'updated', 'deleted']),
+  deleted_at: DateOrStringSchema.nullable(),
+});
+
+export type PrescriptionDto = z.infer<typeof PrescriptionSchema>;
+
 export const DualSignOffSchema = z.object({
   primaryUserId: z.string().uuid(),
   secondaryPin: z.string().min(4).max(8).optional(),

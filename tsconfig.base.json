@@ -23,7 +23,9 @@
     "customConditions": ["@systeme-sante/source"],
     "baseUrl": ".",
     "paths": {
-      "@systeme-sante/models": ["libs/models/src/index.ts"]
+      "@systeme-sante/models": ["libs/models/src/index.ts"],
+      "@systeme-sante/insurance-engine": ["libs/insurance-engine/src/index.ts"],
+      "@systeme-sante/cornerstone-integration": ["libs/cornerstone-integration/src/index.ts"]
     }
   }
 }

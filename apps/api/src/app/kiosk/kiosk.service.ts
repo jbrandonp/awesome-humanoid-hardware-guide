@@ -52,6 +52,8 @@ export class KioskService {
         return {
           currentPatient: null,
           lastCalledPatients: [],
+          queueLength: 0,
+          estimatedWaitTime: 0,
         };
       }
 

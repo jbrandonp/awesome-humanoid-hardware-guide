@@ -42,8 +42,8 @@ export class ClinicalRecordController {
     // Trie par date de création décroissante (du plus récent au plus ancien)
     // On suppose que la DB gère createdAt (Schema options: timestamps: true)
     radiologyRecords.sort((a, b) => {
-      const dateA = (a as unknown as { createdAt: Date }).createdAt?.getTime() || 0;
-      const dateB = (b as unknown as { createdAt: Date }).createdAt?.getTime() || 0;
+      const dateA = (a as { createdAt?: Date }).createdAt?.getTime() || 0;
+      const dateB = (b as { createdAt?: Date }).createdAt?.getTime() || 0;
       return dateB - dateA;
     });
 
@@ -51,7 +51,7 @@ export class ClinicalRecordController {
     const latestRecord = radiologyRecords[0];
     const data = latestRecord.data as Record<string, unknown> | undefined;
     
-    if (!data || !data.annotations) {
+    if (!data || !data.annotations || !Array.isArray(data.annotations)) {
       return [];
     }
     
