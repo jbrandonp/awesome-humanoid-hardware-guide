@@ -178,7 +178,7 @@ export class OcrService {
 
       // Cherche une valeur numérique dans cette fenêtre (ex: " : 120 ")
       const valueMatch = contextWindow.match(
-        /[\s:=]+([0-9]{2,3}(?:[.,][0-9])?)/,
+        /[\s:=]+([0-9]{1,4}(?:[.,][0-9])?)/,
       );
       if (!valueMatch) continue;
 

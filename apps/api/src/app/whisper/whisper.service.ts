@@ -46,7 +46,7 @@ export class WhisperService {
   constructor() {
     this.config = {
       // Chemins relatifs à la racine du projet ou définis par le sysadmin
-      binaryPath: process.env.WHISPER_BIN_PATH || path.join(process.cwd(), 'bin', 'whisper.cpp', 'main'),
+      binaryPath: process.env.WHISPER_BIN_PATH || path.join(process.cwd(), 'bin', 'whisper.cpp', process.platform === 'win32' ? 'main.exe' : 'main'),
       // Modèle Medium q8_0 : Équilibre parfait. Le q8_0 consomme ~1.5 Go de RAM (contre 3Go pour f16)
       modelPath: process.env.WHISPER_MODEL_PATH || path.join(process.cwd(), 'models', 'ggml-medium.en-q8_0.bin'),
       // Hard Limit: Si le WAV dépasse 50Mo, l'empreinte mémoire d'inférence explosera.
@@ -103,27 +103,53 @@ export class WhisperService {
     }
   }
 
-  /**
-   * Récupère le statut d'une transcription en cours (Polling du frontend)
-   */
-  getTaskStatus(taskId: string): WhisperTask | undefined {
-    // SECURITY/RAM: Perform a quick cleanup of old tasks to prevent memory leak
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  onModuleInit(): void {
+    // SECURITY/RAM: Perform periodic cleanup to prevent memory leak if clients drop connections
+    this.cleanupInterval = setInterval(() => this.pruneOldTasks(), 10 * 60 * 1000);
+  }
+
+  onModuleDestroy(): void {
+    if (this.cleanupInterval) clearInterval(this.cleanupInterval);
+  }
+
+  private pruneOldTasks(): void {
     const now = Date.now();
     const MAX_AGE_MS = 30 * 60 * 1000; // 30 minutes
     const MAX_TASKS = 100;
 
-    // Prune old or excessive tasks
-    this.taskQueue = this.taskQueue.filter(t => 
-      (t.status === 'PENDING' || t.status === 'PROCESSING') || // Keep active tasks
-      (now - t.enqueuedAt.getTime() < MAX_AGE_MS) // Keep recent finished tasks
-    ).slice(-MAX_TASKS); // Keep only the last 100
+    const tasksToPrune = this.taskQueue.filter(t => 
+       (t.status === 'COMPLETED' || t.status === 'FAILED') && 
+       (now - t.enqueuedAt.getTime() > MAX_AGE_MS)
+    );
 
+    if (tasksToPrune.length > 0) {
+       this.taskQueue = this.taskQueue.filter(t => !tasksToPrune.includes(t));
+    }
+
+    if (this.taskQueue.length > MAX_TASKS) {
+       const finishedTasksIndices = this.taskQueue
+          .map((t, idx) => (t.status === 'COMPLETED' || t.status === 'FAILED' ? idx : -1))
+          .filter(idx => idx !== -1);
+       
+       if (finishedTasksIndices.length > (this.taskQueue.length - MAX_TASKS)) {
+          const toRemove = finishedTasksIndices.slice(0, this.taskQueue.length - MAX_TASKS);
+          this.taskQueue = this.taskQueue.filter((_, idx) => !toRemove.includes(idx));
+       }
+    }
+  }
+
+  /**
+   * Récupère le statut d'une transcription en cours (Polling du frontend)
+   */
+  getTaskStatus(taskId: string): WhisperTask | undefined {
+    // Pruning is now handled periodically by pruneOldTasks() to prevent memory leaks from abandoned tasks
     return this.taskQueue.find(t => t.id === taskId);
   }
 
   /**
    * MOTEUR DE TRAITEMENT SÉQUENTIEL (Un seul processus Whisper à la fois)
-   * Évite de lancer 2 processus IA qui feraient exploser les 4Go de RAM (2x 1.5Go = Crash)
    */
   private async processQueueSafely(): Promise<void> {
     if (this.isProcessingQueue || this.taskQueue.length === 0) return;
@@ -151,10 +177,7 @@ export class WhisperService {
 
          this.logger.log(`[Whisper] Transcription terminée (${task.id}).`);
 
-         // Optional : On pourrait déclencher l'AuditLog DPDPA ici pour certifier la transcription
-
       } catch (aiError: unknown) {
-         // Échec de l'IA (Fichier corrompu, Crash Binaire, Timeout CPU)
          task.status = 'FAILED';
          task.completedAt = new Date();
          task.errorMessage = (aiError as Error).message || "Erreur inconnue du moteur d'intelligence artificielle.";
@@ -172,15 +195,11 @@ export class WhisperService {
 
   /**
    * EXÉCUTION NATIVE DE L'IA LOCALE (child_process.spawn)
-   * Gère les flux binaires (stdout/stderr) et les Timeouts (Kill Switch).
    */
   private spawnWhisperProcess(audioFilePath: string): Promise<{ text: string, extractedData: SemanticExtractionResult }> {
     return new Promise((resolve, reject) => {
 
-      // 1. Vérification stricte des dépendances binaires avant exécution
-      if (!fs.existsSync(this.config.binaryPath)) {
-         return reject(new Error(`Le binaire whisper.cpp est introuvable au chemin : ${this.config.binaryPath}`));
-      }
+      // 1. Vérification stricte du modèle IA
       if (!fs.existsSync(this.config.modelPath)) {
          return reject(new Error(`Le modèle IA (q8_0) est introuvable au chemin : ${this.config.modelPath}`));
       }
@@ -207,8 +226,8 @@ export class WhisperService {
       const whisperProcess: ChildProcess = spawn(this.config.binaryPath, args);
 
       // 4. Watchdog Timeout (Kill Switch)
-      // Si la machine Windows 7 gèle et que Whisper tourne pendant > 5 minutes, on tue le processus
       const timeoutId = setTimeout(() => {
+        if (whisperProcess.killed) return;
         this.logger.error(`[Whisper] TIMEOUT EXTREME: Le processus a dépassé ${this.config.maxExecutionTimeMs / 1000}s. Exécution du Kill Switch (SIGKILL).`);
         whisperProcess.kill('SIGKILL');
         reject(new Error("Timeout: L'IA a mis trop de temps à répondre ou le fichier est trop complexe pour ce CPU."));

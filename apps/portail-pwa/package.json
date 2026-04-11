@@ -23,5 +23,16 @@
     "eslint-config-next": "16.2.1",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "nx": {
+    "targets": {
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["apps/portail-pwa/**/*.{ts,tsx}"]
+        }
+      }
+    }
   }
 }

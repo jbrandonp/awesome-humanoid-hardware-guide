@@ -89,11 +89,11 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
          });
 
          processedCount++;
-       } catch (networkError: any) {
-         if (networkError.response && (networkError.response.status === 400 || networkError.response.status === 500)) {
-            console.error(`[OS Background Worker] Erreur de validation (${networkError.response.status}) pour la tâche ${task.transactionId}. Tâche rejetée pour ne pas inonder le serveur.`);
-            continue;
-         }
+        } catch (networkError: unknown) {
+          if (axios.isAxiosError(networkError) && networkError.response && (networkError.response.status === 400 || networkError.response.status === 500)) {
+             console.error(`[OS Background Worker] Erreur de validation (${networkError.response.status}) pour la tâche ${task.transactionId}. Tâche rejetée pour ne pas inonder le serveur.`);
+             continue;
+          }
 
          // Le serveur NestJS est hors-ligne, ou le routeur Wi-Fi est hors de portée.
          // On incrémente le compteur de retry et on garde la tâche.
@@ -161,7 +161,7 @@ export class BackgroundSyncService {
    * @param endpoint Le chemin de l'API locale (ex: '/api/sync')
    * @param payload L'objet JSON à transmettre (ex: modifications CRDT Yjs)
    */
-  static async enqueueTransaction(priority: SyncPriorityLevel, endpoint: string, payload: any): Promise<void> {
+  static async enqueueTransaction(priority: SyncPriorityLevel, endpoint: string, payload: unknown): Promise<void> {
     try {
       const transactionId = `SYNC-TXN-${Date.now()}-${Crypto.randomUUID()}`;
 

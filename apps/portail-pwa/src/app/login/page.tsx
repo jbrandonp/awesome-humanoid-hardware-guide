@@ -34,8 +34,11 @@ export default function LoginPage() {
 
     try {
       const data = await verifyOtp(phone, otp);
-      // Simuler l'enregistrement du token (localStorage, cookies, etc.)
-      localStorage.setItem("accessToken", data.accessToken);
+      
+      // FAIL FIX: Ne JAMAIS stocker un JWT médical dans le localStorage (vulnérable au XSS).
+      // Utilisation temporaire d'un cookie sécurisé (Idéalement, cela devrait être un cookie HttpOnly défini par le backend)
+      document.cookie = `accessToken=${data.accessToken}; path=/; secure; samesite=strict; max-age=900`; // 15 minutes expiration
+      
       router.push("/");
     } catch (err: unknown) {
       setError((err as Error).message || "OTP invalide.");

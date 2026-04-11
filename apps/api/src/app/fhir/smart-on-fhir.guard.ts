@@ -2,9 +2,13 @@ import { CanActivate, ExecutionContext, Injectable, SetMetadata } from '@nestjs/
 import { Reflector } from '@nestjs/core';
 import { FastifyRequest } from 'fastify';
 
+interface AuthenticatedUser {
+  role?: string;
+}
+
 // Décorateur pour définir les scopes FHIR nécessaires sur un endpoint
 export const FHIR_SCOPES_KEY = 'fhir_scopes';
-export const FhirScopes = (...scopes: string[]) => SetMetadata(FHIR_SCOPES_KEY, scopes);
+export const FhirScopes = (...scopes: string[]): MethodDecorator & ClassDecorator => SetMetadata(FHIR_SCOPES_KEY, scopes);
 
 @Injectable()
 export class SmartOnFhirGuard implements CanActivate {
@@ -23,7 +27,7 @@ export class SmartOnFhirGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
     // Simuler l'extraction des scopes depuis le req.user (JWT vérifié par AuthGuard)
     // Dans une implémentation réelle OAuth2/SMART, les scopes sont dans le token
-    const user = (request as any).user;
+    const user = (request as { user?: AuthenticatedUser }).user;
 
     if (!user) {
       return false; // Not authenticated

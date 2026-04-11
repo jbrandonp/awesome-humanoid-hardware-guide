@@ -21,7 +21,7 @@ export class PeerConsultController {
     @Body('specialtyTarget') specialtyTarget: string,
     @Body('message') message: string,
     @Body('recordId') recordId: string,
-  ) {
+  ): Promise<unknown> {
     if (!doctorId || !patientId || !recordId || !specialtyTarget) {
       throw new HttpException('Données manquantes', HttpStatus.BAD_REQUEST);
     }

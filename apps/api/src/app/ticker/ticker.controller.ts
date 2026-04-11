@@ -3,9 +3,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { EpiTickerService } from './epi-ticker.service';
+import type { FastifyRequest } from 'fastify';
 
 import { AuditService } from '../audit/audit.service';
 import { ActionType } from '@prisma/client';
+
+type AuthenticatedFastifyRequest = FastifyRequest & { user?: { userId: string } };
 
 export interface MessageEvent {
   data: string | object;
@@ -42,7 +45,7 @@ export class TickerController {
 
   @Post('export/epidemiology')
   @UseGuards(AuthGuard('jwt'))
-  async exportEpidemiologyReport(@Req() req: any) {
+  async exportEpidemiologyReport(@Req() req: AuthenticatedFastifyRequest): Promise<{ success: boolean; message: string }> {
     const user = req.user;
     if (!user || !user.userId) {
       throw new ForbiddenException('Utilisateur non authentifié');
@@ -55,10 +58,11 @@ export class TickerController {
         actionType: ActionType.EXPORT_REPORT,
         resourceId: 'Epidemiology_Monthly',
         phiDataAccessed: {}, // Anonymisé/Agrégé
-        ipAddress: req.ip || 'unknown',
+         ipAddress: (req as { ip?: string }).ip || (req.socket as { remoteAddress?: string })?.remoteAddress || 'unknown',
       });
       return { success: true, message: 'Export autorisé et tracé' };
-    } catch (error) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
       throw new InternalServerErrorException('Échec de la journalisation AuditLog. Export bloqué.');
     }
   }

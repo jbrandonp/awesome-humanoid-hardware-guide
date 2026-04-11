@@ -1,4 +1,5 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SyncModule } from './sync/sync.module';
@@ -39,6 +40,8 @@ import { QueueModule } from './queue/queue.module';
 import { WaitingRoomModule } from './waiting-room/waiting-room.module';
 import { CryptoModule } from './crypto/crypto.module';
 import { EmarModule } from './emar/emar.module';
+import { PhiMaskingInterceptor } from './interceptors/phi-masking.interceptor';
+import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
 
 @Module({
   imports: [
@@ -66,10 +69,20 @@ import { EmarModule } from './emar/emar.module';
     EmarModule
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: IdempotencyInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: PhiMaskingInterceptor,
+    },
+  ],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
+  configure(consumer: MiddlewareConsumer): void {
     consumer
       .apply(SessionTimeoutMiddleware)
       .forRoutes({ path: '*', method: RequestMethod.ALL });

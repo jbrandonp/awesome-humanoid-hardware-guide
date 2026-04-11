@@ -28,7 +28,7 @@ export class Hl7ParserService {
   ) {}
 
   public async parseOruR01(rawMessage: string): Promise<Hl7ParsedData> {
-    const segments = rawMessage.split(/\r?\n/).filter(s => s.trim() !== '');
+    const segments = rawMessage.split(/[\r\n]+/).filter(s => s.trim() !== '');
     
     let mshSegment = '';
     let pidSegment = '';
@@ -81,13 +81,17 @@ export class Hl7ParserService {
 
     const pidFields = pidSegment ? pidSegment.split('|') : [];
     const patientLabId = pidFields[3] || null;
+    
+    // Maintain raw HL7 format as expected by tests and downstream consumers
     const patientName = pidFields[5] || null;
+    
     const patientDob = pidFields[7] || null;
 
     const parsedObservations = obxSegments.map(obx => {
       const obxFields = obx.split('|');
+      const code = obxFields[3] || '';
       return {
-        code: obxFields[3] || '',
+        code,
         value: obxFields[5] || '',
         unit: obxFields[6] || '',
         refRange: obxFields[7] || '',
@@ -111,6 +115,7 @@ export class Hl7ParserService {
       if (!matchedPatientId) {
         reconciliationError = 'Patient not found during reconciliation';
       }
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
        reconciliationError = 'Patient not found during reconciliation';
     }

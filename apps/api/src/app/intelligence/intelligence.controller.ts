@@ -16,7 +16,7 @@ export class IntelligenceController {
   constructor(private readonly intelligenceService: IntelligenceService) {}
 
   @Post('check-interactions')
-  async checkInteractions(@Body() request: DrugInteractionRequest) {
+  async checkInteractions(@Body() request: DrugInteractionRequest): Promise<unknown> {
     if (
       !request ||
       !request.patientId ||

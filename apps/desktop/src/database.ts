@@ -7,6 +7,8 @@ import {
   Visit,
   Vital,
   Prescription,
+  MedicationAdministration,
+  ClinicalIncident,
 } from '@systeme-sante/models';
 
 const adapter = new LokiJSAdapter({
@@ -15,14 +17,14 @@ const adapter = new LokiJSAdapter({
   useIncrementalIndexedDB: true,
 
   onQuotaExceededError: (error) => {
-    // Browser ran out of disk space
+    console.error('Database Quota Exceeded:', error);
   },
   onSetUpError: (error) => {
-    // Database failed to load
+    console.error('Database Setup Error:', error);
   },
 });
 
 export const database = new Database({
   adapter,
-  modelClasses: [Patient, Visit, Vital, Prescription],
+  modelClasses: [Patient, Visit, Vital, Prescription, MedicationAdministration, ClinicalIncident],
 });

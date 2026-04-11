@@ -23,7 +23,7 @@ export class WaitingRoomGateway implements OnGatewayConnection, OnGatewayDisconn
 
   constructor(private readonly jwtService: JwtService) {}
 
-  async handleConnection(client: Socket) {
+  async handleConnection(client: Socket): Promise<void> {
     try {
       // 1. JWT Authentication on Handshake
       const token = client.handshake.auth?.token || client.handshake.headers['authorization']?.split(' ')[1];
@@ -62,19 +62,19 @@ export class WaitingRoomGateway implements OnGatewayConnection, OnGatewayDisconn
       // Join the specific room for this department
       await client.join(departmentId);
       this.logger.log(`Client ${client.id} connected and joined room ${departmentId}`);
-    } catch (error: any) {
-      this.logger.error(`Client connect error: ${error.message}`);
-      client.disconnect(true);
-    }
+     } catch (error: unknown) {
+       this.logger.error(`Client connect error: ${error instanceof Error ? error.message : String(error)}`);
+       client.disconnect(true);
+     }
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket): void {
     this.logger.log(`Client ${client.id} disconnected`);
   }
 
   // Method to be called by other NestJS services (e.g., REST controllers or CQRS Handlers)
   // Ensures DPDPA compliance: Broadcasts strict DTO, NOT the full patient object
-  broadcastNextPatient(data: NextPatientDto) {
+  broadcastNextPatient(data: NextPatientDto): void {
     this.logger.log(`Broadcasting NEXT_PATIENT to room ${data.departmentId}`);
     
     // Broadcast only strictly necessary fields (ticket number/pseudonym, target room)

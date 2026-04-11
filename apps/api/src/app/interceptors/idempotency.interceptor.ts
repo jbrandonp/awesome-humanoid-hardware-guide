@@ -19,7 +19,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     });
   }
 
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     const request = context.switchToHttp().getRequest();
     const method = request.method;
     
@@ -35,33 +35,39 @@ export class IdempotencyInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // 1. Check Redis for existing cached response
+    // 1. Atomically try to acquire a 'processing' lock or get existing result
     const cacheKey = `idempotency:${idempotencyKey}`;
-    const cachedDataString = await this.redis.get(cacheKey);
+    
+    // SET with NX=true and EX=30 seconds (lock timeout)
+    const acquired = await this.redis.set(cacheKey, 'PROCESSING', 'EX', 30, 'NX');
 
-    if (cachedDataString) {
-      const cachedData = JSON.parse(cachedDataString);
+    if (!acquired) {
+      // If we couldn't set it, it means either it's already PROCESSING or already DONE.
+      const existingValue = await this.redis.get(cacheKey);
       
-      // Fastify specific: set the cached status code if needed, but since it's an interceptor
-      // returning `of(cachedData)` will just serialize the data back as HTTP 200/201 etc.
-      // A more robust implementation might cache headers and status codes too.
-      // But returning the exact cached body avoids re-executing Prisma and satisfies the requirement.
-      return of(cachedData);
+      if (existingValue === 'PROCESSING') {
+        // Option A: Throw error to client
+        throw new Error('Request already being processed with this idempotency key.');
+        // Option B: Wait and retry (more complex)
+      } else if (existingValue) {
+        return of(JSON.parse(existingValue));
+      }
     }
 
-    // 2. Not cached: Process request and cache the response
+    // 2. Not cached and lock acquired: Process request and cache the response
     return next.handle().pipe(
       tap({
         next: (response) => {
-          // Fire and forget caching for success.
-          // Handle undefined/empty responses gracefully (e.g. DELETE returning 204 No Content)
+          // Success: cache the response and overwrite 'PROCESSING'
           const valueToCache = response === undefined ? 'null' : JSON.stringify(response);
           this.redis.set(cacheKey, valueToCache, 'EX', 86400).catch(err => {
             console.error('Failed to cache idempotency key:', err);
           });
         },
-        error: (err) => {
-          // Do not cache errors
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          error: (err) => {
+           // Failure: remove the lock so the client can retry
+          this.redis.del(cacheKey).catch(() => {});
         }
       })
     );

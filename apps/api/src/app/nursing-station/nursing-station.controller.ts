@@ -8,7 +8,7 @@ export class NursingStationController {
   constructor(private readonly nursingStationService: NursingStationService) {}
 
   @Post('administrations')
-  async createAdministration(@Body() createAdministrationDto: CreateAdministrationDto) {
+  async createAdministration(@Body() createAdministrationDto: CreateAdministrationDto): Promise<unknown> {
     const parsedData = medicationAdministrationSchema.parse(createAdministrationDto);
     return this.nursingStationService.createAdministration(parsedData);
   }

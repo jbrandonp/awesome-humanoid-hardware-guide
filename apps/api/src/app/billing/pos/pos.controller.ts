@@ -16,7 +16,7 @@ export class PosController {
 
   @Post('open')
   @AuditLog('POS_OPEN_SESSION')
-  async openSession(@Body() payload: OpenSessionPayload) {
+  async openSession(@Body() payload: OpenSessionPayload): Promise<unknown> {
     if (!payload || !payload.terminalId || !payload.cashierId || payload.openingFloatCents === undefined) {
       throw new HttpException('Données incomplètes pour l\'ouverture de caisse.', HttpStatus.BAD_REQUEST);
     }
@@ -28,7 +28,7 @@ export class PosController {
   async processTransaction(
     @Headers('x-idempotency-key') idempotencyKey: string,
     @Body() payload: Omit<ProcessTransactionPayload, 'idempotencyKey'>
-  ) {
+  ): Promise<unknown> {
     if (
       !payload ||
       !payload.sessionId ||
@@ -47,7 +47,7 @@ export class PosController {
   async processRefund(
     @Headers('x-idempotency-key') idempotencyKey: string,
     @Body() payload: Omit<RefundPayload, 'idempotencyKey'>
-  ) {
+  ): Promise<unknown> {
     if (
       !payload ||
       !payload.sessionId ||
@@ -73,7 +73,7 @@ export class PosController {
 
   @Post('close')
   @AuditLog('POS_CLOSE_SESSION')
-  async closeSession(@Body() payload: CloseSessionPayload) {
+  async closeSession(@Body() payload: CloseSessionPayload): Promise<unknown> {
     if (
       !payload ||
       !payload.sessionId ||

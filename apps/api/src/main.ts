@@ -7,10 +7,10 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app/app.module';
-// @ts-ignore
+// @ts-expect-error - node-dns-sd does not have TypeScript definitions
 import dnssd from 'node-dns-sd';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const fastifyAdapter = new FastifyAdapter({
     // Support Yjs CRDT payloads, High-Res Images & Whisper audio (up to 50MB)
     bodyLimit: 50 * 1024 * 1024,
@@ -30,6 +30,7 @@ async function bootstrap() {
         'tauri://localhost',
         'http://tauri.localhost',
         'http://localhost:8081',
+        'http://localhost:3001',
       ];
 
   app.enableCors({
@@ -48,7 +49,7 @@ async function bootstrap() {
   // Start mDNS advertisement
   try {
     await dnssd.publish({
-      name: 'systeme-sante-api',
+      name: 'medical-api',
       type: '_medical-api._tcp',
       port: Number(port)
     });

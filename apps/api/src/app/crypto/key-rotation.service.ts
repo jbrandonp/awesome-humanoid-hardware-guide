@@ -78,10 +78,11 @@ export class KeyRotationService {
   ): Promise<{ rotatedCount: number; errors: Error[] }> {
     this.logger.log(`Starting key rotation for ${modelName}.${fieldName} from v${oldKeyVersion} to v${newKeyVersion}`);
     
-    let model: Model<any>;
+    let model: Model<unknown>;
     try {
-      model = this.connection.model(modelName);
-    } catch (err) {
+        model = this.connection.model(modelName) as Model<unknown>;
+       // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       } catch (err) {
       if (process.env.NODE_ENV !== 'test') {
         this.logger.error(`Model ${modelName} not found.`);
       }
@@ -94,13 +95,13 @@ export class KeyRotationService {
     };
 
     // We stream the documents to avoid loading everything into memory (Offline-First devices might have low RAM)
-    const cursor = model.find(filter as any).cursor();
+    const cursor = model.find(filter as Record<string, unknown>).cursor();
     
     let rotatedCount = 0;
     const errors: Error[] = [];
 
     for await (const doc of cursor) {
-      const docRecord = doc as any;
+         const docRecord = doc as Record<string, unknown>;
       const encryptedField = docRecord[fieldName] as unknown;
 
       if (!this.isEncryptedPayload(encryptedField)) {
@@ -127,12 +128,12 @@ export class KeyRotationService {
            this.logger.warn(`Failed to update document ${String(docRecord['_id'])} (concurrent modification or not found).`);
         }
 
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
+       } catch (_err) {
+        const errorMsg = _err instanceof Error ? _err.message : String(_err);
         if (process.env.NODE_ENV !== 'test') {
           this.logger.error(`Failed to rotate keys for document ${String(docRecord['_id'])}: ${errorMsg}`);
         }
-        errors.push(err instanceof Error ? err : new Error(errorMsg));
+        errors.push(_err instanceof Error ? _err : new Error(errorMsg));
       }
     }
 

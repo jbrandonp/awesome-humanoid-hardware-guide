@@ -16,7 +16,7 @@ const brotliCompress = promisify(zlib.brotliCompress);
 
 @Injectable()
 export class CompressionInterceptor implements NestInterceptor {
-  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<unknown>> {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest();
     const response = ctx.getResponse();
@@ -36,7 +36,7 @@ export class CompressionInterceptor implements NestInterceptor {
       switchMap((data) => {
         if (!data) return from([data]);
 
-        return from((async () => {
+         return from((async (): Promise<Buffer | unknown> => {
           const jsonString = JSON.stringify(data);
           const buffer = Buffer.from(jsonString, 'utf-8');
 
@@ -52,7 +52,8 @@ export class CompressionInterceptor implements NestInterceptor {
               response.header('Content-Type', 'application/json');
               return compressed;
             }
-          } catch (error) {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            } catch (_error) {
             throw new BadGatewayException('Compression failed');
           }
 

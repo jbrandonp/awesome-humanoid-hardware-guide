@@ -18,13 +18,13 @@ export class DrugInteractionController {
 
   @Post('check')
   @UsePipes(new ZodValidationPipe(DrugInteractionCheckSchema))
-  async check(@Body() dto: DrugInteractionCheckDto) {
+  async check(@Body() dto: DrugInteractionCheckDto): Promise<unknown> {
     return this.interactionService.checkInteraction(dto);
   }
 
   @Post('override')
   @UsePipes(new ZodValidationPipe(DrugInteractionOverrideSchema))
-  async override(@Body() dto: DrugInteractionOverrideDto) {
+  async override(@Body() dto: DrugInteractionOverrideDto): Promise<unknown> {
     return this.interactionService.overridePrescription(dto);
   }
 }

@@ -208,9 +208,9 @@ describe('MDNSScannerService', () => {
 
       const promise = MDNSScannerService.discoverServer();
 
-      vi.runAllTimers(); // Advance all timers to trigger the 5s timeout
+      vi.runAllTimers(); // Advance all timers to trigger the 8s timeout
 
-      await expect(promise).rejects.toThrow('Timeout de 5s atteint lors du scan mDNS.');
+      await expect(promise).rejects.toThrow('Timeout de 8s atteint lors du scan mDNS.');
 
       expect(consoleWarnSpy).toHaveBeenCalledTimes(3);
       expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('[mDNS Scanner] Payload service ignoré'), { type: 'medical-api' });
@@ -229,9 +229,9 @@ describe('MDNSScannerService', () => {
 
       const promise = MDNSScannerService.discoverServer();
 
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(8000);
 
-      await expect(promise).rejects.toThrow('Timeout de 5s atteint lors du scan mDNS.');
+      await expect(promise).rejects.toThrow('Timeout de 8s atteint lors du scan mDNS.');
 
       expect(mockEnableManualFallback).toHaveBeenCalled();
       expect(mockStoreState.status).toBe('MANUAL_FALLBACK');

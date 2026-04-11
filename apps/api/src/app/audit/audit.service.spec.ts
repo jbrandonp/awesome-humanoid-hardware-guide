@@ -5,6 +5,7 @@ import { ActionType } from '@prisma/client';
 
 describe('AuditService', () => {
   let service: AuditService;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let mockRepository: any;
 
   beforeEach(async () => {
@@ -21,6 +22,7 @@ describe('AuditService', () => {
 
     service = module.get<AuditService>(AuditService);
     // Directly attach the mock to avoid NestJS context resolution issues in unit tests
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (service as any).auditRepository = mockRepository;
   });
 
@@ -31,12 +33,14 @@ describe('AuditService', () => {
   describe('obfuscatePhiData', () => {
     it('should obfuscate phone numbers by hiding the first 5 digits', () => {
       const data = { phoneNumber: '1234567890' };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = service.obfuscatePhiData(data) as any;
       expect(result.phoneNumber).toBe('*****67890');
     });
 
     it('should obfuscate emails by truncating the username', () => {
       const data = { email: 'john.doe@example.com' };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = service.obfuscatePhiData(data) as any;
       expect(result.email).toBe('j***@example.com');
     });
@@ -47,7 +51,8 @@ describe('AuditService', () => {
           phone: '9876543210',
           contactEmail: 'jane.smith@hospital.org'
         }
-      };
+       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = service.obfuscatePhiData(data) as any;
       expect(result.patient.phone).toBe('*****43210');
       expect(result.patient.contactEmail).toBe('j***@hospital.org');

@@ -25,7 +25,7 @@ export class OcrController {
     @Body('text') text: string,
     @Body('patientId') patientId: string,
     @Body('forceInjection') forceInjection: boolean = false, // Si un humain valide manuellement les 95%
-  ) {
+  ): Promise<{ message: string; entities: unknown[]; vitalId: string }> {
     if (!text || !patientId) {
       throw new HttpException(
         'Texte brut et identifiant patient requis pour le moteur NLP.',

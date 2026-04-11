@@ -5,7 +5,7 @@ import { FhirOperationOutcome } from './fhir.mapper';
 
 @Catch(z.ZodError)
 export class FhirValidationFilter implements ExceptionFilter {
-  catch(exception: z.ZodError, host: ArgumentsHost) {
+   catch(exception: z.ZodError, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
 

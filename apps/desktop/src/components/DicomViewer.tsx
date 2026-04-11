@@ -98,43 +98,31 @@ export const DicomViewer: React.FC<DicomViewerProps> = ({ imageIds }) => {
       });
 
       // 6. Listen for slice changes to perform aggressive garbage collection
-      viewerRef.current?.addEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, ((e: CustomEvent) => {
+      const onSliceChange = (e: any) => {
         const eventData = e.detail;
         const newImageIdIndex = eventData.imageIdIndex;
         setCurrentSlice(newImageIdIndex);
+      };
 
-        // Explicit Garbage Collection: Remove images outside a window of +/- 15 slices
-        const windowSize = 15;
-        imageIds.forEach((id, index) => {
-          if (Math.abs(index - newImageIdIndex) > windowSize) {
-            try {
-              cornerstone.cache.removeImageLoadObject(id);
-            } catch (err) {
-              // ignore if not present
-            }
-          }
-        });
-        
-        try {
-          // Attempt to clear unallocated cache if API exists
-          (cornerstone.cache as any).purgeCache();
-        } catch (err) {
-           // ignore
-        }
-        
-      }) as EventListener);
+      viewerRef.current?.addEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, onSliceChange);
+      
+      // Store reference to function for cleanup
+      (viewerRef.current as any)._onSliceChange = onSliceChange;
     };
 
     setup();
 
     return () => {
       // Cleanup
-      renderingEngine?.destroy();
-      cornerstoneTools.ToolGroupManager.destroyToolGroup(toolGroupId);
+      if (viewerRef.current && (viewerRef.current as any)._onSliceChange) {
+        viewerRef.current.removeEventListener(cornerstone.Enums.Events.STACK_NEW_IMAGE, (viewerRef.current as any)._onSliceChange);
+      }
+      
       try {
-          (cornerstone.cache as any).purgeCache();
+        renderingEngine?.destroy();
+        cornerstoneTools.ToolGroupManager.destroyToolGroup('myToolGroup');
       } catch(e) {
-          // ignore
+          // ignore cleanup errors on fast unmounts
       }
     };
   }, [imageIds]);

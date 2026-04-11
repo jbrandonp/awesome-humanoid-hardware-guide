@@ -2,6 +2,14 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { BlacklistService } from './blacklist.service';
+import type { FastifyRequest } from 'fastify';
+
+interface JwtPayload {
+  sub: string;
+  role: string;
+  exp?: number;
+  iat?: number;
+}
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -17,9 +25,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(req: any, payload: any) {
+  async validate(req: FastifyRequest, payload: JwtPayload): Promise<{ userId: string; role: string }> {
     // Extract raw token from Authorization header to check against blacklist
-    const authHeader = req.headers?.authorization || '';
+    const authHeader = (req.headers as Record<string, string | undefined>)['authorization'] || '';
     const token = authHeader.replace('Bearer ', '');
 
     if (token && await this.blacklistService.isTokenBlacklisted(token)) {

@@ -22,7 +22,7 @@ export class InventoryPredictorService {
   ) {}
 
   @Cron('0 2 * * *') // Run every night at 02:00
-  async runNightlyPredictions() {
+  async runNightlyPredictions(): Promise<void> {
     this.logger.log('Starting nightly inventory prediction job...');
     
     try {
@@ -60,24 +60,34 @@ export class InventoryPredictorService {
         consumptionMap.set(dateStr, current + 1);
       }
 
-      for (const item of inventoryItems) {
-        const itemConsumptionMap = medicationConsumptionMap.get(item.name) || new Map<string, number>();
+      // PERFORMANCE FIX: Batch processing to avoid spawning hundreds of workers at once
+      const batchSize = 5; // Process 5 items at a time
+      for (let i = 0; i < inventoryItems.length; i += batchSize) {
+        const batch = inventoryItems.slice(i, i + batchSize);
+        await Promise.all(batch.map(async (item) => {
+          const itemConsumptionMap = medicationConsumptionMap.get(item.name) || new Map<string, number>();
 
-        const consumptionHistory: DailyConsumption[] = Array.from(itemConsumptionMap.entries()).map(([date, quantity]) => ({
-          date,
-          quantity
+          const consumptionHistory: DailyConsumption[] = Array.from(itemConsumptionMap.entries()).map(([date, quantity]) => ({
+            date,
+            quantity
+          }));
+
+          const workerData: TrainingWorkerData = {
+            itemId: item.id,
+            itemName: item.name,
+            currentStock: item.quantity,
+            criticalThreshold: item.criticalThreshold,
+            consumptionHistory
+          };
+
+          // Check for immediate critical stock before running prediction
+          if (item.quantity <= item.criticalThreshold) {
+            this.emitImmediateAlert(item);
+          }
+
+          // Run prediction in worker thread
+          return this.processItemInWorker(workerData);
         }));
-
-        const workerData: TrainingWorkerData = {
-          itemId: item.id,
-          itemName: item.name,
-          currentStock: item.quantity,
-          criticalThreshold: item.criticalThreshold,
-          consumptionHistory
-        };
-
-        // Run prediction in worker thread
-        await this.processItemInWorker(workerData);
       }
       
       this.logger.log('Nightly inventory prediction job completed.');
@@ -86,9 +96,22 @@ export class InventoryPredictorService {
     }
   }
 
+   private emitImmediateAlert(item: unknown): void {
+    const invItem = item as { id: string; name: string; quantity: number };
+    const alertEvent: InventoryAlertEvent = {
+      itemId: invItem.id,
+      itemName: invItem.name,
+      estimatedDepletionDate: new Date(), // Already depleted/critical
+      confidenceScore: 1.0,
+    };
+    this.eventEmitter.emit('inventory.alert', alertEvent);
+    this.logger.error(`CRITICAL ALERT: ${invItem.name} is already at or below critical threshold (${invItem.quantity} units remaining).`);
+  }
+
   private async processItemInWorker(data: TrainingWorkerData): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Find worker file dynamically based on dist vs src environment
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      return new Promise((resolve, _reject) => {
+       // Find worker file dynamically based on dist vs src environment
       const isTsNode = process.argv[1]?.includes('ts-node') || __filename.endsWith('.ts');
       
       let workerFile = path.resolve(__dirname, 'inventory-predictor.worker.js');
@@ -136,7 +159,7 @@ export class InventoryPredictorService {
     });
   }
 
-  private handlePredictionResult(data: TrainingWorkerData, result: PredictionResult) {
+  private handlePredictionResult(data: TrainingWorkerData, result: PredictionResult): void {
     if (!result.success || result.mse > this.CRITICAL_MSE_THRESHOLD) {
       this.logger.warn(`Model did not converge (MSE: ${result.mse}) or failed. Using fallback for ${data.itemName}.`);
       this.fallbackPrediction(data);
@@ -147,7 +170,7 @@ export class InventoryPredictorService {
     this.evaluateAlert(data, result.predictedConsumption30Days, 1 - result.mse); // Confidence is roughly 1 - MSE
   }
 
-  private fallbackPrediction(data: TrainingWorkerData) {
+  private fallbackPrediction(data: TrainingWorkerData): void {
     // Math fallback: average daily consumption over the history
     const totalConsumption = data.consumptionHistory.reduce((acc, curr) => acc + curr.quantity, 0);
     const totalDays = 90; // Fixed 90 day window
@@ -159,7 +182,7 @@ export class InventoryPredictorService {
     this.evaluateAlert(data, projected30Days, 0.5); // Fixed confidence for fallback
   }
 
-  private evaluateAlert(data: TrainingWorkerData, projectedConsumption: number, confidence: number) {
+  private evaluateAlert(data: TrainingWorkerData, projectedConsumption: number, confidence: number): void {
     if (projectedConsumption <= 0) return;
 
     const projectedStock = data.currentStock - projectedConsumption;

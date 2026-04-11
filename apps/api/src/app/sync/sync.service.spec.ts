@@ -42,9 +42,9 @@ describe('SyncService Performance', () => {
 
     for (let i = 0; i < 50; i++) {
       patients.push({ id: `pat_${i}`, first_name: `First${i}`, last_name: `Last${i}`, date_of_birth: new Date().toISOString() });
-      visits.push({ id: `vis_${i}`, date: new Date().toISOString(), notes: Buffer.from('test').toString('base64') });
-      prescriptions.push({ id: `pres_${i}`, medication_name: `Med${i}`, dosage: '10mg', instructions: 'Take daily', prescribed_at: new Date().toISOString() });
-      vitals.push({ id: `vit_${i}`, blood_pressure: '120/80', heart_rate: 70, recorded_at: new Date().toISOString() });
+      visits.push({ id: `vis_${i}`, patient_id: `pat_${i}`, date: new Date().toISOString(), notes: Buffer.from('test').toString('base64') });
+      prescriptions.push({ id: `pres_${i}`, patient_id: `pat_${i}`, visit_id: `vis_${i}`, medication_name: `Med${i}`, dosage: '10mg', instructions: 'Take daily', prescribed_at: new Date().toISOString() });
+      vitals.push({ id: `vit_${i}`, patient_id: `pat_${i}`, blood_pressure: '120/80', heart_rate: 70, recorded_at: new Date().toISOString() });
     }
 
     // Mock findMany responses

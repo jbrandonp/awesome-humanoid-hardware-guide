@@ -106,7 +106,7 @@ export class EpiTickerService {
         // On ignore le bruit de fond statistique (faux positifs)
         if (casesToday < this.MIN_CASES_REQUIRED_FOR_ALERT) continue;
 
-        const historyRecord = last14DaysData.find(h => h.medicationName === pathologyId);
+         const historyRecord = last14DaysData.find((h: Record<string, unknown>) => h.medicationName === pathologyId);
 
         // Moyenne Mobile (Moving Average) quotidienne sur 14 jours
         const averageCasesLast14Days = historyRecord ? (historyRecord._count._all / 14) : 0;

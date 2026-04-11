@@ -8,5 +8,6 @@ import { HighAlertMedicationController } from './high-alert-medication.controlle
   imports: [PrismaModule, AuditModule],
   providers: [HighAlertMedicationService],
   controllers: [HighAlertMedicationController],
+  exports: [HighAlertMedicationService],
 })
 export class HighAlertMedicationModule {}

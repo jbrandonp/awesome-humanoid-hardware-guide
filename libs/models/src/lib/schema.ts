@@ -9,7 +9,6 @@ const schema: AppSchema = appSchema({
         { name: 'first_name', type: 'string' },
         { name: 'last_name', type: 'string' },
         { name: 'date_of_birth', type: 'number' },
-        { name: '_status', type: 'string' }, // synced, created, updated, deleted
         { name: 'deleted_at', type: 'number', isOptional: true },
       ],
     }),
@@ -19,7 +18,6 @@ const schema: AppSchema = appSchema({
         { name: 'patient_id', type: 'string', isIndexed: true },
         { name: 'date', type: 'number' },
         { name: 'notes', type: 'string' }, // Base64 encoded Yjs update
-        { name: '_status', type: 'string' },
         { name: 'deleted_at', type: 'number', isOptional: true },
       ],
     }),
@@ -31,7 +29,6 @@ const schema: AppSchema = appSchema({
         { name: 'heart_rate', type: 'number', isOptional: true },
         { name: 'temperature', type: 'number', isOptional: true },
         { name: 'recorded_at', type: 'number' },
-        { name: '_status', type: 'string' },
         { name: 'deleted_at', type: 'number', isOptional: true },
       ],
     }),
@@ -44,7 +41,6 @@ const schema: AppSchema = appSchema({
         { name: 'dosage', type: 'string' },
         { name: 'instructions', type: 'string', isOptional: true },
         { name: 'prescribed_at', type: 'number' },
-        { name: '_status', type: 'string' },
         { name: 'deleted_at', type: 'number', isOptional: true },
       ],
     }),
@@ -54,6 +50,15 @@ const schema: AppSchema = appSchema({
         { name: 'name', type: 'string', isIndexed: true }, // Index critique pour la recherche Omnibox
         { name: 'default_dosage', type: 'string', isOptional: true },
         { name: 'category', type: 'string' },
+      ],
+    }),
+    tableSchema({
+      name: 'drug_contraindications',
+      columns: [
+        { name: 'drug_a', type: 'string', isIndexed: true },
+        { name: 'drug_b', type: 'string', isIndexed: true },
+        { name: 'severity', type: 'string' },
+        { name: 'description', type: 'string' },
       ],
     }),
     tableSchema({

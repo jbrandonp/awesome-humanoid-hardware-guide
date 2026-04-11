@@ -147,3 +147,12 @@ test-output
 
 .claude/worktrees
 .claude/settings.local.json
+
+# ------------------------------------------------------------------------------
+# 9. ARTEFACTS SPÉCIFIQUES AU PROJET
+# ------------------------------------------------------------------------------
+.opencode/
+nbproject/
+libs/*/node_modules/
+libs/*/dist/
+libs/*/build/

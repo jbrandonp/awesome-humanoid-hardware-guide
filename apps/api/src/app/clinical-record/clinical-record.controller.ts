@@ -10,7 +10,7 @@ export class ClinicalRecordController {
   async saveAnnotations(
     @Param('patientId') patientId: string,
     @Body() saveAnnotationDto: SaveAnnotationDto,
-  ) {
+  ): Promise<unknown> {
     const { imageId, annotations } = saveAnnotationDto;
     return this.clinicalRecordService.createSpecialtyRecord(
       patientId,
@@ -23,7 +23,7 @@ export class ClinicalRecordController {
   async getAnnotations(
     @Param('patientId') patientId: string,
     @Param('imageId') imageId: string,
-  ) {
+  ): Promise<unknown[] | null> {
     const records = await this.clinicalRecordService.getPatientRecords(patientId);
     
     // Filtre les dossiers RADIOLOGY et trouve ceux qui correspondent à l'imageId
@@ -49,6 +49,12 @@ export class ClinicalRecordController {
 
     // Retourne le plus récent
     const latestRecord = radiologyRecords[0];
-    return (latestRecord.data as Record<string, unknown>).annotations;
+    const data = latestRecord.data as Record<string, unknown> | undefined;
+    
+    if (!data || !data.annotations) {
+      return [];
+    }
+    
+    return data.annotations;
   }
 }

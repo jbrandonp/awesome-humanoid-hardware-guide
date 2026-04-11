@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { MedicationAdministrationStatus } from '@prisma/client';
+import { MedicationAdministration, MedicationAdministrationStatus } from '@prisma/client';
 import { z } from 'zod';
 import { medicationAdministrationSchema } from './dto/create-administration.dto';
 import { HighAlertMedicationService } from '../high-alert-medication/high-alert-medication.service';
@@ -15,7 +15,7 @@ export class NursingStationService {
     private readonly highAlertService: HighAlertMedicationService
   ) {}
 
-  async createAdministration(data: CreateAdministrationInput) {
+  async createAdministration(data: CreateAdministrationInput): Promise<MedicationAdministration> {
     // 1. Fetch Prescription to identify the medication
     const prescription = await this.prisma.prescription.findUnique({
       where: { id: data.prescriptionId },

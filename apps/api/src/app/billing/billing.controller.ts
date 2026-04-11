@@ -22,7 +22,7 @@ export class BillingController {
   async createInvoice(
     @Headers('x-idempotency-key') idempotencyKey: string,
     @Body() payload: Omit<CreateInvoicePayload, 'idempotencyKey'>
-  ) {
+  ): Promise<unknown> {
     if (
       !payload ||
       !idempotencyKey ||

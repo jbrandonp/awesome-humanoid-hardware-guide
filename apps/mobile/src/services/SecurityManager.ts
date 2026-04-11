@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as Crypto from 'expo-crypto';
 import * as FileSystem from 'expo-file-system';
-const documentDirectory = (FileSystem as any).documentDirectory;
+const { documentDirectory } = FileSystem as any;
 import JailMonkey from 'jail-monkey';
 import { Platform } from 'react-native';
 

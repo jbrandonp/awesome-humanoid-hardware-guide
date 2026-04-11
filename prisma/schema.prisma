@@ -100,6 +100,8 @@ model Patient {
   prescriptions Prescription[]
   invoices      Invoice[]
   notifications NotificationStatus[]
+  bedEncounters BedEncounter[]
+  dicomStudies  DicomStudy[]
 }
 
 // ============================================================================
@@ -171,6 +173,9 @@ model MedicationAdministration {
   clinicalJustification String?                        @map("clinical_justification")
   createdAt             DateTime                       @default(now())
   updatedAt             DateTime                       @updatedAt
+  // Sync Status Fields
+  syncStatus            String                         @default("created") @map("_status")
+  deletedAt             DateTime?                      @map("deleted_at")
 
   prescription Prescription @relation(fields: [prescriptionId], references: [id])
   nurse        User         @relation(fields: [nurseId], references: [id])
@@ -207,7 +212,7 @@ model ClinicalIncident {
 
 model AuditLog {
   id              String      @id @default(uuid())
-  userId          String      @map("user_id")
+  userId          String?     @map("user_id")
   patientId       String?     @map("patient_id")
   // Formal audit (used by AuditService via AuditRepository)
   actionType      ActionType? @map("action_type")
@@ -219,7 +224,7 @@ model AuditLog {
   ipAddress       String?     @map("ip_address")
   timestamp       DateTime    @default(now())
 
-  user    User    @relation(fields: [userId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
   patient Patient? @relation(fields: [patientId], references: [id])
 
   @@index([patientId, timestamp])
@@ -240,6 +245,7 @@ model DpdpaConsent {
   patient Patient @relation(fields: [patientId], references: [id])
   user    User    @relation(fields: [userId], references: [id])
 
+  @@index([patientId, expiresAt])
   @@map("dpdpa_consents")
 }
 
@@ -364,7 +370,8 @@ model BedEncounter {
   dischargedAt    DateTime? @map("discharged_at")
   dischargeReason String?   @map("discharge_reason")
 
-  bed Bed @relation(fields: [bedId], references: [id])
+  bed     Bed     @relation(fields: [bedId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 
   @@map("bed_encounters")
 }

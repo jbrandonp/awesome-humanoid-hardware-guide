@@ -29,7 +29,7 @@ export class DrugInteractionService {
     const alerts: string[] = [];
     let highestLevel: InteractionLevel | 'NONE' = 'NONE';
 
-    const updateLevel = (level: InteractionLevel) => {
+     const updateLevel = (level: InteractionLevel): void => {
       const levels = { NONE: 0, LOW: 1, MEDIUM: 2, HIGH: 3, FATAL: 4 };
       if (levels[level] > levels[highestLevel]) {
         highestLevel = level;

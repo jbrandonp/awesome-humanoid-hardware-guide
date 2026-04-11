@@ -47,7 +47,7 @@ export class EngagementController {
    * Protégé, public (pas de JWT) mais vérifie la signature SHA256 (hors scope ici).
    */
   @Post()
-  async handleMetaWebhook(@Body() payload: WhatsAppWebhookPayload, @Res() res: FastifyReply) {
+  async handleMetaWebhook(@Body() payload: WhatsAppWebhookPayload, @Res() res: FastifyReply): Promise<void> {
     // Si ce n'est pas un payload WhatsApp Business, on ignore
     if (payload.object !== 'whatsapp_business_account') {
       return res.status(HttpStatus.BAD_REQUEST).send('Payload non reconnu');
@@ -141,10 +141,10 @@ export class EngagementController {
 
   // GET Endpoint de vérification (Meta Hub Challenge) requis lors de la config du Webhook
   @Get('verify')
-  verifyWebhook(@Req() req: FastifyRequest, @Res() res: FastifyReply) {
-     const mode = (req.query as any)['hub.mode'];
-     const token = (req.query as any)['hub.verify_token'];
-     const challenge = (req.query as any)['hub.challenge'];
+  verifyWebhook(@Req() req: FastifyRequest, @Res() res: FastifyReply): void {
+      const mode = (req.query as Record<string, unknown>)['hub.mode'];
+      const token = (req.query as Record<string, unknown>)['hub.verify_token'];
+      const challenge = (req.query as Record<string, unknown>)['hub.challenge'];
 
      if (mode && token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
        res.status(HttpStatus.OK).send(challenge);

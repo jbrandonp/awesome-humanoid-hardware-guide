@@ -1,28 +1,53 @@
-/**
- * This script is used to patch the '@nx/expo' package to work with EAS Build.
- * It is run as a eas-build-post-install script in the 'package.json' of expo app.
- * It is executed as 'node tools/scripts/eas-build-post-install.mjs <workspace root> <project root>'
- * It will create a symlink from the project's node_modules to the workspace's node_modules.
- */
+import { symlink, existsSync, lstatSync, unlinkSync } from 'fs';
+import { join, resolve } from 'path';
 
-import { symlink, existsSync } from 'fs';
-import { join } from 'path';
+const [workspaceRootArg, projectRootArg] = process.argv.slice(2);
 
-const [workspaceRoot, projectRoot] = process.argv.slice(2);
-
-if (existsSync(join(workspaceRoot, 'node_modules'))) {
-  console.log('Symlink already exists');
-  process.exit(0);
+if (!workspaceRootArg || !projectRootArg) {
+  console.error('Usage: node eas-build-post-install.mjs <workspaceRoot> <projectRoot>');
+  process.exit(1);
 }
 
+const workspaceRoot = resolve(process.cwd(), workspaceRootArg);
+const projectRoot = resolve(process.cwd(), projectRootArg);
+
+const rootNodeModules = join(workspaceRoot, 'node_modules');
+const projectNodeModules = join(projectRoot, 'node_modules');
+
+console.log(`Workspace root: ${workspaceRoot}`);
+console.log(`Project root: ${projectRoot}`);
+
+if (!existsSync(rootNodeModules)) {
+  console.error(`Error: Root node_modules not found at ${rootNodeModules}`);
+  process.exit(1);
+}
+
+if (existsSync(projectNodeModules)) {
+  const stats = lstatSync(projectNodeModules);
+  if (stats.isSymbolicLink()) {
+    console.log('Existing symlink detected. Removing it to ensure a fresh link...');
+    unlinkSync(projectNodeModules);
+  } else {
+    console.log('Note: Project node_modules already exists as a physical directory. Skipping symlink to avoid data loss.');
+    process.exit(0);
+  }
+}
+
+console.log(`Linking ${projectNodeModules} -> ${rootNodeModules}`);
+
+// Cross-platform symlink type
+const symlinkType = process.platform === 'win32' ? 'junction' : 'dir';
+
 symlink(
-  join(projectRoot, 'node_modules'),
-  join(workspaceRoot, 'node_modules'),
-  'dir',
+  rootNodeModules,
+  projectNodeModules,
+  symlinkType,
   (err) => {
-    if (err) console.log(err);
-    else {
-      console.log('Symlink created');
+    if (err) {
+      console.error(`FATAL ERROR: Could not create symlink. Reason: ${err.message}`);
+      process.exit(1);
+    } else {
+      console.log(`Symlink successfully created (${symlinkType} mode).`);
     }
   },
 );

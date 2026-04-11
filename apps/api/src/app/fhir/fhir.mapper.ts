@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 // ============================================================================
 // TYPAGES STRICTS - STANDARD HL7 FHIR (R4) - ZÉRO 'ANY' POLICY
@@ -132,7 +133,7 @@ export class FhirMapper {
   }
 
   toFhirObservation(vital: { id: string; patientId: string; recordedAt?: Date | null; temperature?: number | null; heartRate?: number | null; bloodPressure?: string | null; glucose?: number | null }, type: 'temperature' | 'heartRate' | 'bloodPressure' | 'glucose'): FhirObservation {
-    const base: Partial<FhirObservation> & { [key: string]: any } = {
+    const base: Partial<FhirObservation> & { [key: string]: unknown } = {
       resourceType: 'Observation',
       status: 'final',
       subject: { reference: `Patient/${vital.patientId}` },
@@ -182,7 +183,7 @@ export class FhirMapper {
     return base as FhirObservation;
   }
 
-  toFhirClinicalRecord(record: { _id?: { toString: () => string } | any; specialty: string; patientId: string; createdAt?: Date | null; data?: { headCircumference?: number | null; lesionType?: string | null; location?: string | null; diagnosisCode?: string | null; diagnosisDisplay?: string | null; notes?: string | null } }): FhirObservation | null {
+  toFhirClinicalRecord(record: { _id?: { toString: () => string } | unknown; specialty: string; patientId: string; createdAt?: Date | null; data?: { headCircumference?: number | null; lesionType?: string | null; location?: string | null; diagnosisCode?: string | null; diagnosisDisplay?: string | null; notes?: string | null } }): FhirObservation | null {
     const createdAtDate = record.createdAt ? new Date(record.createdAt) : new Date();
     // 1. Example 1: PEDIATRICS mapping to LOINC
     if (record.specialty === 'PEDIATRICS' && record.data?.headCircumference) {
@@ -203,7 +204,7 @@ export class FhirMapper {
     if (record.specialty === 'DERMATOLOGY' && record.data?.lesionType === 'macule') {
       return {
         resourceType: 'Observation',
-        id: record._id ? record._id.toString() : 'temp-id',
+        id: record._id ? String(record._id) : 'temp-id',
         status: 'final',
         subject: { reference: `Patient/${record.patientId}` },
         effectiveDateTime: createdAtDate.toISOString(),
@@ -221,7 +222,7 @@ export class FhirMapper {
     if (record.data?.diagnosisCode) {
        return {
          resourceType: 'Observation',
-         id: record._id ? record._id.toString() : 'temp-id',
+        id: record._id ? String(record._id) : 'temp-id',
          status: 'final',
          subject: { reference: `Patient/${record.patientId}` },
          effectiveDateTime: createdAtDate.toISOString(),
@@ -270,7 +271,7 @@ export class FhirMapper {
 
   // --- INGRESS (FHIR -> Internal) ---
 
-  fromFhirPatient(fhirPatient: FhirPatient): any {
+  fromFhirPatient(fhirPatient: FhirPatient): Prisma.PatientCreateInput {
     const lastName = fhirPatient.name?.[0]?.family || 'Unknown';
     const firstName = fhirPatient.name?.[0]?.given?.[0] || 'Unknown';
     const dateOfBirth = fhirPatient.birthDate ? new Date(fhirPatient.birthDate) : new Date();

@@ -20,6 +20,12 @@
           "@systeme-sante/api:build",
           "@systeme-sante/api:serve"
         ]
+      },
+      "test": {
+        "executor": "nx:run-commands",
+        "options": {
+          "command": "nx run @systeme-sante/api-e2e:e2e"
+        }
       }
     }
   }

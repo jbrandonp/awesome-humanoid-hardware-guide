@@ -20,7 +20,7 @@ export class RemotePatientMonitoringService {
   constructor(private readonly tickerService: EpiTickerService) {}
 
   @OnEvent('iot.vitals.received')
-  handleVitalsReceived(payload: BleBloodPressurePayload) {
+   handleVitalsReceived(payload: BleBloodPressurePayload): void {
     this.logger.log(`[RPM] Reçu de nouvelles constantes vitales pour le patient: ${payload.patientId}`);
     
     // Evaluate rules
@@ -52,7 +52,7 @@ export class RemotePatientMonitoringService {
     return false;
   }
 
-  private triggerHighPriorityAlert(payload: BleBloodPressurePayload) {
+   private triggerHighPriorityAlert(payload: BleBloodPressurePayload): void {
     this.logger.error(`[CRITICAL ALERT] Constantes vitales dangereuses détectées (Tension Systolique > ${this.SYSTOLIC_THRESHOLD_MMHG} mmHg) pour le patient ${payload.patientId}`);
 
     const alert: TickerAlert = {

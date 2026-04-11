@@ -1,21 +1,41 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
+// Typed sync payload structures (WatermelonDB format)
+export interface SyncedPatient { id: string; first_name: string; last_name: string; date_of_birth: string; }
+export interface SyncedVisit { id: string; patient_id: string; date: string; notes?: string; }
+export interface SyncedPrescription { id: string; patient_id: string; visit_id: string; medication_name: string; dosage: string; instructions?: string; prescribed_at: string; }
+export interface SyncedVital { id: string; patient_id: string; blood_pressure?: string; heart_rate?: number; recorded_at: string; }
+export interface SyncChangeset<T> { created: T[]; updated: T[]; deleted: string[]; }
+
+export interface SyncPushPayload {
+  patients?: SyncChangeset<SyncedPatient>;
+  visits?: SyncChangeset<SyncedVisit>;
+  prescriptions?: SyncChangeset<SyncedPrescription>;
+  vitals?: SyncChangeset<SyncedVital>;
+}
+
+export interface SyncPullResult {
+  patients: SyncChangeset<SyncedPatient>;
+  visits: SyncChangeset<SyncedVisit>;
+  prescriptions: SyncChangeset<SyncedPrescription>;
+  vitals: SyncChangeset<SyncedVital>;
+}
+
 @Injectable()
 export class SyncService {
   constructor(
     private readonly prisma: PrismaService,
   ) {}
 
-  async pushChanges(changes: any) {
-    const transactionOps: any[] = [];
+  async pushChanges(changes: SyncPushPayload): Promise<void> {
 
     if (changes.patients) {
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
       if (changes.patients.created.length > 0) {
         promises.push(
           this.prisma.patient.createMany({
-            data: changes.patients.created.map((patient: any) => ({
+            data: changes.patients.created.map((patient: SyncedPatient) => ({
               id: patient.id,
               firstName: patient.first_name,
               lastName: patient.last_name,
@@ -28,7 +48,7 @@ export class SyncService {
       }
       if (changes.patients.updated.length > 0) {
         await this.prisma.$transaction(
-          changes.patients.updated.map((patient: any) =>
+          changes.patients.updated.map((patient: SyncedPatient) =>
             this.prisma.patient.update({
               where: { id: patient.id },
               data: {
@@ -53,11 +73,11 @@ export class SyncService {
     }
 
     if (changes.visits) {
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
       if (changes.visits.created.length > 0) {
         promises.push(
           this.prisma.visit.createMany({
-            data: changes.visits.created.map((visit: any) => ({
+            data: changes.visits.created.map((visit: SyncedVisit) => ({
               id: visit.id,
               patientId: visit.patient_id,
               date: new Date(visit.date),
@@ -69,7 +89,7 @@ export class SyncService {
         );
       }
       if (changes.visits.updated.length > 0) {
-        const updates = changes.visits.updated.map((visit: any) => {
+        const updates = changes.visits.updated.map((visit: SyncedVisit) => {
           const mergedNotesBuffer = visit.notes
             ? Buffer.from(visit.notes, 'base64')
             : null;
@@ -96,18 +116,18 @@ export class SyncService {
     }
 
     if (changes.prescriptions) {
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
       if (changes.prescriptions.created.length > 0) {
         promises.push(
           this.prisma.prescription.createMany({
-            data: changes.prescriptions.created.map((prescription: any) => ({
+            data: changes.prescriptions.created.map((prescription: SyncedPrescription) => ({
               id: prescription.id,
               patientId: prescription.patient_id,
               visitId: prescription.visit_id,
-              medicationName: prescription.medication,
+              medicationName: prescription.medication_name,
               dosage: prescription.dosage,
               instructions: prescription.instructions,
-              prescribedAt: new Date(prescription.created_at),
+              prescribedAt: new Date(prescription.prescribed_at),
               status: 'synced',
             })),
             skipDuplicates: true,
@@ -116,11 +136,11 @@ export class SyncService {
       }
       if (changes.prescriptions.updated.length > 0) {
         await this.prisma.$transaction(
-          changes.prescriptions.updated.map((prescription: any) =>
+          changes.prescriptions.updated.map((prescription: SyncedPrescription) =>
             this.prisma.prescription.update({
               where: { id: prescription.id },
               data: {
-                medicationName: prescription.medication,
+                medicationName: prescription.medication_name,
                 dosage: prescription.dosage,
                 instructions: prescription.instructions,
                 status: 'synced',
@@ -141,11 +161,11 @@ export class SyncService {
     }
 
     if (changes.vitals) {
-      const promises: Promise<any>[] = [];
+      const promises: Promise<unknown>[] = [];
       if (changes.vitals.created.length > 0) {
         promises.push(
           this.prisma.vital.createMany({
-            data: changes.vitals.created.map((vital: any) => ({
+             data: changes.vitals.created.map((vital: SyncedVital) => ({
               id: vital.id,
               patientId: vital.patient_id,
               bloodPressure: vital.blood_pressure,
@@ -159,7 +179,7 @@ export class SyncService {
       }
       if (changes.vitals.updated.length > 0) {
         await this.prisma.$transaction(
-          changes.vitals.updated.map((vital: any) =>
+           changes.vitals.updated.map((vital: SyncedVital) =>
             this.prisma.vital.update({
               where: { id: vital.id },
               data: {
@@ -183,12 +203,9 @@ export class SyncService {
       await Promise.all(promises);
     }
 
-    if (transactionOps.length > 0) {
-      await this.prisma.$transaction(transactionOps);
-    }
   }
 
-  async pullChanges(lastPulledAt: number) {
+  async pullChanges(lastPulledAt: number): Promise<SyncPullResult> {
     const lastPulledDate = new Date(lastPulledAt);
 
     // PATIENTS

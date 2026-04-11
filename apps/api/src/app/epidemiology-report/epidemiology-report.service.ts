@@ -15,7 +15,7 @@ export class EpidemiologyReportService {
   ) {}
 
   @Cron('0 2 * * *')
-  async generateDailyReport() {
+  async generateDailyReport(): Promise<void> {
     this.logger.log('Starting daily epidemiology report generation...');
     
     // We execute the aggregation query via raw query
@@ -89,7 +89,7 @@ export class EpidemiologyReportService {
     }
   }
 
-  async getReport(startDate: Date, endDate: Date) {
+  async getReport(startDate: Date, endDate: Date): Promise<unknown> {
     const cacheKey = `epi_report_${startDate.toISOString()}_${endDate.toISOString()}`;
     
     const cachedData = await this.cacheManager.get(cacheKey);

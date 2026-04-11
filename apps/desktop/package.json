@@ -8,5 +8,16 @@
     "@tauri-apps/api": "^2.10.1",
     "lokijs": "^1.5.12",
     "yjs": "^13.6.30"
+  },
+  "nx": {
+    "targets": {
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["apps/desktop/**/*.{ts,tsx}"]
+        }
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, StatusBar, ActivityIndicator } from 'react-native';
 import { Omnibox } from '../components/Omnibox';
 import { initializeDatabase } from '../database';
+import { MDNSScannerService } from '../services/mdns-scanner.service';
 import { usePowerManagement } from '../hooks/usePowerManagement';
 
 // Zéro Cloud Logs: Assurez-vous qu'aucun service tiers n'est importé/activé ici pour les PHI.
@@ -13,14 +14,22 @@ export const App = () => {
 
   useEffect(() => {
     let isMounted = true;
-    initializeDatabase()
-      .then(() => {
+    
+    // Initialisation parallèle de la DB et de la connexion réseau
+    const init = async () => {
+      try {
+        await initializeDatabase();
         if (isMounted) setIsDbReady(true);
-      })
-      .catch((err) => {
-        console.error('Database initialization failed:', err);
-        // Depending on app logic, you might want to show an error screen instead
-      });
+        
+        // Démarre la recherche du serveur en arrière-plan
+        await MDNSScannerService.bootstrapConnection();
+      } catch (err) {
+        console.error('Initialisation failed:', err);
+      }
+    };
+
+    init();
+    
     return () => {
       isMounted = false;
     };

@@ -28,7 +28,6 @@ export interface SvgInkPath {
 
 export function SmartPenCanvas() {
   const [inkPaths, setInkPaths] = useState<SvgInkPath[]>([]);
-  const [currentPathData, setCurrentPathData] = useState<string>("");
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [hardwareError, setHardwareError] = useState<string | null>(null);
 

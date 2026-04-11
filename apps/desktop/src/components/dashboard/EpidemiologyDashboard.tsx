@@ -74,7 +74,7 @@ export function EpidemiologyDashboard() {
     }
   }, [filters, mockData]);
 
-  const handleFilterChange = (key: keyof FilterCriteria, value: any) => {
+  const handleFilterChange = (key: keyof FilterCriteria, value: string | number | null) => {
     setFilters(prev => ({ ...prev, [key]: value || null }));
   };
 

@@ -8,8 +8,10 @@ import { MedicationAdministrationStatus } from '@prisma/client';
 describe('NursingStationService', () => {
   let service: NursingStationService;
   // @ts-expect-error unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let prismaService: PrismaService;
   // @ts-expect-error unused
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   let highAlertService: HighAlertMedicationService;
 
   const mockPrismaService = {

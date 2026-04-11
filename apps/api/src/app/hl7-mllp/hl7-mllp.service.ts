@@ -1,8 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
 import * as net from 'net';
 import { Hl7ParserService } from './hl7-parser.service';
-import { PrismaService } from '../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class Hl7MllpService implements OnModuleInit, OnModuleDestroy {
@@ -13,11 +11,9 @@ export class Hl7MllpService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly hl7ParserService: Hl7ParserService,
-    prismaService: PrismaService,
-    eventEmitter: EventEmitter2,
   ) {}
 
-  onModuleInit() {
+  onModuleInit(): void {
     const MAX_MESSAGE_SIZE = 10 * 1024 * 1024; // 10MB (HL7 messages can be large if they contain base64 imagery)
 
     this.server = net.createServer((socket) => {
@@ -79,7 +75,7 @@ export class Hl7MllpService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  onModuleDestroy() {
+  onModuleDestroy(): void {
     if (this.server) {
       this.server.close();
     }
@@ -102,7 +98,7 @@ export class Hl7MllpService implements OnModuleInit, OnModuleDestroy {
 
       // Attempt to extract MSH-10 for the ACK if parser failed halfway
       try {
-        const segments = rawMessage.split(/\r?\n/);
+        const segments = rawMessage.split(/[\r\n]+/);
         const msh = segments.find(s => s.startsWith('MSH|'));
         if (msh) {
           const mshFields = msh.split('|');
@@ -110,6 +106,7 @@ export class Hl7MllpService implements OnModuleInit, OnModuleDestroy {
              messageId = mshFields[9];
           }
         }
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (e) {
         // Ignored, we just want to fall back to UNKNOWN
       }

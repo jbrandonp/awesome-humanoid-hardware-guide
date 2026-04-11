@@ -22,6 +22,17 @@ export class MDNSScannerService {
   private static zeroconf = new Zeroconf();
 
   /**
+   * Nettoyage centralisé des écouteurs d'événements Zeroconf.
+   */
+  private static cleanup() {
+    this.zeroconf.stop();
+    this.zeroconf.removeAllListeners('resolved');
+    this.zeroconf.removeAllListeners('error');
+    this.zeroconf.removeAllListeners('found');
+    this.zeroconf.removeAllListeners('update');
+  }
+
+  /**
    * SCAN mDNS (LAN)
    * Recherche le backend NestJS diffusant le service '_medical-api._tcp.local'.
    */
@@ -32,18 +43,15 @@ export class MDNSScannerService {
 
     return new Promise((resolve, reject) => {
       let isResolved = false;
-      const timeoutSecs = 5;
+      const timeoutSecs = 8; // Augmenté à 8s pour plus de fiabilité sur Wi-Fi instable
 
-      this.zeroconf.removeAllListeners('resolved');
-      this.zeroconf.removeAllListeners('error');
+      this.cleanup(); // Nettoyage préventif
 
-      // Timer de Fallback (Si le routeur bloque le multicast mDNS ou que le serveur est éteint)
+      // Timer de Fallback
       const scanTimeout = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
-          this.zeroconf.stop();
-          this.zeroconf.removeAllListeners('resolved');
-          this.zeroconf.removeAllListeners('error');
+          this.cleanup();
           store.enableManualFallback();
           reject(new Error(`Timeout de ${timeoutSecs}s atteint lors du scan mDNS.`));
         }
@@ -53,40 +61,41 @@ export class MDNSScannerService {
       this.zeroconf.on('resolved', (service: any) => {
         if (isResolved) return;
 
-        // Guard clause contre les payloads malformés renvoyés par les modules natifs
-        if (!service || !Array.isArray(service.addresses)) {
-          console.warn('[mDNS Scanner] Payload service ignoré (malformé):', service);
+        // Guard clause contre les payloads malformés
+        if (!service || !Array.isArray(service.addresses) || service.addresses.length === 0) {
+          console.warn('[mDNS Scanner] Payload service ignoré (malformé ou sans IP):', service);
           return;
         }
 
-        // On vérifie le type de service pour ignorer les imprimantes et les Apple TV
-        if (service.type === 'medical-api' && service.addresses.length > 0) {
+        // On vérifie le type de service (Guard contre name undefined)
+        const hasMedicalName = service.name && service.name.includes('medical-api');
+        const hasMedicalType = service.type && service.type.includes('medical-api');
+
+        if (hasMedicalName || hasMedicalType) {
            isResolved = true;
            clearTimeout(scanTimeout);
-           this.zeroconf.stop();
-           this.zeroconf.removeAllListeners('resolved');
-           this.zeroconf.removeAllListeners('error');
+           this.cleanup();
 
-           const ip = service.addresses[0];
-           const port = service.port;
+           // Bug Fix: Préférer IPv4 (format X.X.X.X) sur IPv6 pour la compatibilité NestJS/Axios par défaut
+           const ipv4 = service.addresses.find((addr: string) => addr.includes('.') && !addr.includes(':'));
+           const ip = ipv4 || service.addresses[0];
+           
+           const port = service.port || 3000;
+           // En local résilient, on tente HTTP car le certificat auto-signé HTTPS 
+           // peut bloquer les requêtes mobiles sans configuration SSL complexe.
            const fullUrl = `http://${ip}:${port}`;
 
-           resolve({
-             ip,
-             port,
-             fullUrl
-           });
+           console.log(`[mDNS Scanner] Serveur local détecté: ${fullUrl}`);
+           resolve({ ip, port, fullUrl });
         }
       });
 
-      // Erreurs natives (Permissions réseau manquantes sur iOS/Android)
+      // Erreurs natives
       this.zeroconf.on('error', (err: Error | string) => {
         if (!isResolved) {
            isResolved = true;
            clearTimeout(scanTimeout);
-           this.zeroconf.stop();
-           this.zeroconf.removeAllListeners('resolved');
-           this.zeroconf.removeAllListeners('error');
+           this.cleanup();
            console.error('[mDNS Scanner] Erreur ZeroConf native:', err);
            store.enableManualFallback();
            reject(new Error(`Erreur du scanner réseau: ${err}`));

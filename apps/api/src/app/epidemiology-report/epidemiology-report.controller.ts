@@ -30,7 +30,7 @@ export class EpidemiologyReportController {
     @Req() req: AuthenticatedRequest,
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
-  ) {
+  ): Promise<unknown> {
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // default last 30 days
     const end = endDate ? new Date(endDate) : new Date();
 

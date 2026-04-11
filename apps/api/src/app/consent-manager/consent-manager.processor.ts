@@ -17,7 +17,7 @@ export class ConsentManagerProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<RevokeConsentJobPayload, any, string>): Promise<any> {
+  async process(job: Job<RevokeConsentJobPayload, unknown, string>): Promise<{ success: boolean; recordsUpdatedCount: number } | unknown> {
     const { patientId, userId, ipAddress } = job.data;
     
     this.logger.log(`[ConsentManager Worker] Démarrage de la révocation asynchrone pour le patient: ${patientId}`);

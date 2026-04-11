@@ -1,7 +1,15 @@
 import { Controller, Post, Get, Body, Param, UseGuards } from '@nestjs/common';
-import { WhisperService } from './whisper.service';
+import { WhisperService, WhisperTask } from './whisper.service';
 import { AuthGuard } from '@nestjs/passport';
 import { AuditLog } from '../audit/audit.decorator';
+
+type SubmitTranscriptionResponse = 
+  | { error: string }
+  | { message: string; taskId: string };
+
+type TranscriptionStatusResponse =
+  | { error: string }
+  | WhisperTask;
 
 @Controller('whisper')
 @UseGuards(AuthGuard('jwt'))
@@ -10,7 +18,7 @@ export class WhisperController {
 
   @Post('transcribe')
   @AuditLog('AI_DICTATION_SUBMIT')
-  async submitAudioForTranscription(@Body('filePath') filePath: string) {
+  async submitAudioForTranscription(@Body('filePath') filePath: string): Promise<SubmitTranscriptionResponse> {
     if (!filePath) {
       return { error: 'Chemin du fichier audio requis.' };
     }
@@ -25,7 +33,7 @@ export class WhisperController {
   }
 
   @Get('status/:taskId')
-  async getTranscriptionStatus(@Param('taskId') taskId: string) {
+  async getTranscriptionStatus(@Param('taskId') taskId: string): Promise<TranscriptionStatusResponse> {
     const task = this.whisperService.getTaskStatus(taskId);
     if (!task) {
       return { error: 'Tâche introuvable' };

@@ -85,9 +85,9 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('mock-jwt-token');
       expect(result.refreshToken).toBeDefined();
 
-      // Check encryption format (iv:hex)
+      // Check encryption format (iv:authTag:encrypted)
       const parts = result.refreshToken.split(':');
-      expect(parts.length).toBe(2);
+      expect(parts.length).toBe(3);
     });
   });
 
@@ -99,11 +99,12 @@ describe('AuthService', () => {
         .createHash('sha256')
         .update(process.env.TOKEN_ENCRYPTION_KEY!)
         .digest();
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', secret, iv);
       let encrypted = cipher.update(rawToken, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      const encryptedToken = iv.toString('hex') + ':' + encrypted;
+      const authTag = cipher.getAuthTag().toString('hex');
+      const encryptedToken = iv.toString('hex') + ':' + authTag + ':' + encrypted;
 
       await service.logout(encryptedToken);
 
@@ -120,11 +121,12 @@ describe('AuthService', () => {
         .createHash('sha256')
         .update(process.env.TOKEN_ENCRYPTION_KEY!)
         .digest();
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', secret, iv);
       let encrypted = cipher.update(rawToken, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      const encryptedToken = iv.toString('hex') + ':' + encrypted;
+      const authTag = cipher.getAuthTag().toString('hex');
+      const encryptedToken = iv.toString('hex') + ':' + authTag + ':' + encrypted;
 
       const isValid = await service.isRefreshTokenValid(encryptedToken);
 
@@ -138,11 +140,12 @@ describe('AuthService', () => {
         .createHash('sha256')
         .update(process.env.TOKEN_ENCRYPTION_KEY!)
         .digest();
-      const iv = crypto.randomBytes(16);
-      const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', secret, iv);
       let encrypted = cipher.update(rawToken, 'utf8', 'hex');
       encrypted += cipher.final('hex');
-      const encryptedToken = iv.toString('hex') + ':' + encrypted;
+      const authTag = cipher.getAuthTag().toString('hex');
+      const encryptedToken = iv.toString('hex') + ':' + authTag + ':' + encrypted;
 
       const isValid = await service.isRefreshTokenValid(encryptedToken);
 

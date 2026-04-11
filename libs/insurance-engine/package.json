@@ -2,7 +2,6 @@
   "name": "@systeme-sante/insurance-engine",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +15,16 @@
     }
   },
   "nx": {
-    "name": "insurance-engine"
+    "name": "insurance-engine",
+    "targets": {
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["libs/insurance-engine/**/*.ts"]
+        }
+      }
+    }
   },
   "dependencies": {
     "tslib": "^2.3.0"

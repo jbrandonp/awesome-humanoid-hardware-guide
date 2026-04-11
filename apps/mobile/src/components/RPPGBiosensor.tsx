@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
+// @ts-ignore
 import { CameraView, useCameraPermissions } from "expo-camera";
 
 export function RPPGBiosensor() {

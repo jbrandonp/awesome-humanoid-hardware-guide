@@ -20,28 +20,23 @@ export interface MaskableObject {
 
 @Injectable()
 export class PhiMaskingInterceptor implements NestInterceptor {
+  // Roles that are ALLOWED to see full PHI
+  private readonly clinicalRoles = ['DOCTOR', 'NURSE', 'ADMIN', 'LAB_TECH', 'PHARMACIST'];
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const user = request.user;
 
-    // Apply masking only if the user has the RECEPTIONIST role
-    if (user && user.role === 'RECEPTIONIST') {
+    // SECURE FIX: Restrictive by default. If role is NOT clinical, apply masking.
+    const isClinical = user && this.clinicalRoles.includes(user.role);
+
+    if (!isClinical) {
       return next.handle().pipe(
         map((data: unknown) => this.maskData(data))
       );
     }
 
     return next.handle();
-  }
-
-  private isPatient(obj: MaskableObject): boolean {
-    // schema.prisma Patient has: firstName, lastName, dateOfBirth
-    return 'firstName' in obj && 'lastName' in obj && 'dateOfBirth' in obj;
-  }
-
-  private isClinicalRecord(obj: MaskableObject): boolean {
-    // clinical-record.schema.ts has: patientId, specialty, data
-    return 'patientId' in obj && 'specialty' in obj && 'data' in obj;
   }
 
   private maskData(data: unknown): unknown {
@@ -54,14 +49,11 @@ export class PhiMaskingInterceptor implements NestInterceptor {
     }
 
     if (typeof data === 'object') {
-      if (data instanceof Date) {
-        return data;
-      }
-      if (Buffer.isBuffer(data)) {
+      if (data instanceof Date || Buffer.isBuffer(data)) {
         return data;
       }
 
-      // Handle Mongoose Documents or similar objects with toJSON safely without 'any'
+      // Safe plain object conversion
       let plainObj: Record<string, unknown> = {};
       if ('toJSON' in data && typeof data.toJSON === 'function') {
         const jsonResult = data.toJSON();
@@ -72,28 +64,43 @@ export class PhiMaskingInterceptor implements NestInterceptor {
         plainObj = data as Record<string, unknown>;
       }
 
+      // STRUCTURAL CHECKS
+      const isPatient = 'firstName' in plainObj && 'lastName' in plainObj && 'dateOfBirth' in plainObj;
+      const isClinicalRecord = 'patientId' in plainObj && 'specialty' in plainObj && ('data' in plainObj || 'clinicalDetails' in plainObj);
+
+      if (!isPatient && !isClinicalRecord) {
+        // Recursively check children but don't apply field-based masking to this object itself
+        const result: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(plainObj)) {
+          result[key] = this.maskData(value);
+        }
+        return result;
+      }
+
       const maskedObj: Record<string, unknown> = {};
       
-      const isPat = this.isPatient(plainObj);
-      const isClin = this.isClinicalRecord(plainObj);
-
       for (const [key, value] of Object.entries(plainObj)) {
-        // Mask phone number if it's a Patient (or just any phone number to be safe, but we restrict it to Patient here if needed, 
-        // actually phone might be on Patient or just returned. Let's mask phone if isPat is true)
-        if (isPat && (key === 'phone' || key === 'phoneNumber')) {
+        const lowerKey = key.toLowerCase();
+        
+        // Field-based masking (Model-agnostic for better security)
+        if (lowerKey.includes('phone') || lowerKey.includes('contact')) {
           maskedObj[key] = this.maskPhoneNumber(value);
-        } else if (isClin && (key === 'data' || key === 'notes' || key === 'clinicalDetails' || key === 'viralLoad')) {
-          // Masquer les détails cliniques pour un ClinicalRecord
+        } else if (
+          lowerKey === 'data' || 
+          lowerKey === 'notes' || 
+          lowerKey === 'clinicaldetails' || 
+          lowerKey === 'viralload' ||
+          lowerKey === 'diagnosis' ||
+          lowerKey === 'prescription'
+        ) {
           maskedObj[key] = '*** MASKED ***';
-        } else {
-          // Keep other properties visible (like appointment time)
+        } else if (lowerKey === 'email') {
+          maskedObj[key] = '***@***';
+        } else if (typeof value === 'object') {
           maskedObj[key] = this.maskData(value);
+        } else {
+          maskedObj[key] = value;
         }
-      }
-      
-      // Re-apply the original prototype (useful for Prisma or other custom classes) if it's not a plain object
-      if (!('toJSON' in data && typeof data.toJSON === 'function')) {
-        Object.setPrototypeOf(maskedObj, Object.getPrototypeOf(data));
       }
 
       return maskedObj;

@@ -3,6 +3,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
 import { randomUUID } from 'crypto';
 
+interface AnonymizedRecord {
+  anonymousId: string;
+  isAnonymized: boolean;
+  data?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
 @Injectable()
 export class PeerConsultService {
   private readonly logger = new Logger(PeerConsultService.name);
@@ -16,7 +23,7 @@ export class PeerConsultService {
    * Anonymisation stricte (Zero-PHI) d'un dossier MongoDB pour un second avis
    * Clone le dossier et masque toutes les données identifiantes.
    */
-  anonymizeClinicalRecord(record: any): any {
+  anonymizeClinicalRecord(record: unknown): AnonymizedRecord {
     // Clonage profond pour éviter la mutation par référence
     const clonedRecord = JSON.parse(JSON.stringify(record));
 
@@ -51,7 +58,7 @@ export class PeerConsultService {
     specialtyTarget: string,
     message: string,
     recordId: string,
-  ) {
+  ): Promise<{ status: string; anonymousId: string; message: string }> {
     this.logger.log(
       `Médecin ${doctorId} demande un avis en ${specialtyTarget} pour le dossier ${recordId}`,
     );
@@ -72,12 +79,9 @@ export class PeerConsultService {
       );
     }
 
-    // 2. Récupération du dossier clinique (MongoDB)
-    const rawRecords =
-      await this.clinicalRecordService.getPatientRecords(patientId);
-    const targetRecord = rawRecords.find(
-      (r) => r.id === recordId || r._id.toString() === recordId,
-    );
+    // 2. Récupération du dossier clinique (MongoDB) - OPTIMIZED: Fetch by ID directly
+    const targetRecord =
+      await this.clinicalRecordService.getPatientRecordById(recordId);
 
     if (!targetRecord) {
       throw new ForbiddenException('Dossier clinique introuvable.');

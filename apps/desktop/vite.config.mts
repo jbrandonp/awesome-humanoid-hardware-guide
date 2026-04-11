@@ -14,6 +14,9 @@ export default defineConfig(() => ({
     host: 'localhost',
   },
   plugins: [react()],
+  optimizeDeps: {
+    include: ['@reduxjs/toolkit']
+  },
   // Uncomment this if you are using workers.
   // worker: {
   //  plugins: [],

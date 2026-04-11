@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z, ZodError } from 'zod';
 import { PipeTransform, Injectable, ArgumentMetadata, BadRequestException } from '@nestjs/common';
 
 export const DrugInteractionCheckSchema = z.object({
@@ -16,15 +16,22 @@ export type DrugInteractionOverrideDto = z.infer<typeof DrugInteractionOverrideS
 
 @Injectable()
 export class ZodValidationPipe implements PipeTransform {
-  constructor(private schema: z.ZodSchema<any>) {}
+  constructor(private schema: z.ZodSchema<unknown>) {}
 
-  transform(value: any, metadata: ArgumentMetadata) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    transform(value: unknown, _metadata: ArgumentMetadata): unknown {
     try {
       return this.schema.parse(value);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error instanceof ZodError) {
+        throw new BadRequestException({
+          message: 'Validation failed',
+          errors: error.issues,
+        });
+      }
       throw new BadRequestException({
         message: 'Validation failed',
-        errors: error.issues,
+        errors: [],
       });
     }
   }

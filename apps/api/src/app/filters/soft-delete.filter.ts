@@ -20,7 +20,7 @@ import { map } from 'rxjs/operators';
 
 @Injectable()
 export class SoftDeleteFilter implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest();
     
     // Only apply to GET requests
@@ -33,7 +33,7 @@ export class SoftDeleteFilter implements NestInterceptor {
     );
   }
 
-  private removeSoftDeleted(data: any): any {
+  private removeSoftDeleted(data: unknown): unknown {
     if (!data) return data;
 
     if (Array.isArray(data)) {
@@ -44,7 +44,8 @@ export class SoftDeleteFilter implements NestInterceptor {
     }
 
     if (typeof data === 'object' && !(data instanceof Date)) {
-      if (this.isSoftDeleted(data)) {
+      const obj = data as Record<string, unknown>;
+      if (this.isSoftDeleted(obj)) {
         return null;
       }
       
@@ -62,7 +63,7 @@ export class SoftDeleteFilter implements NestInterceptor {
       for (const key of Object.getOwnPropertyNames(data)) {
         const descriptor = Object.getOwnPropertyDescriptor(data, key);
         if (descriptor && descriptor.enumerable) {
-          cleanObject[key] = this.removeSoftDeleted(data[key]);
+          cleanObject[key] = this.removeSoftDeleted(obj[key]);
         } else if (descriptor) {
           Object.defineProperty(cleanObject, key, descriptor);
         }
@@ -73,9 +74,10 @@ export class SoftDeleteFilter implements NestInterceptor {
     return data;
   }
 
-  private isSoftDeleted(obj: any): boolean {
+  private isSoftDeleted(obj: unknown): boolean {
     if (!obj || typeof obj !== 'object') return false;
-    return obj.deletedAt !== null && obj.deletedAt !== undefined ||
-           obj.deleted_at !== null && obj.deleted_at !== undefined;
+    const record = obj as Record<string, unknown>;
+    return (record.deletedAt !== null && record.deletedAt !== undefined) ||
+           (record.deleted_at !== null && record.deleted_at !== undefined);
   }
 }

@@ -12,7 +12,7 @@ export class AbdmWebhookGateway {
 
   @Post('users/auth/on-init')
   @HttpCode(HttpStatus.ACCEPTED)
-  async onAuthInit(@Body() payload: any) {
+  async onAuthInit(@Body() payload: unknown): Promise<{ status: string }> {
     this.logger.log(`Received ABDM callback: v0.5/users/auth/on-init`);
     await this.abdmQueue.add('process-auth-on-init', payload, {
       attempts: 5,

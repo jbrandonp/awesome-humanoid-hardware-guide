@@ -74,6 +74,13 @@
             "buildTarget": "@systeme-sante/api:build:production"
           }
         }
+      },
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["apps/api/**/*.ts"]
+        }
       }
     }
   },

@@ -1,53 +1,56 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as Y from 'yjs';
 
 @Injectable()
 export class CrdtService {
+  private readonly logger = new Logger(CrdtService.name);
+
   /**
    * Computes the State Vector for a given document buffer.
-   * This vector represents the current state (clock) of the document.
-   *
-   * @param docBuffer The binary state of the Yjs document (Uint8Array or Buffer)
-   * @returns The state vector as a Uint8Array
    */
   getStateVector(docBuffer: Uint8Array | Buffer | null): Uint8Array {
-    const doc = new Y.Doc();
-    if (docBuffer) {
-      Y.applyUpdate(doc, docBuffer);
+    try {
+      const doc = new Y.Doc();
+      if (docBuffer) {
+        Y.applyUpdate(doc, new Uint8Array(docBuffer));
+      }
+      return Y.encodeStateVector(doc);
+    } catch (e) {
+      this.logger.error('Failed to compute state vector: Corrupted buffer', e);
+      return new Uint8Array();
     }
-    return Y.encodeStateVector(doc);
   }
 
   /**
    * Computes the differences (delta) between the current document and a target state vector.
-   * This ensures only missing updates are sent over the network.
-   *
-   * @param docBuffer The binary state of the current Yjs document
-   * @param targetStateVector The state vector of the remote client/server
-   * @returns The state update (delta) as a Uint8Array
    */
   getDelta(docBuffer: Uint8Array | Buffer | null, targetStateVector: Uint8Array | Buffer | null): Uint8Array {
-    const doc = new Y.Doc();
-    if (docBuffer) {
-      Y.applyUpdate(doc, docBuffer);
+    try {
+      const doc = new Y.Doc();
+      if (docBuffer) {
+        Y.applyUpdate(doc, new Uint8Array(docBuffer));
+      }
+      const stateVector = targetStateVector ? new Uint8Array(targetStateVector) : undefined;
+      return Y.encodeStateAsUpdate(doc, stateVector);
+    } catch (e) {
+      this.logger.error('Failed to compute delta: Corrupted buffer or state vector', e);
+      return new Uint8Array();
     }
-    const stateVector = targetStateVector ? new Uint8Array(targetStateVector) : undefined;
-    return Y.encodeStateAsUpdate(doc, stateVector);
   }
 
   /**
    * Merges a delta (update) into the given document state and returns the new state.
-   *
-   * @param docBuffer The binary state of the current Yjs document
-   * @param delta The update to apply
-   * @returns The updated binary state of the Yjs document
+   * PERFORMANCE FIX: Uses Y.mergeUpdates directly instead of instantiating Y.Doc.
    */
   mergeDelta(docBuffer: Uint8Array | Buffer | null, delta: Uint8Array | Buffer): Uint8Array {
-    const doc = new Y.Doc();
-    if (docBuffer) {
-      Y.applyUpdate(doc, docBuffer);
+    try {
+      if (!docBuffer) return new Uint8Array(delta);
+      
+      // Efficiently merge binary updates without full document reconstruction
+      return Y.mergeUpdates([new Uint8Array(docBuffer), new Uint8Array(delta)]);
+    } catch (e) {
+      this.logger.error('CRITICAL: CRDT Merge failed. Falling back to latest delta to avoid sync blockage.', e);
+      return new Uint8Array(delta);
     }
-    Y.applyUpdate(doc, delta);
-    return Y.encodeStateAsUpdate(doc);
   }
 }

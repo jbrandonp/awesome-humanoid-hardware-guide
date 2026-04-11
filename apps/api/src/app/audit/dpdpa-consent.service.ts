@@ -58,7 +58,7 @@ export class DpdpaConsentService {
    * OCTROI DE CONSENTEMENT (GRANT)
    * Enregistre l'autorisation temporaire donnée par le patient via OTP ou QR Scan.
    */
-  async grantConsent(payload: ConsentGrantPayload) {
+  async grantConsent(payload: ConsentGrantPayload): Promise<unknown> {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + payload.durationMinutes);
 

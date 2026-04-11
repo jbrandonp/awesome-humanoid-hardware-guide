@@ -6,6 +6,18 @@ import { Role } from '@prisma/client';
 import { AuthService } from './auth.service';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 
+interface LoginDto {
+  email?: string;
+  password?: string;
+}
+
+interface RegisterStaffDto {
+  email: string;
+  role: Role;
+  firstName?: string;
+  lastName?: string;
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -17,7 +29,9 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requêtes par minute
   @Post('login')
-  async login(@Body() body: any) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async login(@Body() _body: LoginDto): Promise<unknown> {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     // NOTE: In a real scenario, validate email/password here.
     // For now we assume they are valid and fetch the user (or fake one)
     const userId = '123e4567-e89b-12d3-a456-426614174000';
@@ -28,7 +42,7 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('request-otp')
-  async requestOtp(@Body() body: { phone: string }) {
+  async requestOtp(@Body() body: { phone: string }): Promise<unknown> {
     if (!body.phone) {
       throw new Error('Phone number is required');
     }
@@ -38,7 +52,7 @@ export class AuthController {
   @UseGuards(ThrottlerGuard)
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('verify-otp')
-  async verifyOtp(@Body() body: { phone: string; otp: string }) {
+  async verifyOtp(@Body() body: { phone: string; otp: string }): Promise<unknown> {
     if (!body.phone || !body.otp) {
       throw new Error('Phone number and OTP are required');
     }
@@ -50,7 +64,7 @@ export class AuthController {
    */
   @UseGuards(AuthGuard('jwt'))
   @Post('logout')
-  async logout(@Body('refreshToken') refreshToken: string) {
+  async logout(@Body('refreshToken') refreshToken: string): Promise<{ message: string }> {
     await this.authService.logout(refreshToken);
     return { message: 'Logged out successfully.' };
   }
@@ -62,7 +76,7 @@ export class AuthController {
   @Post('users')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.ADMIN)
-  async registerNewStaff(@Body() userData: any) {
+  async registerNewStaff(@Body() userData: RegisterStaffDto): Promise<{ message: string; data: RegisterStaffDto }> {
     // Cette route rejettera tout User n'ayant pas le rôle "ADMIN" (code HTTP 403 Forbidden).
     // Dans une DB réelle, on chiffrerait le mot de passe avec bcrypt ici.
     return {
@@ -77,7 +91,7 @@ export class AuthController {
   @Get('dashboard-stats')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.DOCTOR, Role.NURSE)
-  async getDashboardStats() {
+  async getDashboardStats(): Promise<{ patientsSeen: number; pendingConsults: number }> {
      return { patientsSeen: 12, pendingConsults: 4 };
   }
 }

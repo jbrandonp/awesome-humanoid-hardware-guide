@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProcurementService {
@@ -7,7 +8,7 @@ export class ProcurementService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getDrafts() {
+  async getDrafts(): Promise<unknown> {
     return this.prisma.purchaseOrder.findMany({
       where: {
         status: 'DRAFT',
@@ -26,7 +27,7 @@ export class ProcurementService {
     });
   }
 
-  async approveDraft(id: string, updates?: { quantity?: number; supplierId?: string }) {
+  async approveDraft(id: string, updates?: { quantity?: number; supplierId?: string }): Promise<unknown> {
     this.logger.log(`[P2P] Approbation de la commande ${id}...`);
 
     return this.prisma.$transaction(async (tx) => {
@@ -43,10 +44,10 @@ export class ProcurementService {
         throw new Error(`La commande n'est plus au statut DRAFT (${draft.status}).`);
       }
 
-      const updateData: any = { status: 'APPROVED' };
+      const updateData: Prisma.PurchaseOrderUpdateInput = { status: 'APPROVED' };
 
       if (updates?.supplierId && updates.supplierId !== draft.supplierId) {
-        updateData.supplierId = updates.supplierId;
+        updateData.supplier = { connect: { id: updates.supplierId } };
       }
 
       if (updates?.quantity && draft.items.length > 0) {

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, AnyBulkWriteOperation } from 'mongoose';
 import { ClinicalRecord, ClinicalRecordDocument } from './clinical-record.schema';
 
 @Injectable()
@@ -12,7 +12,7 @@ export class ClinicalRecordService {
     @InjectModel(ClinicalRecord.name) private recordModel: Model<ClinicalRecordDocument>,
   ) { }
 
-  async createSpecialtyRecord(patientId: string, specialty: string, formData: any) {
+  async createSpecialtyRecord(patientId: string, specialty: string, formData: unknown): Promise<ClinicalRecordDocument> {
     this.logger.log(`Création d'un dossier ${specialty} dynamique pour le patient ${patientId}`);
     const record = new this.recordModel({
       patientId,
@@ -22,13 +22,17 @@ export class ClinicalRecordService {
     return record.save();
   }
 
-  async getPatientRecords(patientId: string) {
+  async getPatientRecords(patientId: string): Promise<ClinicalRecordDocument[]> {
     // Exclusion des tombstones (deletedAt: { $exists: false })
     return this.recordModel.find({ patientId, deletedAt: { $exists: false } }).exec();
   }
 
+  async getPatientRecordById(recordId: string): Promise<ClinicalRecordDocument | null> {
+    return this.recordModel.findById(recordId).exec();
+  }
+
   // Tombstone Model
-  async deleteRecord(recordId: string) {
+  async deleteRecord(recordId: string): Promise<ClinicalRecordDocument | null> {
     this.logger.log(`Suppression logique (Tombstone) du record MongoDB ${recordId}`);
     return this.recordModel.findByIdAndUpdate(recordId, {
       deletedAt: new Date(),
@@ -46,50 +50,59 @@ export class ClinicalRecordService {
   // DPDPA Async Anonymization (Soft Delete & Pseudonymization)
   async anonymizePatientRecords(patientId: string): Promise<number> {
     this.logger.warn(`[DPDPA] ANONYMISATION ASYNCHRONE des dossiers dynamiques MongoDB pour le patient ${patientId}`);
-    const records = await this.recordModel.find({ patientId }).exec();
+    
+    // Pseudonymization of the patientId itself for the link
+    const pseudoId = `PSEUDO-${randomUUID()}`;
     let updatedCount = 0;
-    const operations = [];
+    const batchSize = 100;
+    let operations: AnyBulkWriteOperation[] = [];
 
-    for (const record of records) {
+    // Use cursor for memory efficiency with large datasets
+    const cursor = this.recordModel.find({ patientId }).cursor();
+
+    for (let record = await cursor.next(); record != null; record = await cursor.next()) {
       if (!record.data) continue;
 
-      let hasModifications = false;
-      const dataObj = record.data;
-
-      // Anonymisation des données dynamiques (noms et dates)
+      const dataObj = JSON.parse(JSON.stringify(record.data)); // Deep clone to avoid mutation issues
+      // Anonymization of dynamic data (names and dates)
       for (const key of Object.keys(dataObj)) {
-        if (key.toLowerCase().includes('name') || key.toLowerCase().includes('firstname') || key.toLowerCase().includes('lastname')) {
-          dataObj[key] = `ANON-${randomUUID()}`;
-          hasModifications = true;
-        } else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('dob') || key.toLowerCase().includes('birth')) {
+        const lowerKey = key.toLowerCase();
+        if (lowerKey.includes('name') || lowerKey.includes('firstname') || lowerKey.includes('lastname') || lowerKey.includes('contact') || lowerKey.includes('phone') || lowerKey.includes('email')) {
+          dataObj[key] = `ANON-${randomUUID().substring(0, 8)}`;
+        } else if (lowerKey.includes('date') || lowerKey.includes('dob') || lowerKey.includes('birth')) {
           const dateVal = new Date(dataObj[key] as string | number);
           if (!isNaN(dateVal.getTime())) {
-            dateVal.setDate(dateVal.getDate() + 10); // Shift date par ex de 10 jours
+            // Strategic Date Shifting (DPDPA compliance)
+            dateVal.setFullYear(dateVal.getFullYear() - 1); 
             dataObj[key] = dateVal.toISOString();
-            hasModifications = true;
           }
         }
       }
 
-      if (hasModifications) {
-        operations.push({
-          updateOne: {
-            filter: { _id: record._id },
-            update: {
-              $set: {
-                data: dataObj,
-                status: 'deleted',
-                deletedAt: new Date()
-              }
+      operations.push({
+        updateOne: {
+          filter: { _id: record._id },
+          update: {
+            $set: {
+              patientId: pseudoId, // Disconnect from original patientId
+              data: dataObj,
+              status: 'deleted',
+              deletedAt: new Date(),
+              isAnonymized: true
             }
           }
-        });
-        updatedCount++;
+        }
+      });
+      updatedCount++;
+
+      if (operations.length >= batchSize) {
+        await this.recordModel.bulkWrite(operations);
+        operations = [];
       }
     }
 
     if (operations.length > 0) {
-      await this.recordModel.bulkWrite(operations as any);
+      await this.recordModel.bulkWrite(operations);
     }
 
     return updatedCount;

@@ -16,7 +16,7 @@ export class AuthService {
     this.validateSecrets();
   }
 
-  private validateSecrets() {
+  private validateSecrets(): void {
     const requiredSecrets = [
       'JWT_SECRET',
       'JWT_REFRESH_SECRET',
@@ -42,7 +42,7 @@ export class AuthService {
   /**
    * Generates a new Access Token (15 mins) and an encrypted Refresh Token (7 days).
    */
-  async login(userId: string, role: string) {
+  async login(userId: string, role: string): Promise<{ accessToken: string; refreshToken: string }> {
     const payload = { sub: userId, role };
 
     if (!process.env.JWT_SECRET) {
@@ -81,12 +81,19 @@ export class AuthService {
   /**
    * Logs out the user by blacklisting the Refresh Token.
    */
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string): Promise<void> {
     if (!refreshToken) return;
+
+    interface JwtDecoded {
+      sub: string;
+      role: string;
+      exp?: number;
+      iat?: number;
+    }
 
     try {
       const decrypted = this.decryptToken(refreshToken);
-      const decoded = this.jwtService.decode(decrypted) as any;
+      const decoded = this.jwtService.decode(decrypted) as JwtDecoded | null;
       if (decoded && decoded.exp) {
         const expiresInSeconds = decoded.exp - Math.floor(Date.now() / 1000);
         if (expiresInSeconds > 0) {
@@ -96,7 +103,8 @@ export class AuthService {
           );
         }
       }
-    } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       // Invalid token format, ignore
     }
   }
@@ -113,12 +121,13 @@ export class AuthService {
         secret: process.env.JWT_REFRESH_SECRET,
       });
       return true;
-    } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_e) {
       return false;
     }
   }
 
-  async requestOtp(phone: string) {
+  async requestOtp(phone: string): Promise<{ message: string }> {
     const patient = await this.prisma.patient.findUnique({
       where: { phone },
     });
@@ -136,13 +145,14 @@ export class AuthService {
       data: { otp, otpExpiresAt },
     });
 
-    // In a real scenario, integrate with SMS/WhatsApp provider here
-    this.logger.log(`[OTP] Un OTP a été généré et envoyé au numéro: ${phone}`);
+    // HIPAA/DPDPA Compliance: Mask PHI in logs
+    const maskedPhone = phone.replace(/.(?=.{4})/g, '*');
+    this.logger.log(`[OTP] Un OTP a été généré et envoyé au numéro: ${maskedPhone}`);
 
     return { message: 'OTP envoyé avec succès.' };
   }
 
-  async verifyOtp(phone: string, otp: string) {
+  async verifyOtp(phone: string, otp: string): Promise<{ accessToken: string; refreshToken: string }> {
     const patient = await this.prisma.patient.findUnique({
       where: { phone },
     });
@@ -178,22 +188,33 @@ export class AuthService {
 
   private encryptToken(token: string): string {
     const secret = this.getEncryptionSecret();
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', secret, iv);
+    const iv = crypto.randomBytes(12); // GCM standard IV size
+    const cipher = crypto.createCipheriv('aes-256-gcm', secret, iv);
+    
     let encrypted = cipher.update(token, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return iv.toString('hex') + ':' + encrypted;
+    
+    const authTag = cipher.getAuthTag().toString('hex');
+    
+    // Format: iv:authTag:encrypted
+    return `${iv.toString('hex')}:${authTag}:${encrypted}`;
   }
 
   private decryptToken(encryptedData: string): string {
     const parts = encryptedData.split(':');
-    if (parts.length !== 2) throw new Error('Invalid encrypted token format');
+    if (parts.length !== 3) throw new Error('Invalid encrypted token format (Expected IV:AuthTag:Ciphertext)');
+    
     const secret = this.getEncryptionSecret();
     const iv = Buffer.from(parts[0], 'hex');
-    const encryptedText = parts[1];
-    const decipher = crypto.createDecipheriv('aes-256-cbc', secret, iv);
+    const authTag = Buffer.from(parts[1], 'hex');
+    const encryptedText = parts[2];
+    
+    const decipher = crypto.createDecipheriv('aes-256-gcm', secret, iv);
+    decipher.setAuthTag(authTag);
+    
     let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
+    
     return decrypted;
   }
 }

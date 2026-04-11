@@ -36,8 +36,8 @@ export function useKioskConnection(serverUrl: string) {
   useEffect(() => {
     if (!socket) return;
 
-    let reconnectTimer: NodeJS.Timeout | null = null;
     let heartbeatInterval: NodeJS.Timeout | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     const connect = () => {
       reconnectTimer = null;
@@ -56,6 +56,11 @@ export function useKioskConnection(serverUrl: string) {
     };
 
     const startHeartbeat = () => {
+      // Prevent Ping Storm: Always clear existing interval before creating a new one
+      if (heartbeatInterval) {
+        clearInterval(heartbeatInterval);
+      }
+      
       // Ping toutes les 5 secondes pour détecter les déconnexions fantômes
       heartbeatInterval = setInterval(() => {
         if (socket.connected) {

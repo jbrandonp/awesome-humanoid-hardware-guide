@@ -1,4 +1,12 @@
-const forge = require('node-forge');
+let forge;
+try {
+  forge = require('node-forge');
+} catch (e) {
+  console.error('Error: "node-forge" dependency is missing.');
+  console.log('Please run: npm install --save-dev node-forge');
+  process.exit(1);
+}
+
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
@@ -19,8 +27,8 @@ function getLocalIpAddress() {
 const localIp = getLocalIpAddress();
 console.log(`Local IP Address detected: ${localIp}`);
 
-// Ensure certs directory exists
-const certsDir = path.join(__dirname, '..', '..', 'certs');
+// Ensure certs directory exists at project root
+const certsDir = path.resolve(process.cwd(), 'certs');
 if (!fs.existsSync(certsDir)) {
   fs.mkdirSync(certsDir, { recursive: true });
 }
@@ -110,6 +118,14 @@ serverCert.setExtensions([
       {
         type: 7, // IP address
         ip: localIp
+      },
+      {
+        type: 7,
+        ip: '127.0.0.1'
+      },
+      {
+        type: 2, // DNS name
+        value: 'localhost'
       }
     ]
   }

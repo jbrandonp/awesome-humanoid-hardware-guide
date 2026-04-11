@@ -76,6 +76,7 @@ export class FhirService {
         fullUrl: `urn:uuid:${patient.id}`,
         resource: this.fhirMapper.toFhirPatient(patient),
       });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (parseError: unknown) {
       throw new UnprocessableEntityException(
         "Données d'identité du patient corrompues.",
@@ -184,7 +185,7 @@ export class FhirService {
    * POST /fhir/Patient
    * Ingress: Crée un patient via un payload FHIR
    */
-  async ingestPatient(fhirPayload: any): Promise<FhirPatient> {
+  async ingestPatient(fhirPayload: unknown): Promise<FhirPatient> {
     const parsedData = FhirPatientSchema.parse(fhirPayload); // Lève une erreur Zod en cas d'échec
 
     const dbPatientData = this.fhirMapper.fromFhirPatient(parsedData);
@@ -254,7 +255,7 @@ export class FhirService {
    * POST /fhir/Observation
    * Ingress: Sauvegarde une Observation FHIR en base
    */
-  async ingestObservation(fhirPayload: any): Promise<FhirObservation> {
+  async ingestObservation(fhirPayload: unknown): Promise<FhirObservation> {
     const parsedData = FhirObservationSchema.parse(fhirPayload);
 
     const dbVitalData = this.fhirMapper.fromFhirObservation(parsedData);

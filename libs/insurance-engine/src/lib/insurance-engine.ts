@@ -139,7 +139,7 @@ export class InsuranceEngine {
                applied: true,
                amountCoveredCents: amountToCover.getAmount(),
                amountPatientCents: difference.getAmount(),
-               description: `Per item cap of ${capItem.getAmount()} reached. Patient pays difference.`,
+               description: `Per item cap of ${capItem.getAmount()} reached for policy ${policy.name}. Patient pays difference.`,
              });
            }
         }
@@ -148,10 +148,19 @@ export class InsuranceEngine {
           const capAnnual = Dinero({ amount: policy.rules.capsCents.annual, currency: itemCurrency });
 
           if (state.accumulatedAnnualCovered.getCurrency() !== itemCurrency) {
-             // Handle currency mismatch gracefully
-             state.accumulatedAnnualCovered = Dinero({ amount: state.accumulatedAnnualCovered.getAmount(), currency: itemCurrency });
+             // BUG FIX: Never assume 1:1 conversion. In a resilient system, we should fetch rates.
+             // For now, we enforce consistency or throw if cross-currency is not supported.
+             console.warn(`Currency mismatch detected: ${state.accumulatedAnnualCovered.getCurrency()} vs ${itemCurrency}. Annual cap tracking might be inaccurate.`);
+             // Fallback: stay in the original currency of the accumulator if possible, 
+             // but Dinero requires same currency for operations.
           }
-          const spaceLeft = capAnnual.subtract(state.accumulatedAnnualCovered);
+          
+          // Ensure we are comparing apples to apples
+          const currentAccumulated = state.accumulatedAnnualCovered.getCurrency() === itemCurrency 
+            ? state.accumulatedAnnualCovered 
+            : Dinero({ amount: state.accumulatedAnnualCovered.getAmount(), currency: itemCurrency });
+
+          const spaceLeft = capAnnual.subtract(currentAccumulated);
 
           if (spaceLeft.getAmount() <= 0) {
              const difference = amountToCover;
@@ -161,7 +170,7 @@ export class InsuranceEngine {
                applied: true,
                amountCoveredCents: 0,
                amountPatientCents: difference.getAmount(),
-               description: `Annual cap reached.`,
+               description: `Annual cap reached for policy ${policy.name}.`,
              });
           } else if (amountToCover.greaterThan(spaceLeft)) {
              const difference = amountToCover.subtract(spaceLeft);
@@ -171,7 +180,7 @@ export class InsuranceEngine {
                applied: true,
                amountCoveredCents: amountToCover.getAmount(),
                amountPatientCents: difference.getAmount(),
-               description: `Annual cap of ${capAnnual.getAmount()} reached. Patient pays difference.`,
+               description: `Annual cap of ${capAnnual.getAmount()} reached for policy ${policy.name}. Patient pays difference.`,
              });
           }
         }

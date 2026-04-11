@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Req, Logger, HttpException, HttpStatus } from '@nestjs/common';
+import type { FastifyRequest } from 'fastify';
 import { ConsentManagerService } from './consent-manager.service';
 
 import { z } from 'zod';
@@ -15,10 +16,10 @@ export class ConsentManagerController {
   constructor(private readonly consentManagerService: ConsentManagerService) {}
 
   @Post('revoke-consent')
-  async revokeConsent(@Body() body: any, @Req() req: any) {
+  async revokeConsent(@Body() body: unknown, @Req() req: FastifyRequest): Promise<{ status: string; message: string; jobId: string }> {
     try {
       const { patientId, userId } = RevokeConsentSchema.parse(body);
-      const ipAddress = req.ip || 'unknown';
+      const ipAddress = (req as { ip?: string }).ip || (req.socket as { remoteAddress?: string })?.remoteAddress || 'unknown';
       
       this.logger.log(`[ConsentManager] Requête de révocation reçue pour le patient ${patientId}`);
       

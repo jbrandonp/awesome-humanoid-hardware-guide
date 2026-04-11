@@ -1,5 +1,16 @@
 {
   "name": "@systeme-sante/kiosk",
   "version": "0.0.1",
-  "private": true
+  "private": true,
+  "nx": {
+    "targets": {
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["apps/kiosk/**/*.{ts,tsx}"]
+        }
+      }
+    }
+  }
 }

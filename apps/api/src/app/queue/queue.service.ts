@@ -94,9 +94,9 @@ export class QueueService {
     await this.auditService.logAudit({
       userId: nurseId,
       patientId: patientId,
-      actionType: 'UPDATE' as any, // Memory constraint: the ActionType enum is not exported by Prisma client in some versions, string literal 'UPDATE' is required
+      actionType: 'UPDATE' as const, // Memory constraint: the ActionType enum is not exported by Prisma client in some versions, string literal 'UPDATE' is required
       resourceId: 'QueueTriage',
-      phiDataAccessed: { overrideReason, oldScore, newScore } as Record<string, any>,
+      phiDataAccessed: { overrideReason, oldScore, newScore } as Record<string, unknown>,
     });
 
     // Re-evaluate criticality triggers based on manual override
@@ -123,7 +123,7 @@ export class QueueService {
     return [...this.queue];
   }
 
-  private sortQueue() {
+   private sortQueue(): void {
     this.queue.sort((a, b) => {
       if (a.esiScore !== b.esiScore) {
         return a.esiScore - b.esiScore; // Ascending: ESI 1 comes before ESI 5

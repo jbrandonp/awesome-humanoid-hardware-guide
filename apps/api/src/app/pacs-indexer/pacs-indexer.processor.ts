@@ -18,7 +18,8 @@ import * as os from 'os';
 import { Readable } from 'stream';
 
 if (!isMainThread) {
-  const dicomParser = require('dicom-parser');
+   // eslint-disable-next-line @typescript-eslint/no-require-imports
+   const dicomParser = require('dicom-parser');
   try {
     const byteArray = new Uint8Array(workerData);
     const dataSet = dicomParser.parseDicom(byteArray);
@@ -66,7 +67,7 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
     super();
   }
 
-  onModuleInit() {
+  onModuleInit(): void {
     const accessKeyId = process.env.S3_ACCESS_KEY;
     const secretAccessKey = process.env.S3_SECRET_KEY;
 
@@ -363,7 +364,8 @@ export class PacsIndexerProcessor extends WorkerHost implements OnModuleInit {
           );
           reject(err);
         });
-      }).catch((_e) => {
+       // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       }).catch((_e) => {
         /* ignore */
       }); // Ignore error and skip thumbnail if tool missing
 

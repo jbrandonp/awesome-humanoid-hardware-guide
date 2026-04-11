@@ -29,9 +29,10 @@ console.log(
 );
 
 try {
-  // This curl will fail intentionally if no server is running or if we set max-time to 1s.
+  // This curl will fail intentionally due to timeout (-m 1) or no server.
+  // FIX: Inject the actual massive payload instead of an empty object to truly test network stress/timeout handling.
   execSync(
-    'curl -m 1 -X POST http://localhost:3000/api/sync -H "Content-Type: application/json" -d "{}"',
+    `curl -m 1 -X POST http://localhost:3000/api/sync -H "Content-Type: application/json" -d '${JSON.stringify(mockPayload)}'`,
     { stdio: 'ignore' },
   );
 } catch (e) {

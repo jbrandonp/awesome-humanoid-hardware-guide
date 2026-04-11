@@ -18,14 +18,14 @@ export class ProcurementController {
 
   @Get('drafts')
   @Roles('PHARMACIST', 'ADMIN')
-  async getDrafts() {
+  async getDrafts(): Promise<unknown> {
     return this.procurementService.getDrafts();
   }
 
   @Put(':id/approve')
   @Roles('PHARMACIST', 'ADMIN')
   @AuditLog('P2P_APPROVE_ORDER')
-  async approveDraft(@Param('id') id: string, @Body() body: any) {
+  async approveDraft(@Param('id') id: string, @Body() body: unknown): Promise<unknown> {
     const updates = ApproveDraftSchema.parse(body);
     return this.procurementService.approveDraft(id, updates);
   }

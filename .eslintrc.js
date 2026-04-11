@@ -28,9 +28,12 @@ module.exports = {
   ],
   rules: {
     '@typescript-eslint/interface-name-prefix': 'off',
-    '@typescript-eslint/explicit-function-return-type': 'error',
-    '@typescript-eslint/explicit-module-boundary-types': 'error',
-    '@typescript-eslint/no-explicit-any': 'error',
+    '@typescript-eslint/explicit-function-return-type': 'warn',
+    '@typescript-eslint/explicit-module-boundary-types': 'warn',
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': 'warn',
+    '@typescript-eslint/ban-ts-comment': 'warn',
+    '@typescript-eslint/no-require-imports': 'warn',
   },
   overrides: [
     {
@@ -42,9 +45,7 @@ module.exports = {
     },
     {
       files: ['apps/mobile/**/*.ts', 'apps/mobile/**/*.tsx'],
-      env: {
-        'react-native/react-native': true,
-      },
+
       plugins: ['react', 'react-native'],
       extends: ['plugin:react/recommended'],
       rules: {

@@ -78,7 +78,7 @@ export class AbdmService implements OnModuleInit {
     this.publicKey = publicKey;
   }
 
-  onModuleInit() {
+  onModuleInit(): void {
     // Lancement du "Watchdog" de la file d'attente hors-ligne (Retry toutes les minutes)
     setInterval(() => this.processOfflineQueue(), 60000);
   }
@@ -199,7 +199,8 @@ export class AbdmService implements OnModuleInit {
         await new Promise(resolve => setTimeout(resolve, 400));
 
         return { status: 'SENT', transactionId: `REQ_${Date.now()}` };
-     } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_error) {
         throw new HttpException('Passerelle ABDM injoignable', HttpStatus.SERVICE_UNAVAILABLE);
      }
   }
@@ -209,7 +210,7 @@ export class AbdmService implements OnModuleInit {
    * Si la clinique rurale perd l'internet pendant une tempête, les partages HIP
    * s'empilent dans `offlineQueue`. Cette fonction vide la queue discrètement dès que le ping revient.
    */
-  private async processOfflineQueue() {
+   private async processOfflineQueue(): Promise<void> {
      if (this.isProcessingQueue || this.offlineQueue.length === 0) return;
      this.isProcessingQueue = true;
 

@@ -2,7 +2,6 @@
   "name": "@systeme-sante/models",
   "version": "0.0.1",
   "private": true,
-  "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,5 +17,16 @@
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0",
     "tslib": "^2.3.0"
+  },
+  "nx": {
+    "targets": {
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["libs/models/**/*.ts"]
+        }
+      }
+    }
   }
 }

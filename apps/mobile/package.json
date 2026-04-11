@@ -39,5 +39,16 @@
   "devDependencies": {
     "@expo/config-plugins": "^55.0.7",
     "patch-package": "^8.0.1"
+  },
+  "nx": {
+    "targets": {
+      "lint": {
+        "executor": "@nx/eslint:lint",
+        "options": {
+          "eslintConfig": ".eslintrc.js",
+          "lintFilePatterns": ["apps/mobile/**/*.{ts,tsx}"]
+        }
+      }
+    }
   }
 }

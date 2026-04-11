@@ -10,7 +10,7 @@ export class AbdmProcessor extends WorkerHost {
     super();
   }
 
-  async process(job: Job<any, any, string>): Promise<any> {
+  async process(job: Job<unknown, unknown, string>): Promise<void> {
     this.logger.log(`Processing ABDM job: ${job.name} (Job ID: ${job.id})`);
 
     try {
@@ -30,7 +30,7 @@ export class AbdmProcessor extends WorkerHost {
     }
   }
 
-  private async processAuthOnInit(data: any) {
+  private async processAuthOnInit(data: unknown): Promise<void> {
     // Process the callback data here. For example, updating the DB, triggering events, etc.
     this.logger.log(`Successfully processed auth on-init payload: ${JSON.stringify(data)}`);
     // Example: await this.abdmService.handleAuthOnInit(data);

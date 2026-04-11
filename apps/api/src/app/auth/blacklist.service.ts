@@ -5,14 +5,14 @@ import Redis from 'ioredis';
 export class BlacklistService implements OnModuleInit, OnModuleDestroy {
   private redisClient!: Redis;
 
-  onModuleInit() {
+  onModuleInit(): void {
     this.redisClient = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
     });
   }
 
-  onModuleDestroy() {
+  onModuleDestroy(): void {
     this.redisClient.disconnect();
   }
 

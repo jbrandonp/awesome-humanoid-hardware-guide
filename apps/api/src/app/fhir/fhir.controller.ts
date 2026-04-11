@@ -19,6 +19,9 @@ import { AuditLog } from '../audit/audit.decorator';
 import type { FastifyReply } from 'fastify';
 import { FhirValidationFilter } from './fhir-validation.filter';
 import { SmartOnFhirGuard, FhirScopes } from './smart-on-fhir.guard';
+import type { FhirPatient, FhirObservation, FhirBundle } from './fhir.mapper';
+
+type AuthenticatedFastifyRequest = FastifyRequest & { user?: { userId: string } };
 
 @Controller('fhir')
 @UseFilters(FhirValidationFilter)
@@ -35,7 +38,7 @@ export class FhirController {
   @UseGuards(AuthGuard('jwt'), SmartOnFhirGuard)
   @FhirScopes('patient/Patient.read', 'patient/Observation.read')
   @AuditLog('FHIR_EXPORT_FULL_RECORD')
-  async exportRecord(@Param('id') id: string) {
+  async exportRecord(@Param('id') id: string): Promise<FhirBundle> {
     return this.fhirService.exportPatientToFhir(id);
   }
 
@@ -45,7 +48,7 @@ export class FhirController {
   @Get('Patient/:id')
   @UseGuards(AuthGuard('jwt'), SmartOnFhirGuard)
   @FhirScopes('patient/Patient.read')
-  async getPatient(@Param('id') id: string) {
+  async getPatient(@Param('id') id: string): Promise<FhirPatient> {
     return this.fhirService.getPatient(id);
   }
 
@@ -55,7 +58,7 @@ export class FhirController {
   @Post('Patient')
   @UseGuards(AuthGuard('jwt'), SmartOnFhirGuard)
   @FhirScopes('patient/Patient.write')
-  async createPatient(@Body() fhirPayload: any) {
+  async createPatient(@Body() fhirPayload: unknown): Promise<FhirPatient> {
     return this.fhirService.ingestPatient(fhirPayload);
   }
 
@@ -69,7 +72,7 @@ export class FhirController {
     @Query('subject') subject: string,
     @Query('skip') skip?: number,
     @Query('take') take?: number,
-  ) {
+  ): Promise<FhirBundle> {
     const skipVal = skip ? Number(skip) : 0;
     const takeVal = take ? Number(take) : 10;
     return this.fhirService.getObservations(subject, skipVal, takeVal);
@@ -81,7 +84,7 @@ export class FhirController {
   @Post('Observation')
   @UseGuards(AuthGuard('jwt'), SmartOnFhirGuard)
   @FhirScopes('patient/Observation.write')
-  async createObservation(@Body() fhirPayload: any) {
+  async createObservation(@Body() fhirPayload: unknown): Promise<FhirObservation> {
     return this.fhirService.ingestObservation(fhirPayload);
   }
 
@@ -94,11 +97,11 @@ export class FhirController {
   @AuditLog('FHIR_PHARMACY_ACCESS_PRESCRIPTIONS')
   async pharmacyAccess(
     @Param('patientId') patientId: string,
-    @Req() req: FastifyRequest,
+    @Req() req: AuthenticatedFastifyRequest,
     @Res() res: FastifyReply,
-  ) {
+  ): Promise<FastifyReply> {
     // Extraction du userId depuis le JWT validé
-    const user = (req as any).user;
+    const user = req.user;
     if (!user || !user.userId) {
       return res
         .status(HttpStatus.UNAUTHORIZED)

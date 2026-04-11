@@ -51,7 +51,7 @@ export class ReconciliationService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async openSession(payload: OpenSessionPayload) {
+   async openSession(payload: OpenSessionPayload): Promise<unknown> {
     // Vérifier si une session est déjà ouverte pour ce terminal ou ce caissier
     const existingSession = await this.prisma.cashRegisterSession.findFirst({
       where: {
@@ -80,7 +80,7 @@ export class ReconciliationService {
     return session;
   }
 
-  async processTransaction(payload: ProcessTransactionPayload) {
+   async processTransaction(payload: ProcessTransactionPayload): Promise<unknown> {
     const session = await this.prisma.cashRegisterSession.findUnique({
       where: { id: payload.sessionId },
     });
@@ -154,7 +154,7 @@ export class ReconciliationService {
     return { status: 'SUCCESS', transactions: result };
   }
 
-  async processRefund(payload: RefundPayload) {
+   async processRefund(payload: RefundPayload): Promise<unknown> {
     const session = await this.prisma.cashRegisterSession.findUnique({
       where: { id: payload.sessionId },
     });
@@ -215,7 +215,7 @@ export class ReconciliationService {
     return { status: 'SUCCESS', transaction: refundTx };
   }
 
-  async closeSession(payload: CloseSessionPayload) {
+   async closeSession(payload: CloseSessionPayload): Promise<unknown> {
     const session = await this.prisma.cashRegisterSession.findUnique({
       where: { id: payload.sessionId },
       include: { financialTransactions: true },

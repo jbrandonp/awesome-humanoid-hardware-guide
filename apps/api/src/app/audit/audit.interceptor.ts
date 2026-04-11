@@ -20,7 +20,7 @@ export class AuditInterceptor implements NestInterceptor {
     private prisma: PrismaService,
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const action = this.reflector.get<string>(
       AUDIT_LOG_KEY,
       context.getHandler(),

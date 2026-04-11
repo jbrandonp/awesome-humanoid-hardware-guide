@@ -65,6 +65,34 @@ Ce projet s'engage à une politique de **Zéro Trust & Zéro Cloud Logs**.
 - **Synchronisation Infaillible (CRDT)** : Les notes médicales ne s'écrasent jamais. Elles sont fusionnées mathématiquement par `Yjs` (côté client et serveur).
 - **Epi-Ticker & SSE** : Un bandeau visuel prévient les praticiens de tout pic d'épidémie local et de pénurie de médicaments en temps réel via un Server-Sent Event ultra léger.
 
+ ---
+
+## 🔧 Additional Setup
+
+### Whisper.cpp Local Speech Recognition
+
+The API includes local speech-to-text using Whisper.cpp. To enable this feature:
+
+1. **Download or compile Whisper.cpp**:
+   - Clone the repository: `git clone https://github.com/ggerganov/whisper.cpp.git`
+   - Follow build instructions for your platform.
+   - The binary `main` (or `main.exe` on Windows) should be placed in `bin/whisper.cpp/` at the project root.
+
+2. **Download a model**:
+   - Download a quantized model (e.g., `ggml-medium.en-q8_0.bin`) from [Hugging Face](https://huggingface.co/ggerganov/whisper.cpp/tree/main) and place it in `models/`.
+
+3. **Set environment variables** (optional):
+   - `WHISPER_BIN_PATH`: absolute path to the binary
+   - `WHISPER_MODEL_PATH`: absolute path to the model file
+
+If the binary is not found, the Whisper service will log a warning and skip transcription.
+
+---
+
+## 🚢 Deployment
+
+See [docs/deployment/DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deployment instructions.
+
 ---
 
 _Ce projet est sous licence MIT._

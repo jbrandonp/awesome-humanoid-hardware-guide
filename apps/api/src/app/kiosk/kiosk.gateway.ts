@@ -26,15 +26,16 @@ export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
 
   constructor(private readonly kioskService: KioskService) {}
 
-  afterInit(server: Server) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    afterInit(_server: Server): void {
     this.logger.log('Kiosk WebSocket Gateway Initialized');
   }
 
-  handleConnection(client: Socket) {
+  handleConnection(client: Socket): void {
     this.logger.log(`Kiosk Client connected: ${client.id}`);
   }
 
-  handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket): void {
     this.logger.log(`Kiosk Client disconnected: ${client.id}`);
   }
 
@@ -42,7 +43,7 @@ export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
    * Listens for the Kiosk client requesting the current state (on boot or reconnect)
    */
   @SubscribeMessage('REQUEST_CURRENT_STATE')
-  async handleRequestCurrentState(@ConnectedSocket() client: Socket) {
+  async handleRequestCurrentState(@ConnectedSocket() client: Socket): Promise<void> {
     this.logger.log(`Received REQUEST_CURRENT_STATE from Kiosk Client: ${client.id}`);
     const state = await this.kioskService.getCurrentState();
     // Send the state back to the specific client that requested it
@@ -53,7 +54,7 @@ export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
    * Heartbeat / Ping-Pong mechanism to detect ghost disconnects
    */
   @SubscribeMessage('ping')
-  handlePing(@ConnectedSocket() client: Socket, @MessageBody() timestamp: number) {
+  handlePing(@ConnectedSocket() client: Socket, @MessageBody() timestamp: number): void {
     // Respond with a pong and the original timestamp so the client can calculate latency
     client.emit('pong', timestamp);
   }
@@ -63,7 +64,7 @@ export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
    * Whenever this is called, Kiosk clients will receive the ping and
    * automatically send a new REQUEST_CURRENT_STATE
    */
-  public broadcastPatientCalled() {
+  public broadcastPatientCalled(): void {
     this.logger.log('Broadcasting PATIENT_CALLED to all connected Kiosk clients');
     this.server.emit('PATIENT_CALLED');
   }

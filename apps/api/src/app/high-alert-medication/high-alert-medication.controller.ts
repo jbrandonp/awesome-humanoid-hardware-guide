@@ -13,7 +13,7 @@ export class HighAlertMedicationController {
   @UseGuards(AuthGuard('jwt'))
   @AuditLog('HIGH_ALERT_DUAL_SIGNOFF')
   @Post('dual-sign-off')
-  async createDualSignOff(@Body() payload: any) {
+  async createDualSignOff(@Body() payload: unknown): Promise<{ message: string; status: string }> {
     const result = DualSignOffSchema.safeParse(payload);
     if (!result.success) {
       this.logger.error(`Validation failed for dual sign-off: ${result.error.message}`);

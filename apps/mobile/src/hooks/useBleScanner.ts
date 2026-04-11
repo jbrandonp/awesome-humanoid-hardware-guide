@@ -6,6 +6,7 @@ import {
   BleError,
   State,
   Characteristic,
+  Service,
 } from 'react-native-ble-plx';
 import { Buffer } from 'buffer';
 import { database, initializeDatabase } from '../database';
@@ -269,7 +270,7 @@ export function useBleScanner(patientId?: string): BleScannerState & {
       let vitalType: VitalType = 'BLOOD_PRESSURE';
 
       if (
-        services.find((s: any) =>
+        services.find((s: Service) =>
           s.uuid.includes(GATT_PROFILES.BLOOD_PRESSURE.service),
         )
       ) {
@@ -277,7 +278,7 @@ export function useBleScanner(patientId?: string): BleScannerState & {
         targetChar = GATT_PROFILES.BLOOD_PRESSURE.characteristic;
         vitalType = 'BLOOD_PRESSURE';
       } else if (
-        services.find((s: any) =>
+        services.find((s: Service) =>
           s.uuid.includes(GATT_PROFILES.HEART_RATE.service),
         )
       ) {
@@ -285,7 +286,7 @@ export function useBleScanner(patientId?: string): BleScannerState & {
         targetChar = GATT_PROFILES.HEART_RATE.characteristic;
         vitalType = 'HEART_RATE';
       } else if (
-        services.find((s: any) =>
+        services.find((s: Service) =>
           s.uuid.includes(GATT_PROFILES.GLUCOSE.service),
         )
       ) {
@@ -468,21 +469,25 @@ export function useBleScanner(patientId?: string): BleScannerState & {
       await initializeDatabase();
 
       await database.write(async () => {
-        const vitalsCollection = database.get('vitals');
-        await vitalsCollection.create((vital: any) => {
-          // Idéalement, patientId proviendrait d'un Contexte React sélectionné par le médecin
-          vital.patient.id = patientId;
+        // Typed as Model to avoid 'any' — WatermelonDB's create callback exposes raw setters
+        const vitalsCollection = database.get<import('@systeme-sante/models').Vital>('vitals');
+        await vitalsCollection.create((vital) => {
+          // WatermelonDB association: set the foreign key directly on _raw
+          (vital._raw as any).patient_id = patientId;
           vital.recordedAt = new Date(vitalData.timestampIso);
-          vital.status = 'created';
 
           if (vitalData.type === 'BLOOD_PRESSURE') {
             vital.bloodPressure = `${vitalData.systolicMmHg}/${vitalData.diastolicMmHg}`;
-            if (vitalData.heartRateBpm)
+            if (vitalData.heartRateBpm !== undefined) {
               vital.heartRate = vitalData.heartRateBpm;
+            }
           } else if (vitalData.type === 'HEART_RATE') {
-            vital.heartRate = vitalData.heartRateBpm;
+            if (vitalData.heartRateBpm !== undefined) {
+              vital.heartRate = vitalData.heartRateBpm;
+            }
           } else if (vitalData.type === 'GLUCOSE') {
-            // Si on avait un champ glucose, ex: vital.glucose = vitalData.glucoseMgDl;
+            // Field 'glucoseMgDl' would need to be added to the Vital schema
+            // vital.glucoseMgDl = vitalData.glucoseMgDl;
           }
         });
       });

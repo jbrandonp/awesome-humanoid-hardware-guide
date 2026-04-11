@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 // ============================================================================
 // TYPAGES STRICTS - ZERO 'ANY' POLICY (Inventory Prediction Engine)
@@ -144,7 +145,7 @@ export class InventoryService {
    * P2P - Procure-to-Pay : Création automatique d'un Bon de Commande (Purchase Order) au statut DRAFT.
    * Remplace l'ancienne génération PDF directe.
    */
-  async generateDraftPurchaseOrder(itemId: string, requestedQuantity: number, tx: any) {
+   async generateDraftPurchaseOrder(itemId: string, requestedQuantity: number, tx: Prisma.TransactionClient): Promise<void> {
     const item = await tx.inventoryItem.findUnique({
       where: { id: itemId },
       include: { supplier: true }
