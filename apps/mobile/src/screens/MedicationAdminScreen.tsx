@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { BarcodeAdministration } from '../components/BarcodeAdministration';
+import { Prescription } from '@systeme-sante/models';
+import { MedicalApi } from '../services/api';
 
 type MedicationAdminScreenRouteProp = RouteProp<RootStackParamList, 'MedicationAdmin'>;
 type MedicationAdminScreenNavigationProp = StackNavigationProp<RootStackParamList, 'MedicationAdmin'>;
@@ -16,24 +19,63 @@ export function MedicationAdminScreen() {
   const [dose, setDose] = useState('');
   const [routeOfAdmin, setRouteOfAdmin] = useState('ORAL');
   const [notes, setNotes] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const api = new MedicalApi('http://localhost:3000'); // TODO: Get from environment
 
   const handleScanBarcode = () => {
-    // TODO: Integrate with barcode scanner
-    Alert.alert('Scanner', 'Fonctionnalité de scan à implémenter.');
+    setShowScanner(true);
   };
 
-  const handleSubmit = () => {
+  const handlePrescriptionSelected = useCallback((prescription: Prescription) => {
+    setSelectedPrescription(prescription);
+    setMedication(prescription.medicationName);
+    setDose(prescription.dosage);
+    setShowScanner(false);
+  }, []);
+
+  const handleSubmit = async () => {
     if (!medication || !dose) {
       Alert.alert('Données manquantes', 'Veuillez spécifier le médicament et la dose.');
       return;
     }
-    // TODO: Send to API
-    console.log('Medication admin:', { medication, dose, routeOfAdmin, notes });
-    Alert.alert(
-      'Succès',
-      'Administration enregistrée.',
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
+
+    if (!selectedPrescription) {
+      Alert.alert('Prescription manquante', 'Veuillez scanner une prescription avant de soumettre.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const administrationData = {
+        prescriptionId: selectedPrescription.id,
+        nurseId: '00000000-0000-0000-0000-000000000000', // TODO: Get from auth
+        status: 'ADMINISTERED' as const,
+        dosageGiven: dose,
+        route: routeOfAdmin,
+        administeredAt: new Date().toISOString(),
+        isPrn: false,
+        clinicalJustification: notes || null,
+      };
+
+      await api.submitMedicationAdministration(administrationData);
+      
+      Alert.alert(
+        'Succès',
+        'Administration enregistrée et synchronisée.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error: any) {
+      console.error('Erreur envoi administration:', error);
+      Alert.alert(
+        'Erreur',
+        `Échec de l'enregistrement: ${error.response?.data?.message || error.message}`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

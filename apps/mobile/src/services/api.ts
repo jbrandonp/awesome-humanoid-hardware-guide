@@ -40,6 +40,19 @@ export interface QueueEntry {
   checkedInAt: string;
 }
 
+export interface MedicationAdministrationData {
+  prescriptionId: string;
+  nurseId: string;
+  status: 'ADMINISTERED' | 'REFUSED' | 'OMITTED' | 'PARTIAL';
+  dosageGiven: string;
+  route: string;
+  administeredAt: string; // ISO string
+  isPrn: boolean;
+  clinicalJustification?: string | null;
+  secondaryNursePin?: string;
+  secondaryNurseBadgeId?: string;
+}
+
 export class MedicalApi {
   private baseUrl: string;
 
@@ -79,6 +92,11 @@ export class MedicalApi {
 
   async submitVitals(vitals: Omit<Vital, 'id' | 'recordedAt'>): Promise<Vital> {
     const response = await axios.post(`${this.baseUrl}/remote-patient-monitoring/vitals`, vitals);
+    return response.data;
+  }
+
+  async submitMedicationAdministration(data: MedicationAdministrationData): Promise<any> {
+    const response = await axios.post(`${this.baseUrl}/nursing-station/administrations`, data);
     return response.data;
   }
 }
