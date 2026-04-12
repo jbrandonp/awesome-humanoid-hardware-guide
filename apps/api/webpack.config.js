@@ -9,6 +9,17 @@ module.exports = {
       devtoolModuleFilenameTemplate: '[absolute-resource-path]',
     }),
   },
+  externals: ({ context, request }, callback) => {
+    // Don't externalize @systeme-sante/models, bundle it
+    if (request === '@systeme-sante/models') {
+      return callback(null, false);
+    }
+    // Externalize node_modules
+    if (/^[@a-zA-Z]/.test(request) && !request.startsWith('.')) {
+      return callback(null, 'commonjs ' + request);
+    }
+    callback();
+  },
   plugins: [
     new NxAppWebpackPlugin({
       target: 'node',

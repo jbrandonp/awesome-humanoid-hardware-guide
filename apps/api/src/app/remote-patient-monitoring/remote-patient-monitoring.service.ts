@@ -12,6 +12,52 @@ export class RemotePatientMonitoringService {
   // Map<patientId, BleBloodPressurePayload>
   private lastMeasurements: Map<string, BleBloodPressurePayload> = new Map();
 
+  // Mock vitals data for development
+  private mockVitals: any[] = [
+    {
+      id: 'vital-1',
+      patientId: 'patient-1',
+      bloodPressure: '120/80',
+      heartRate: 72,
+      temperature: 36.6,
+      glucose: 5.2,
+      recordedAt: new Date(Date.now() - 3600000), // 1 hour ago
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'created',
+      deletedAt: null,
+    },
+    {
+      id: 'vital-2',
+      patientId: 'patient-1',
+      bloodPressure: '118/78',
+      heartRate: 70,
+      temperature: 36.8,
+      glucose: 5.0,
+      recordedAt: new Date(Date.now() - 7200000), // 2 hours ago
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'created',
+      deletedAt: null,
+    },
+    {
+      id: 'vital-3',
+      patientId: 'patient-2',
+      bloodPressure: '135/85',
+      heartRate: 80,
+      temperature: 37.2,
+      glucose: 6.1,
+      recordedAt: new Date(Date.now() - 1800000), // 30 minutes ago
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'created',
+      deletedAt: null,
+    },
+  ];
+
+  // Mock alerts
+  private mockAlerts: any[] = [];
+
   // Thresholds
   private readonly SYSTOLIC_THRESHOLD_MMHG = 180;
   // Note: the payload doesn't currently contain SpO2, but the prompt gave "ex: si SpO2 < 92% ou Tension Systolique > 180 mmHg sur 2 mesures consécutives".
@@ -63,5 +109,34 @@ export class RemotePatientMonitoringService {
     };
 
     this.tickerService.broadcastAlert(alert);
+    // Store alert for REST API
+    this.mockAlerts.push({
+      id: alert.id,
+      patientId: payload.patientId,
+      type: alert.type,
+      message: alert.message,
+      timestamp: alert.timestamp,
+      systolicMmHg: payload.systolicMmHg,
+      diastolicMmHg: payload.diastolicMmHg,
+      pulseRateBpm: payload.pulseRateBpm,
+    });
+  }
+
+  async getVitals(patientId?: string): Promise<any[]> {
+    if (patientId) {
+      return this.mockVitals.filter(v => v.patientId === patientId);
+    }
+    return this.mockVitals;
+  }
+
+  async getLatestVitals(patientId: string): Promise<any | null> {
+    const vitals = this.mockVitals
+      .filter(v => v.patientId === patientId)
+      .sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime());
+    return vitals.length > 0 ? vitals[0] : null;
+  }
+
+  async getAlerts(): Promise<any[]> {
+    return this.mockAlerts;
   }
 }

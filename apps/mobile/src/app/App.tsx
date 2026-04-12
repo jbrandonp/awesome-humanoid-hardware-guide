@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/accessible-emoji */
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Text, StatusBar, ActivityIndicator } from 'react-native';
-import { Omnibox } from '../components/Omnibox';
+import { AppNavigator } from '../navigation/AppNavigator';
 import { initializeDatabase } from '../database';
 import { MDNSScannerService } from '../services/mdns-scanner.service';
 import { usePowerManagement } from '../hooks/usePowerManagement';
@@ -49,7 +49,7 @@ export const App = () => {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       {powerState.isLowPowerMode && (
-        <View style={{ backgroundColor: 'red', padding: 10, marginTop: 40 }}>
+        <View style={{ backgroundColor: 'red', padding: 10 }}>
           <Text
             style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}
           >
@@ -58,9 +58,7 @@ export const App = () => {
           </Text>
         </View>
       )}
-      <View style={{ flex: 1, marginTop: powerState.isLowPowerMode ? 10 : 50 }}>
-        <Omnibox />
-      </View>
+      <AppNavigator />
     </View>
   );
 };

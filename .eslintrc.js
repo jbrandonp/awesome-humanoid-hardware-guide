@@ -64,6 +64,11 @@ module.exports = {
       },
       plugins: ['react'],
       extends: ['plugin:react/recommended'],
+      rules: {
+        'react/react-in-jsx-scope': 'off',
+        'react/no-unescaped-entities': 'off',
+        'react/display-name': 'off',
+      },
     },
   ],
 };

@@ -59,9 +59,7 @@ export function App() {
     );
   }
 
-  return (
-    <ZenConsultationLayout />
-  );
+  return <ZenConsultationLayout apiUrl={apiUrl} />;
 }
 
 export default App;
