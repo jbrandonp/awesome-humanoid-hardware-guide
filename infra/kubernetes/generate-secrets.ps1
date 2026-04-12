@@ -57,8 +57,8 @@ $template = $template -replace 'CHANGE_ME_WHATSAPP_PHONE_ID', $whatsappPhoneId
 $template = $template -replace 'postgresql://medical_user:CHANGE_ME_SECURE_PASSWORD@postgres-service:5432/medical_db\?schema=public', $databaseUrl
 $template = $template -replace 'mongodb://mongo_admin:CHANGE_ME_SECURE_PASSWORD@mongodb-service:27017/medical_db\?authSource=admin', $mongoUrl
 
-# Write secrets.yaml
-$template | Out-File -FilePath secrets.yaml -Encoding UTF8
+# Write secrets.yaml without BOM
+[System.IO.File]::WriteAllText("secrets.yaml", $template, [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "✅ Kubernetes secrets.yaml generated successfully"
 Write-Host "⚠️  IMPORTANT: Update external API keys with real values before production deployment"

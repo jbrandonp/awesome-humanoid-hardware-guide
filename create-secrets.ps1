@@ -81,8 +81,8 @@ stringData:
   redis-url: "redis://redis-service:6379"
 "@
 
-# Write to file
-$yaml | Out-File -FilePath infra/kubernetes/secrets.yaml -Encoding UTF8
+# Write to file without BOM
+[System.IO.File]::WriteAllText("infra/kubernetes/secrets.yaml", $yaml, [System.Text.UTF8Encoding]::new($false))
 
 Write-Host "✅ Kubernetes secrets.yaml generated successfully with distinct passwords"
 Write-Host "⚠️  IMPORTANT: Update external API keys with real values before production deployment"
