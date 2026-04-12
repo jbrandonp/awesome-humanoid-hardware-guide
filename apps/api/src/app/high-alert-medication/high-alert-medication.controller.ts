@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UnauthorizedException, Logger, UseGuards } from '@nestjs/common';
 import { HighAlertMedicationService } from './high-alert-medication.service';
-import { DualSignOff, DualSignOffSchema } from '@systeme-sante/models';
+import { DualSignOffSchema, DualSignOffDto } from '../models/sync-models';
 import { AuditLog } from '../audit/audit.decorator';
 import { AuthGuard } from '@nestjs/passport';
 
@@ -20,7 +20,7 @@ export class HighAlertMedicationController {
       throw new UnauthorizedException('Invalid secondary sign-off payload format.');
     }
 
-    const typedPayload: DualSignOff = result.data;
+    const typedPayload: DualSignOffDto = result.data;
     
     // Attempt to validate the second nurse
     const success = await this.service.processDualSignOff(typedPayload);

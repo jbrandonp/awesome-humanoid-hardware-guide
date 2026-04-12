@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { DualSignOff } from '@systeme-sante/models';
+import { DualSignOffDto } from '../models/sync-models';
 import { ActionType } from '@prisma/client';
 import * as crypto from 'crypto';
 
@@ -21,7 +21,7 @@ export class HighAlertMedicationService {
    * @param payload DualSignOff
    * @returns true if successful, throws UnauthorizedException otherwise
    */
-  async processDualSignOff(payload: DualSignOff): Promise<boolean> {
+  async processDualSignOff(payload: DualSignOffDto): Promise<boolean> {
     let secondaryUser = null;
 
     if (payload.secondaryPin) {

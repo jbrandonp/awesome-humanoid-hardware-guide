@@ -15,5 +15,14 @@
     "rootDir": "../../"
   },
   "include": ["src/**/*.ts", "../../libs/models/src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts", "jest.config.js", "../../libs/models/src/**/*.spec.ts"]
+  "exclude": [
+    "src/**/*.spec.ts",
+    "jest.config.js",
+    "../../libs/models/src/**/*.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../../libs/models/tsconfig.lib.json"
+    }
+  ]
 }
