@@ -28,7 +28,7 @@ npm install --legacy-peer-deps
 
 # 3. Démarrage de l'infrastructure Docker (Postgres, Mongo, MinIO)
 echo "🐳 Démarrage des bases de données..."
-docker compose up -d
+docker compose --file infra/docker/docker-compose.yml up -d
 
 echo "⏳ Attente du démarrage de PostgreSQL..."
 sleep 10

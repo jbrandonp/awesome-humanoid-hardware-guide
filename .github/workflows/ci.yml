@@ -82,6 +82,9 @@ jobs:
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+        # NOTE: Configure these secrets in GitHub repository settings:
+        # - Add repository variables: DOCKERHUB_USERNAME
+        # - Add repository secrets: DOCKERHUB_TOKEN
 
       - name: Build and push API Docker image
         uses: docker/build-push-action@v5

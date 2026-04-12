@@ -6,7 +6,11 @@ import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';
 import { Patient, Prescription } from '@systeme-sante/models';
 
-export const BarcodeAdministration = () => {
+interface BarcodeAdministrationProps {
+  onSuccess?: (prescription: Prescription, patient: Patient) => void;
+}
+
+export const BarcodeAdministration = ({ onSuccess }: BarcodeAdministrationProps) => {
   const [permission, requestPermission] = useCameraPermissions();
   const [scannedPatientId, setScannedPatientId] = useState<string | null>(null);
   const [scannedSKU, setScannedSKU] = useState<string | null>(null);
@@ -81,7 +85,11 @@ export const BarcodeAdministration = () => {
       } else {
         // Validation succeeded
         setScannedSKU(sku);
-        setPrescriptionData(prescriptions[0]);
+        const prescription = prescriptions[0];
+        setPrescriptionData(prescription);
+        if (onSuccess && patientData) {
+          onSuccess(prescription, patientData);
+        }
       }
     } catch (e) {
       triggerError("Erreur critique lors de la validation du médicament.");
