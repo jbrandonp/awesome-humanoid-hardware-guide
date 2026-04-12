@@ -20,7 +20,6 @@
     "useDefineForClassFields": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "customConditions": ["@systeme-sante/source"],
     "baseUrl": ".",
     "paths": {
       "@systeme-sante/models": ["libs/models/src/index.ts"],

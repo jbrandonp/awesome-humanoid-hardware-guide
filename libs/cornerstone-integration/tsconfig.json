@@ -1,12 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "module": "es2022",
-    "moduleResolution": "bundler",
-    "lib": ["es2015", "dom"],
-    "declaration": true,
-    "strict": true,
-    "noImplicitAny": true
-  },
-  "include": ["src/**/*.ts"]
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "./tsconfig.lib.json"
+    }
+  ]
 }

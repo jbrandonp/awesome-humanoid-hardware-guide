@@ -4,7 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuditLog } from '../audit/audit.decorator';
 import type { FastifyReply } from 'fastify';
 import { z, ZodError } from 'zod';
-import { PatientSchema, VisitSchema, VitalsSchema, PrescriptionSchema } from '../models/sync-models';
+import { PatientSchema, VisitSchema, VitalsSchema, PrescriptionSchema } from '@systeme-sante/models';
 
 @Controller('sync')
 @UseGuards(AuthGuard('jwt'))

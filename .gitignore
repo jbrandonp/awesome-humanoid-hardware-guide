@@ -68,7 +68,8 @@ docker-compose.override.yml
 *.rsa
 # Clés privées ABDM ou certificats HTTPS locaux
 certs/
-secrets/
+  secrets/
+  infra/kubernetes/secrets.yaml
 
 # ------------------------------------------------------------------------------
 # 5. LOGS, CRASHDUMPS ET DIAGNOSTICS MATÉRIELS

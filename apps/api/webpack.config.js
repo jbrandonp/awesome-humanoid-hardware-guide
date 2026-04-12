@@ -10,12 +10,15 @@ module.exports = {
     }),
   },
   externals: ({ context, request }, callback) => {
-    // Don't externalize @systeme-sante/models, bundle it
-    if (request === '@systeme-sante/models') {
+    // Don't externalize workspace packages (@systeme-sante/*), bundle them
+    if (request && (request.startsWith('@systeme-sante/') || 
+                   request === '@systeme-sante/models' ||
+                   request === '@systeme-sante/insurance-engine' ||
+                   request === '@systeme-sante/cornerstone-integration')) {
       return callback(null, false);
     }
-    // Externalize node_modules
-    if (/^[@a-zA-Z]/.test(request) && !request.startsWith('.')) {
+    // Externalize node_modules (non-workspace packages)
+    if (request && /^[@a-zA-Z]/.test(request) && !request.startsWith('.')) {
       return callback(null, 'commonjs ' + request);
     }
     callback();

@@ -3,7 +3,7 @@ import { UnauthorizedException } from '@nestjs/common';
 import { HighAlertMedicationService } from './high-alert-medication.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { DualSignOffDtoDto } from '../models/sync-models';
+import { DualSignOff } from '@systeme-sante/models';
 
 describe('HighAlertMedicationService', () => {
   let service: HighAlertMedicationService;
@@ -44,8 +44,8 @@ describe('HighAlertMedicationService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('processDualSignOffDto', () => {
-    const mockPayload: DualSignOffDto = {
+  describe('processDualSignOff', () => {
+    const mockPayload: DualSignOff = {
       primaryUserId: 'user-1',
       secondaryPin: '1234',
       patientId: 'patient-1',
@@ -61,7 +61,7 @@ describe('HighAlertMedicationService', () => {
         role: 'NURSE',
       });
 
-      await expect(service.processDualSignOffDto(mockPayload)).rejects.toThrow(
+         await expect(service.processDualSignOff(mockPayload)).rejects.toThrow(
         new UnauthorizedException('Secondary sign-off must be performed by a different user.')
       );
     });
@@ -69,7 +69,7 @@ describe('HighAlertMedicationService', () => {
     it('should throw UnauthorizedException if secondary user credentials are invalid', async () => {
         (prismaService.user.findFirst as jest.Mock).mockResolvedValue(null);
 
-        await expect(service.processDualSignOffDto(mockPayload)).rejects.toThrow(
+        await expect(service.processDualSignOff(mockPayload)).rejects.toThrow(
             new UnauthorizedException('Invalid secondary credentials for dual sign-off.')
         );
     });
@@ -84,14 +84,14 @@ describe('HighAlertMedicationService', () => {
       // Mock AuditService to resolve
       (auditService.logAudit as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.processDualSignOffDto(mockPayload);
+       const result = await service.processDualSignOff(mockPayload);
 
       expect(result).toBe(true);
       expect(auditService.logAudit).toHaveBeenCalled();
     });
 
     it('should successfully process dual sign-off with badgeId', async () => {
-        const badgePayload: DualSignOffDto = {
+        const badgePayload: DualSignOff = {
             primaryUserId: 'user-1',
             secondaryBadgeId: 'badge-123',
             patientId: 'patient-1',
@@ -107,14 +107,14 @@ describe('HighAlertMedicationService', () => {
 
         (auditService.logAudit as jest.Mock).mockResolvedValue(undefined);
 
-        const result = await service.processDualSignOffDto(badgePayload);
+         const result = await service.processDualSignOff(badgePayload);
 
         expect(result).toBe(true);
         expect(auditService.logAudit).toHaveBeenCalled();
       });
 
       it('should throw UnauthorizedException if offlineHash is invalid', async () => {
-        const payloadWithHash: DualSignOffDto = {
+         const payloadWithHash: DualSignOff = {
             ...mockPayload,
             offlineHash: 'invalid-hash'
         };
@@ -124,7 +124,7 @@ describe('HighAlertMedicationService', () => {
             role: 'NURSE',
         });
 
-        await expect(service.processDualSignOffDto(payloadWithHash)).rejects.toThrow(
+         await expect(service.processDualSignOff(payloadWithHash)).rejects.toThrow(
             new UnauthorizedException('Invalid offline signature hash.')
         );
       });

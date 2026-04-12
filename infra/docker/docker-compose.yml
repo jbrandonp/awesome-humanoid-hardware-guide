@@ -4,7 +4,7 @@ services:
     container_name: systeme-sante-postgres
     environment:
       POSTGRES_USER: medical_user
-      POSTGRES_PASSWORD: medical_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medical_password}
       POSTGRES_DB: medical_db
     ports:
       - '5432:5432'
@@ -22,7 +22,7 @@ services:
     container_name: systeme-sante-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: mongo_admin
-      MONGO_INITDB_ROOT_PASSWORD: mongo_password
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongo_password}
     ports:
       - '27017:27017'
     volumes:
@@ -34,7 +34,7 @@ services:
     container_name: systeme-sante-minio
     environment:
       MINIO_ROOT_USER: minio_admin
-      MINIO_ROOT_PASSWORD: minio_password
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-minio_password}
     ports:
       - '9000:9000'
       - '9001:9001'
@@ -66,8 +66,8 @@ services:
       redis:
         condition: service_started
     environment:
-      DATABASE_URL: postgresql://medical_user:medical_password@postgres:5432/medical_db?schema=public
-      MONGO_URL: mongodb://mongo_admin:mongo_password@mongodb:27017/medical_db?authSource=admin
+      DATABASE_URL: postgresql://medical_user:${POSTGRES_PASSWORD:-medical_password}@postgres:5432/medical_db?schema=public
+      MONGO_URL: mongodb://mongo_admin:${MONGO_PASSWORD:-mongo_password}@mongodb:27017/medical_db?authSource=admin
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-production-secret-key-change-me}

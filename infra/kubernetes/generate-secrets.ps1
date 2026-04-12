@@ -11,19 +11,17 @@ function Generate-RandomPassword {
     return $password
 }
 
-function Get-EnvValue {
-    param([string]$Key)
-    $line = Get-Content ../../.env.production | Where-Object { $_ -match "^$Key=" }
-    if ($line) {
-        return $line.Split('=', 2)[1].Trim('"')
-    }
-    return $null
+function Generate-Base64Secret {
+    param([int]$Bytes = 32)
+    $randomBytes = New-Object byte[] $Bytes
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($randomBytes)
+    return [Convert]::ToBase64String($randomBytes)
 }
 
-# Read JWT secrets from .env.production
-$jwtSecret = Get-EnvValue "JWT_SECRET"
-$jwtRefreshSecret = Get-EnvValue "JWT_REFRESH_SECRET"
-$tokenEncryptionKey = Get-EnvValue "TOKEN_ENCRYPTION_KEY"
+# Generate JWT secrets (random base64)
+$jwtSecret = Generate-Base64Secret 32
+$jwtRefreshSecret = Generate-Base64Secret 32
+$tokenEncryptionKey = Generate-Base64Secret 32
 
 # Generate secure passwords
 $postgresPassword = Generate-RandomPassword 24

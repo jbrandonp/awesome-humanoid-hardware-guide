@@ -147,18 +147,16 @@ export class InsuranceEngine {
         if (policy.rules.capsCents?.annual !== undefined) {
           const capAnnual = Dinero({ amount: policy.rules.capsCents.annual, currency: itemCurrency });
 
-          if (state.accumulatedAnnualCovered.getCurrency() !== itemCurrency) {
-             // BUG FIX: Never assume 1:1 conversion. In a resilient system, we should fetch rates.
-             // For now, we enforce consistency or throw if cross-currency is not supported.
-             console.warn(`Currency mismatch detected: ${state.accumulatedAnnualCovered.getCurrency()} vs ${itemCurrency}. Annual cap tracking might be inaccurate.`);
-             // Fallback: stay in the original currency of the accumulator if possible, 
-             // but Dinero requires same currency for operations.
-          }
-          
-          // Ensure we are comparing apples to apples
-          const currentAccumulated = state.accumulatedAnnualCovered.getCurrency() === itemCurrency 
-            ? state.accumulatedAnnualCovered 
-            : Dinero({ amount: state.accumulatedAnnualCovered.getAmount(), currency: itemCurrency });
+           // Ensure we are comparing apples to apples
+           let currentAccumulated = state.accumulatedAnnualCovered;
+           if (state.accumulatedAnnualCovered.getCurrency() !== itemCurrency) {
+              // Convert accumulator to item currency using 1:1 rate for development
+              // In production, implement proper currency conversion with real exchange rates
+              console.warn(`Currency mismatch: ${state.accumulatedAnnualCovered.getCurrency()} vs ${itemCurrency}. Assuming 1:1 conversion for development.`);
+              currentAccumulated = Dinero({ amount: state.accumulatedAnnualCovered.getAmount(), currency: itemCurrency });
+              // Update the accumulator state to new currency for consistency in further processing
+              state.accumulatedAnnualCovered = currentAccumulated;
+           }
 
           const spaceLeft = capAnnual.subtract(currentAccumulated);
 
