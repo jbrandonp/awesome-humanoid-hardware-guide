@@ -8,6 +8,19 @@ const nextConfig = {
       },
     ];
   },
+  experimental: {
+    esmExternals: 'loose',
+    externalDir: true,
+  },
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.experiments = {
+        ...config.experiments,
+        syncWebAssembly: true,
+      };
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;

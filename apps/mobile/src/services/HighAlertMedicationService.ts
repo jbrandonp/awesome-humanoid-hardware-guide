@@ -3,6 +3,7 @@ import * as Crypto from 'expo-crypto';
 import { DualSignOff } from '@systeme-sante/models';
 
 const DUAL_SIGN_OFF_QUEUE_KEY = '@dual_sign_off_queue';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export class HighAlertMedicationService {
   private static isSyncing = false;
@@ -74,7 +75,7 @@ export class HighAlertMedicationService {
       // We process the queue sequentially to ensure order and avoid hammering the server
       for (const item of queue) {
         // 3. Make a request to the NestJS API endpoint
-        const response = await fetch('http://localhost:3000/high-alert-medications/dual-sign-off', {
+         const response = await fetch(`${API_BASE_URL}/high-alert-medications/dual-sign-off`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
