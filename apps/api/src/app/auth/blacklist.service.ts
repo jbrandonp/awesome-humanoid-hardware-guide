@@ -9,6 +9,15 @@ export class BlacklistService implements OnModuleInit, OnModuleDestroy {
     this.redisClient = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      maxRetriesPerRequest: 0,
+      enableOfflineQueue: false,
+      connectTimeout: 5000,
+      lazyConnect: true,
+      retryStrategy: (times) => null // Don't retry
+    });
+    // Suppress connection errors
+    this.redisClient.on('error', (err) => {
+      console.warn('Redis connection error in BlacklistService:', err.message);
     });
   }
 

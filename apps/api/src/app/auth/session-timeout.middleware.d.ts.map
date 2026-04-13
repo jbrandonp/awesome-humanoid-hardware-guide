@@ -1,0 +1,1 @@
+{"version":3,"file":"session-timeout.middleware.d.ts","sourceRoot":"","sources":["session-timeout.middleware.ts"],"names":[],"mappings":"AAAA,OAAO,EAAc,cAAc,EAAE,MAAM,gBAAgB,CAAC;AAC5D,OAAO,EAAE,cAAc,EAAE,YAAY,EAAE,MAAM,SAAS,CAAC;AAEvD,qBACa,wBAAyB,YAAW,cAAc;IAC7D,GAAG,CAAC,GAAG,EAAE,cAAc,CAAC,KAAK,CAAC,EAAE,GAAG,EAAE,YAAY,CAAC,KAAK,CAAC,EAAE,IAAI,EAAE,MAAM,IAAI,GAAG,IAAI;CAGlF"}

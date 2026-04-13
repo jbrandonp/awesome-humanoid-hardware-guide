@@ -1,0 +1,22 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Installer les dépendances globales
+RUN npm install -g ts-node tsconfig-paths
+
+# Copier les fichiers de configuration
+COPY package*.json ./
+COPY tsconfig.base.json ./
+
+# Installer les dépendances
+RUN npm install
+
+# Copier le code source
+COPY . .
+
+# Exposer le port
+EXPOSE 3000
+
+# Commande de démarrage
+CMD ["npx", "ts-node", "-r", "tsconfig-paths/register", "--project", "apps/api/tsconfig.dev.json", "apps/api/src/main.ts"]

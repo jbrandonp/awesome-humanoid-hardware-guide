@@ -1,0 +1,1 @@
+{"version":3,"file":"semantic-parser.d.ts","sourceRoot":"","sources":["semantic-parser.ts"],"names":[],"mappings":"AAIA,MAAM,WAAW,wBAAwB;IACvC,QAAQ,EAAE,MAAM,GAAG,IAAI,CAAC;IACxB,MAAM,EAAE,MAAM,GAAG,IAAI,CAAC;IACtB,SAAS,EAAE,MAAM,GAAG,IAAI,CAAC;IACzB,QAAQ,EAAE,MAAM,GAAG,IAAI,CAAC;CACzB;AAED,qBAAa,cAAc;IACzB;;;;;;OAMG;WACW,uBAAuB,CAAC,IAAI,EAAE,MAAM,GAAG,wBAAwB;CA0F9E"}

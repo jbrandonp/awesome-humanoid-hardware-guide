@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copier uniquement les fichiers nécessaires pour l'installation des dépendances
+COPY package*.json ./
+COPY tsconfig.base.json ./
+
+# Installer les dépendances
+RUN npm install
+
+# Exposer le port
+EXPOSE 3000
+
+# Commande par défaut (sera override par docker-compose)
+CMD ["sleep", "infinity"]

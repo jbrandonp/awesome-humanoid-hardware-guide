@@ -1,0 +1,1 @@
+{"version":3,"file":"triage.schema.d.ts","sourceRoot":"","sources":["triage.schema.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,CAAC,EAAE,MAAM,KAAK,CAAC;AAExB,eAAO,MAAM,iBAAiB;;;;;;;;;;iBAU5B,CAAC;AAEH,MAAM,MAAM,WAAW,GAAG,CAAC,CAAC,KAAK,CAAC,OAAO,iBAAiB,CAAC,CAAC;AAE5D,MAAM,MAAM,YAAY,GAAG;IACzB,KAAK,EAAE,MAAM,CAAC;CACf,CAAC"}

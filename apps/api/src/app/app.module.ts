@@ -50,14 +50,28 @@ import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
       (process.env.NODE_ENV === 'production' 
         ? (() => { throw new Error('MONGO_URL is required in production'); })()
         : 'mongodb://localhost:27017/medical_db'
-      )
+      ),
+      {
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 5000,
+        connectTimeoutMS: 5000,
+        maxPoolSize: 1,
+        retryWrites: false,
+        bufferCommands: false,
+        autoIndex: false,
+      }
     ),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
     BullModule.forRoot({
        connection: {
           host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379', 10)
+          port: parseInt(process.env.REDIS_PORT || '6379', 10),
+          maxRetriesPerRequest: 0,
+          enableOfflineQueue: false,
+          connectTimeout: 5000,
+          lazyConnect: true,
+          retryStrategy: (times) => null,
        }
     }),
     // Core

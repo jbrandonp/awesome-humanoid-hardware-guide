@@ -1,4 +1,4 @@
-import Dinero from 'dinero.js';
+import * as Dinero from 'dinero.js';
 
 /**
  * Creates a Dinero instance representing a monetary value in cents.

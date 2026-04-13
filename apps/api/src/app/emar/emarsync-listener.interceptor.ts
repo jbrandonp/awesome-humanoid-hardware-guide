@@ -28,6 +28,15 @@ export class EmarsyncListener implements NestInterceptor {
     this.redisClient = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
+      maxRetriesPerRequest: 0,
+      enableOfflineQueue: false,
+      connectTimeout: 5000,
+      lazyConnect: true,
+      retryStrategy: (times) => null
+    });
+    // Suppress connection errors
+    this.redisClient.on('error', (err) => {
+      this.logger.warn('Redis connection error in EmarsyncListener:', err.message);
     });
   }
 
