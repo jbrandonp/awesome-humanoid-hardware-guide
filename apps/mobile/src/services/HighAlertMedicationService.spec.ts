@@ -99,7 +99,7 @@ describe('HighAlertMedicationService - attemptSync', () => {
 
     expect(AsyncStorage.getItem).toHaveBeenCalledWith(DUAL_SIGN_OFF_QUEUE_KEY);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/high-alert-medications/dual-sign-off', {
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/high-alert-medications/dual-sign-off'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

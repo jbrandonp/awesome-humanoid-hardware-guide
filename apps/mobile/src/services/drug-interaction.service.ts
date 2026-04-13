@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
 // Structures strictes conformes au Backend DPDPA
 export interface MedicationQuery {
   medicationName: string;
@@ -54,7 +56,7 @@ export class DrugInteractionChecker {
       // Appel API en mode Timeout restrictif pour ne pas figer l'Omnibox
       // (15s chrono max pour prescrire, on abandonne l'appel IA si > 2s).
       const response = await axios.post<DrugInteractionResult>(
-        'http://localhost:3000/api/intelligence/check-interactions',
+         `${API_BASE_URL}/intelligence/check-interactions`,
         requestPayload,
         {
           timeout: 2000,

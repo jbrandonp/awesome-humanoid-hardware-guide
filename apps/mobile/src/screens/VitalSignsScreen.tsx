@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { MedicalApi } from '../services/api';
 
 type VitalSignsScreenRouteProp = RouteProp<RootStackParamList, 'VitalSigns'>;
 type VitalSignsScreenNavigationProp = StackNavigationProp<RootStackParamList, 'VitalSigns'>;
@@ -18,20 +19,46 @@ export function VitalSignsScreen() {
   const [temperature, setTemperature] = useState('');
   const [respiratoryRate, setRespiratoryRate] = useState('');
   const [oxygenSaturation, setOxygenSaturation] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const api = new MedicalApi(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
+
+  const handleSubmit = async () => {
     // Validate inputs
     if (!systolic || !diastolic || !heartRate || !temperature) {
       Alert.alert('Données manquantes', 'Veuillez remplir les champs obligatoires.');
       return;
     }
-    // TODO: Send to API
-    console.log('Vitals submitted:', { systolic, diastolic, heartRate, temperature, respiratoryRate, oxygenSaturation });
-    Alert.alert(
-      'Succès',
-      'Constantes vitales enregistrées.',
-      [{ text: 'OK', onPress: () => navigation.goBack() }]
-    );
+    
+    setIsSubmitting(true);
+    try {
+      const vitalsData = {
+        patientId,
+        patientName: 'Patient', // TODO: Récupérer le nom réel du patient
+        systolic: parseInt(systolic, 10),
+        diastolic: parseInt(diastolic, 10),
+        heartRate: parseInt(heartRate, 10),
+        temperature: parseFloat(temperature),
+        respiratoryRate: respiratoryRate ? parseInt(respiratoryRate, 10) : undefined,
+        oxygenSaturation: oxygenSaturation ? parseInt(oxygenSaturation, 10) : undefined,
+      };
+      
+      await api.submitVitals(vitalsData);
+      
+      Alert.alert(
+        'Succès',
+        'Constantes vitales enregistrées et synchronisées.',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+      );
+    } catch (error: any) {
+      console.error('Erreur envoi signes vitaux:', error);
+      Alert.alert(
+        'Erreur',
+        `Échec de l'enregistrement: ${error.response?.data?.message || error.message}`
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -107,8 +134,12 @@ export function VitalSignsScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Enregistrer</Text>
+        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} disabled={isSubmitting}>
+          {isSubmitting ? (
+            <ActivityIndicator color="#ffffff" />
+          ) : (
+            <Text style={styles.submitButtonText}>Enregistrer</Text>
+          )}
         </TouchableOpacity>
       </View>
     </ScrollView>

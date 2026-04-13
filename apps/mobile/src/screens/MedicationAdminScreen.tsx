@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, Modal } from 'react-native';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Constants from 'expo-constants';
 import { RootStackParamList } from '../navigation/AppNavigator';
 import { BarcodeAdministration } from '../components/BarcodeAdministration';
 import { Prescription } from '@systeme-sante/models';
@@ -23,13 +24,13 @@ export function MedicationAdminScreen() {
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const api = new MedicalApi('http://localhost:3000'); // TODO: Get from environment
+  const api = new MedicalApi(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
 
   const handleScanBarcode = () => {
     setShowScanner(true);
   };
 
-  const handlePrescriptionSelected = useCallback((prescription: Prescription) => {
+  const handlePrescriptionSelected = useCallback((prescription: Prescription, patient?: any) => {
     setSelectedPrescription(prescription);
     setMedication(prescription.medicationName);
     setDose(prescription.dosage);
@@ -51,7 +52,7 @@ export function MedicationAdminScreen() {
     try {
       const administrationData = {
         prescriptionId: selectedPrescription.id,
-        nurseId: '00000000-0000-0000-0000-000000000000', // TODO: Get from auth
+        nurseId: '00000000-0000-0000-0000-000000000000', // TODO: Implémenter l'authentification
         status: 'ADMINISTERED' as const,
         dosageGiven: dose,
         route: routeOfAdmin,
@@ -79,79 +80,101 @@ export function MedicationAdminScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Administration de Médicaments</Text>
-        <Text style={styles.subtitle}>Patient ID: {patientId}</Text>
-      </View>
-
-      <View style={styles.form}>
-        <TouchableOpacity style={styles.scanButton} onPress={handleScanBarcode}>
-          <Text style={styles.scanButtonText}>📷 Scanner le code-barres</Text>
-        </TouchableOpacity>
-
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Médicament</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Nom ou DCI"
-            value={medication}
-            onChangeText={setMedication}
-          />
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Administration de Médicaments</Text>
+          <Text style={styles.subtitle}>Patient ID: {patientId}</Text>
         </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Dose</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="ex: 500 mg"
-            value={dose}
-            onChangeText={setDose}
-          />
-        </View>
+        <View style={styles.form}>
+          <TouchableOpacity style={styles.scanButton} onPress={handleScanBarcode}>
+            <Text style={styles.scanButtonText}>📷 Scanner le code-barres</Text>
+          </TouchableOpacity>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Voie d'administration</Text>
-          <View style={styles.routeButtons}>
-            {['ORAL', 'IV', 'IM', 'SC', 'TOPICAL'].map((route) => (
-              <TouchableOpacity
-                key={route}
-                style={[
-                  styles.routeButton,
-                  routeOfAdmin === route && styles.routeButtonSelected,
-                ]}
-                onPress={() => setRouteOfAdmin(route)}
-              >
-                <Text
-                  style={[
-                    styles.routeButtonText,
-                    routeOfAdmin === route && styles.routeButtonTextSelected,
-                  ]}
-                >
-                  {route}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Médicament</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nom ou DCI"
+              value={medication}
+              onChangeText={setMedication}
+            />
           </View>
-        </View>
 
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Notes (optionnel)</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="Observations, réactions, etc."
-            multiline
-            numberOfLines={3}
-            value={notes}
-            onChangeText={setNotes}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Dose</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="ex: 500 mg"
+              value={dose}
+              onChangeText={setDose}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Voie d'administration</Text>
+            <View style={styles.routeButtons}>
+              {['ORAL', 'IV', 'IM', 'SC', 'TOPICAL'].map((route) => (
+                <TouchableOpacity
+                  key={route}
+                  style={[
+                    styles.routeButton,
+                    routeOfAdmin === route && styles.routeButtonSelected,
+                  ]}
+                  onPress={() => setRouteOfAdmin(route)}
+                >
+                  <Text
+                    style={[
+                      styles.routeButtonText,
+                      routeOfAdmin === route && styles.routeButtonTextSelected,
+                    ]}
+                  >
+                    {route}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Notes (optionnel)</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Observations, réactions, etc."
+              multiline
+              numberOfLines={3}
+              value={notes}
+              onChangeText={setNotes}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            <Text style={styles.submitButtonText}>Enregistrer l'administration</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <Modal
+        visible={showScanner}
+        animationType="slide"
+        onRequestClose={() => setShowScanner(false)}
+      >
+        <View style={{ flex: 1 }}>
+          <BarcodeAdministration
+            onSuccess={(prescription, patient) => {
+              handlePrescriptionSelected(prescription);
+            }}
           />
+          <TouchableOpacity
+            style={{ padding: 16, backgroundColor: '#3b82f6', alignItems: 'center' }}
+            onPress={() => setShowScanner(false)}
+          >
+            <Text style={{ color: 'white', fontSize: 18, fontWeight: 'bold' }}>Fermer</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <Text style={styles.submitButtonText}>Enregistrer l'administration</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </Modal>
+    </View>
   );
 }
 

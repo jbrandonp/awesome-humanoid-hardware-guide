@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-// Polices désactivées temporairement pour éviter les erreurs Windows/ESM
+// Polices désactivées temporairement pour éviter les erreurs Windows/ESM avec Node.js v24
+// Utiliser les polices système par défaut
 const inter = { variable: "" };
 const robotoMono = { variable: "" };
 

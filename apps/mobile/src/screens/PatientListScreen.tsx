@@ -21,7 +21,7 @@ export function PatientListScreen() {
   const navigation = useNavigation<PatientListScreenNavigationProp>();
   const [beds, setBeds] = useState<Bed[]>([]);
   const [loading, setLoading] = useState(true);
-  const api = new MedicalApi('http://localhost:3000');
+  const api = new MedicalApi(process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000');
 
   useEffect(() => {
     const loadBeds = async () => {

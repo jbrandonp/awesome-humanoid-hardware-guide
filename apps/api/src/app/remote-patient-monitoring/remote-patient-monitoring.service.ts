@@ -139,4 +139,26 @@ export class RemotePatientMonitoringService {
   async getAlerts(): Promise<any[]> {
     return this.mockAlerts;
   }
+
+  async createVitals(data: any): Promise<any> {
+    const id = `vital-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const vital = {
+      id,
+      patientId: data.patientId,
+      bloodPressure: data.bloodPressure || null,
+      heartRate: data.heartRate || null,
+      temperature: data.temperature || null,
+      glucose: data.glucose || null,
+      respiratoryRate: data.respiratoryRate || null,
+      oxygenSaturation: data.oxygenSaturation || null,
+      recordedAt: new Date(data.recordedAt || Date.now()),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      status: 'created',
+      deletedAt: null,
+    };
+    this.mockVitals.push(vital);
+    this.logger.log(`[RPM] Nouveaux signes vitaux créés pour le patient ${data.patientId}`);
+    return vital;
+  }
 }

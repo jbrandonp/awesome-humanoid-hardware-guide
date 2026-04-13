@@ -54,7 +54,7 @@ describe('DrugInteractionChecker', () => {
 
         expect(mockedAxios.post).toHaveBeenCalledTimes(1);
         expect(mockedAxios.post).toHaveBeenCalledWith(
-          'http://localhost:3000/api/intelligence/check-interactions',
+           expect.stringContaining('/intelligence/check-interactions'),
           {
             patientId: defaultPatientId,
             practitionerId: defaultPractitionerId,

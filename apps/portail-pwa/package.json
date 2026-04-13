@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "caniuse-lite": "^1.0.30001787",
     "next": "14.2.0",
     "next-pwa": "^5.6.0",
     "react": "^19.1.0",
@@ -31,7 +32,9 @@
         "executor": "@nx/eslint:lint",
         "options": {
           "eslintConfig": ".eslintrc.js",
-          "lintFilePatterns": ["apps/portail-pwa/**/*.{ts,tsx}"]
+          "lintFilePatterns": [
+            "apps/portail-pwa/**/*.{ts,tsx}"
+          ]
         }
       }
     }
