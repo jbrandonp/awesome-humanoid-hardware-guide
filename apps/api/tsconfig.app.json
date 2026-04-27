@@ -14,7 +14,8 @@
     "emitDecoratorMetadata": true,
     "target": "es2021",
     "strict": true,
-    "rootDir": "../../"
+    "rootDir": "../../",
+    "emitDeclarationOnly": false
   },
   "include": ["src/**/*.ts", "../../libs/models/src/**/*.ts"],
   "exclude": [

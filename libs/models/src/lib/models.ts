@@ -33,6 +33,7 @@ export const VitalsSchema = z.object({
   bloodPressure: z.string().optional().nullable(),
   heartRate: z.number().optional().nullable(),
   temperature: z.number().optional().nullable(),
+  glucose: z.number().optional().nullable(),
   recordedAt: DateOrStringSchema,
   _status: z.enum(['synced', 'created', 'updated', 'deleted']),
   deleted_at: DateOrStringSchema.nullable(),

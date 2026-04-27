@@ -102,6 +102,7 @@ model Patient {
   notifications NotificationStatus[]
   bedEncounters BedEncounter[]
   dicomStudies  DicomStudy[]
+  clinicalIncidents ClinicalIncident[]
 }
 
 // ============================================================================
@@ -122,6 +123,8 @@ model Visit {
   patient       Patient        @relation(fields: [patientId], references: [id])
   prescriptions Prescription[]
   diagnoses     Diagnosis[]
+
+  @@index([patientId])
 }
 
 model Vital {
@@ -139,6 +142,8 @@ model Vital {
   deletedAt     DateTime? @map("deleted_at")
 
   patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
 }
 
 model Prescription {
@@ -159,6 +164,9 @@ model Prescription {
   patient             Patient                    @relation(fields: [patientId], references: [id])
   administrations     MedicationAdministration[]
   crdtAdministrations Bytes?                     @map("crdt_administrations")
+
+  @@index([patientId])
+  @@index([visitId])
 }
 
 model MedicationAdministration {
@@ -180,6 +188,8 @@ model MedicationAdministration {
   prescription Prescription @relation(fields: [prescriptionId], references: [id])
   nurse        User         @relation(fields: [nurseId], references: [id])
 
+  @@index([prescriptionId])
+  @@index([nurseId])
   @@map("medication_administrations")
 }
 
@@ -203,6 +213,9 @@ model ClinicalIncident {
   metadata    Json?
   createdAt   DateTime @default(now())
 
+  patient Patient @relation(fields: [patientId], references: [id])
+
+  @@index([patientId])
   @@map("clinical_incidents")
 }
 
@@ -268,7 +281,7 @@ model Invoice {
   patient               Patient                @relation(fields: [patientId], references: [id])
   financialTransactions FinancialTransaction[]
 
-  @@map("invoices")
+  @@index([patientId])
 }
 
 model InventoryItem {
@@ -373,6 +386,8 @@ model BedEncounter {
   bed     Bed     @relation(fields: [bedId], references: [id])
   patient Patient @relation(fields: [patientId], references: [id])
 
+  @@index([patientId])
+  @@index([bedId])
   @@map("bed_encounters")
 }
 
@@ -393,6 +408,7 @@ model NotificationStatus {
 
   patient Patient @relation(fields: [patientId], references: [id])
 
+  @@index([patientId])
   @@map("notification_statuses")
 }
 
@@ -440,6 +456,7 @@ model DicomStudy {
 
   series DicomSeries[]
 
+  @@index([patientId])
   @@map("dicom_studies")
 }
 

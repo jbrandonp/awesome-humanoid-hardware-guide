@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { WaitingRoomGateway } from './waiting-room.gateway';
-import { JwtModule } from '@nestjs/jwt';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [JwtModule.register({})],
+  imports: [AuthModule],
   providers: [WaitingRoomGateway],
   exports: [WaitingRoomGateway],
 })

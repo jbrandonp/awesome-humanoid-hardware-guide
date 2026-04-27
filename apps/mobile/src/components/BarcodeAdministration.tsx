@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
-// @ts-ignore
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { database } from '../database';
 import { Q } from '@nozbe/watermelondb';

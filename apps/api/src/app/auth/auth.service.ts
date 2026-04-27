@@ -22,10 +22,21 @@ export class AuthService {
       'JWT_REFRESH_SECRET',
       'TOKEN_ENCRYPTION_KEY',
     ];
+    const defaultValues = new Set([
+      'change-me-to-a-secure-random-string-at-least-32-chars',
+      'production-secret-key-change-me',
+      'production-refresh-secret-key-change-me',
+      'medical-system-secure-32-byte-key-min',
+    ]);
     for (const secret of requiredSecrets) {
       if (!process.env[secret]) {
         throw new Error(
           `CRITICAL SECURITY ERROR: ${secret} is not defined in environment variables.`,
+        );
+      }
+      if (defaultValues.has(process.env[secret]!)) {
+        throw new Error(
+          `CRITICAL SECURITY ERROR: ${secret} is set to an insecure default value. Please generate a strong secret.`,
         );
       }
     }

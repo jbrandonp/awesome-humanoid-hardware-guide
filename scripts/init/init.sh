@@ -31,12 +31,15 @@ echo "🐳 Démarrage des bases de données..."
 docker compose --file infra/docker/docker-compose.yml up -d
 
 echo "⏳ Attente du démarrage de PostgreSQL..."
-sleep 10
+until docker exec systeme-sante-postgres pg_isready -U medical_user 2>/dev/null; do
+  echo "En attente de PostgreSQL..."
+  sleep 2
+done
 
 # 4. Déploiement du schéma de base de données
 echo "🗄️ Déploiement du schéma Prisma..."
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 
 # 5. Compilation du Frontend Desktop (React)
 echo "💻 Compilation du client Desktop..."

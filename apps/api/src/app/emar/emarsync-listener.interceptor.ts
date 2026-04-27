@@ -57,50 +57,52 @@ export class EmarsyncListener implements NestInterceptor {
     const idempotencyKey = `emarsync:${payload.idempotencyKey}`;
 
     try {
-      // 1. Idempotency Check (Redis) - Fail-Closed if Redis is down
-      let isAlreadyProcessed = false;
+      // 1. Atomic idempotency lock via Redis SET NX
       try {
-        const cached = await this.redisClient.get(idempotencyKey);
-        isAlreadyProcessed = !!cached;
+        const lockResult = await this.redisClient.set(
+          idempotencyKey, 'PROCESSING', 'EX', 30, 'NX'
+        );
+        if (lockResult !== 'OK') {
+          this.logger.warn(`[EmarsyncListener] Idempotency key ${payload.idempotencyKey} already being processed.`);
+          return next.handle();
+        }
       } catch (redisError) {
         this.logger.error(`[EmarsyncListener] Redis is UNAVAILABLE. Cannot perform idempotency check.`, redisError);
         throw new HttpException('Le service cache Redis est indisponible. Veuillez réessayer plus tard.', HttpStatus.SERVICE_UNAVAILABLE);
       }
 
-      if (isAlreadyProcessed) {
-        this.logger.warn(`[EmarsyncListener] Idempotency key ${payload.idempotencyKey} already processed. Skipping inventory deduction.`);
-        return next.handle();
-      }
-
       this.logger.log(`[EmarsyncListener] Intercepting ADMINISTERED event for ${payload.medicationName}. Decrementing stock...`);
 
       // 2. Atomic Database Transaction
-      await this.prisma.$transaction(async (tx) => {
-        const inventoryItem = await tx.inventoryItem.findUnique({
-          where: { name: payload.medicationName },
-        });
-
-        if (!inventoryItem) {
-          throw new HttpException(`[EmarsyncListener] Medication ${payload.medicationName} not found in Floor Stock.`, HttpStatus.BAD_REQUEST);
-        }
-
-        if (inventoryItem.quantity <= 0) {
-          throw new HttpException(`[EmarsyncListener] Out of stock for ${payload.medicationName}. Cannot decrement.`, HttpStatus.CONFLICT);
-        }
-
-        await tx.inventoryItem.update({
-          where: { name: payload.medicationName },
-          data: { quantity: { decrement: 1 } },
-        });
-      });
-
-      // 3. Mark Idempotency in Redis - Fail-Closed
       try {
-        await this.redisClient.set(idempotencyKey, 'PROCESSED', 'EX', 86400);
-      } catch (redisError) {
-        this.logger.error(`[EmarsyncListener] Failed to mark idempotency in Redis: ${redisError}`);
-        throw new HttpException('Erreur lors de la confirmation d\'idempotence (Redis).', HttpStatus.INTERNAL_SERVER_ERROR);
+        await this.prisma.$transaction(async (tx) => {
+          const inventoryItem = await tx.inventoryItem.findUnique({
+            where: { name: payload.medicationName },
+          });
+
+          if (!inventoryItem) {
+            throw new HttpException(`[EmarsyncListener] Medication ${payload.medicationName} not found in Floor Stock.`, HttpStatus.BAD_REQUEST);
+          }
+
+          if (inventoryItem.quantity <= 0) {
+            throw new HttpException(`[EmarsyncListener] Out of stock for ${payload.medicationName}. Cannot decrement.`, HttpStatus.CONFLICT);
+          }
+
+          await tx.inventoryItem.update({
+            where: { name: payload.medicationName },
+            data: { quantity: { decrement: 1 } },
+          });
+        });
+      } catch (dbError) {
+        // Rollback the Redis lock so the request can be retried
+        await this.redisClient.del(idempotencyKey).catch(() => {});
+        throw dbError;
       }
+
+      // 3. Mark as processed in Redis (non-critical — best effort)
+      await this.redisClient.set(idempotencyKey, 'PROCESSED', 'EX', 86400).catch(() => {
+        this.logger.warn(`[EmarsyncListener] Failed to update idempotency status in Redis, TTL will expire.`);
+      });
 
       this.logger.log(`[EmarsyncListener] Successfully decremented stock for ${payload.medicationName}.`);
     } catch (error: unknown) {

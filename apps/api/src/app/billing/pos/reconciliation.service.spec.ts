@@ -66,8 +66,8 @@ describe('ReconciliationService', () => {
         openingFloatCents: 10000, // 100.00
       });
 
-      expect(result.id).toBe('session-1');
-      expect(result.openingFloatCents).toBe(10000);
+      expect((result as any).id).toBe('session-1');
+      expect((result as any).openingFloatCents).toBe(10000);
       expect(prisma.cashRegisterSession.create).toHaveBeenCalled();
     });
 
@@ -117,7 +117,7 @@ describe('ReconciliationService', () => {
 
       const result = await service.processTransaction(payload);
 
-      expect(result.status).toBe('SUCCESS');
+      expect((result as any).status).toBe('SUCCESS');
       expect(prisma.$transaction).toHaveBeenCalled();
       // Should create 2 transactions and update 1 invoice
       expect(prisma.financialTransaction.create).toHaveBeenCalledTimes(2);
@@ -168,7 +168,7 @@ describe('ReconciliationService', () => {
         idempotencyKey: 'idem-refund-1',
       });
 
-      expect(result.status).toBe('SUCCESS');
+      expect((result as any).status).toBe('SUCCESS');
       expect(prisma.financialTransaction.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -244,10 +244,10 @@ describe('ReconciliationService', () => {
         upiTotalCents: 2000,
       };
 
-      const result = await service.closeSession(payload);
+      const result = await service.closeSession(payload) as any;
 
-      expect(result.discrepancyCents).toBe(0);
-      expect(result.status).toBe(RegisterStatus.CLOSED);
+      expect((result as any).discrepancyCents).toBe(0);
+      expect((result as any).status).toBe(RegisterStatus.CLOSED);
       expect(result.expectedCloseAmountCents).toBe(22000);
       expect(result.actualCloseAmountCents).toBe(22000);
     });
@@ -281,10 +281,10 @@ describe('ReconciliationService', () => {
         upiTotalCents: 0,
       };
 
-      const result = await service.closeSession(payload);
+      const result = await service.closeSession(payload) as any;
 
-      expect(result.discrepancyCents).toBe(0);
-      expect(result.status).toBe(RegisterStatus.CLOSED);
+      expect((result as any).discrepancyCents).toBe(0);
+      expect((result as any).status).toBe(RegisterStatus.CLOSED);
       expect(result.expectedCloseAmountCents).toBe(15000);
       expect(result.actualCloseAmountCents).toBe(15000);
     });
@@ -309,10 +309,10 @@ describe('ReconciliationService', () => {
         upiTotalCents: 0,
       };
 
-      const result = await service.closeSession(payload);
+      const result = await service.closeSession(payload) as any;
 
-      expect(result.discrepancyCents).toBe(-5000); // 5000 actual - 10000 expected
-      expect(result.status).toBe(RegisterStatus.PENDING_APPROVAL); // 5000 is > 2% of 10000 (200)
+      expect((result as any).discrepancyCents).toBe(-5000); // 5000 actual - 10000 expected
+      expect((result as any).status).toBe(RegisterStatus.PENDING_APPROVAL); // 5000 is > 2% of 10000 (200)
     });
   });
 });

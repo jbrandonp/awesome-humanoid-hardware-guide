@@ -56,12 +56,12 @@ describe('Hl7MllpController', () => {
     });
 
     it('should throw error when message is missing', async () => {
-      await expect(controller.sendHl7Message({})).rejects.toThrow('Message HL7 requis');
+      await expect(controller.sendHl7Message({} as any)).rejects.toThrow('Message HL7 requis');
     });
 
     it('should throw error when message does not contain MSH segment', async () => {
       const invalidMessage = 'INVALID|segment|...';
-      await expect(controller.sendHl7Message({ message: invalidMessage })).rejects.toThrow('segment MSH manquant');
+      await expect(controller.sendHl7Message({ message: invalidMessage } as any)).rejects.toThrow('segment MSH manquant');
     });
   });
 
@@ -76,7 +76,7 @@ describe('Hl7MllpController', () => {
     });
 
     it('should throw error when message is missing', async () => {
-      await expect(controller.parseHl7Message({})).rejects.toThrow('Message HL7 requis');
+      await expect(controller.parseHl7Message({} as any)).rejects.toThrow('Message HL7 requis');
     });
 
     it('should handle parsing errors gracefully', async () => {

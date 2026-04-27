@@ -41,7 +41,12 @@ const QUICK_PROTOCOLS = {
   ],
 };
 
-export function Omnibox() {
+interface OmniboxProps {
+  patientId?: string;
+  practitionerId?: string;
+}
+
+export function Omnibox({ patientId, practitionerId }: OmniboxProps = {}) {
   const [query, setQuery] = useState('');
   const [searchResults, setSearchResults] = useState<OmniboxSearchResult[]>([]);
   const [selectedItems, setSelectedItems] = useState<OmniboxSearchResult[]>([]);
@@ -127,15 +132,16 @@ export function Omnibox() {
         const currentMeds = selectedItems
           .filter((i) => i.type === 'medication')
           .map((i) => i.name);
-        const patientId = 'dummy-patient-uuid';
+        const activePatientId = patientId || 'UNKNOWN_PATIENT';
+        const activePractitionerId = practitionerId || 'UNKNOWN_PRACTITIONER';
 
         try {
           const interactions =
             await DrugInteractionChecker.checkInteractionsLive(
               item.name,
               currentMeds,
-              patientId,
-              'dummy-practitioner-uuid',
+              activePatientId,
+              activePractitionerId,
             );
           if (interactions.length > 0) {
             const severityEmoji =

@@ -28,7 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(req: FastifyRequest, payload: JwtPayload): Promise<{ userId: string; role: string }> {
     // Extract raw token from Authorization header to check against blacklist
     const authHeader = (req.headers as Record<string, string | undefined>)['authorization'] || '';
-    const token = authHeader.replace('Bearer ', '');
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
 
     if (token && await this.blacklistService.isTokenBlacklisted(token)) {
       throw new UnauthorizedException('Ce token a été invalidé (Déconnexion effectuée).');

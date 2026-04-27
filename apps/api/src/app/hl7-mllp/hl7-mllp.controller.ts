@@ -168,7 +168,7 @@ export class Hl7MllpController {
   private generateAckMessage(originalMessage: string): string {
     // Extraire le contrôle ID du message original
     let controlId = 'UNKNOWN';
-    const mshSegment = originalMessage.split('\n').find(line => line.startsWith('MSH|'));
+    const mshSegment = originalMessage.split(/\r\n|\r|\n/).find(line => line.startsWith('MSH|'));
     if (mshSegment) {
       const fields = mshSegment.split('|');
       if (fields.length > 9) {
@@ -177,7 +177,7 @@ export class Hl7MllpController {
     }
 
     const now = new Date();
-    const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0];
+    const timestamp = now.toISOString().replace(/[-:T]/g, '').substring(0, 14);
     
     // Construire l'ACK HL7 minimal
     return `MSH|^~\\&|RESILIENT_API|HOSPITAL|LAB_SYSTEM|HOSPITAL|${timestamp}||ACK^R01|${controlId}|P|2.5\r`

@@ -24,6 +24,12 @@ export function calculateTriageScore(input: TriageInput): number {
     input.chiefComplaint.toLowerCase().includes('chest pain') ||
     input.chiefComplaint.toLowerCase().includes('stroke') ||
     input.chiefComplaint.toLowerCase().includes('suicidal') ||
+    input.chiefComplaint.toLowerCase().includes('douleur thoracique') ||
+    input.chiefComplaint.toLowerCase().includes('douleur poitrine') ||
+    input.chiefComplaint.toLowerCase().includes('avc') ||
+    input.chiefComplaint.toLowerCase().includes('accident vasculaire') ||
+    input.chiefComplaint.toLowerCase().includes('suicidaire') ||
+    input.chiefComplaint.toLowerCase().includes('idées noires') ||
     input.temperature >= 40 // Extreme fever
   ) {
     return 2;

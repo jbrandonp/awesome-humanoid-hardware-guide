@@ -52,19 +52,13 @@ export class FhirService {
 
     if (patient.vitals.length === 0) {
       this.logger.warn(
-        `[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune constante vitale enregistrée.`,
-      );
-      throw new UnprocessableEntityException(
-        "Dossier incomplet : Impossible de générer un Bundle FHIR pour un patient sans aucune constante vitale (Vitals). Veuillez acquérir des données avant l'export.",
+        `[FHIR] Patient ${patientId} n'a aucune constante vitale enregistree. Export partiel.`,
       );
     }
 
     if (patient.visits.length === 0) {
       this.logger.warn(
-        `[FHIR] Échec de l'export: Le patient ${patientId} n'a aucune visite/consultation.`,
-      );
-      throw new UnprocessableEntityException(
-        'Dossier incomplet : Le patient ne possède aucun historique de consultation.',
+        `[FHIR] Patient ${patientId} n'a aucune visite/consultation. Export partiel.`,
       );
     }
 

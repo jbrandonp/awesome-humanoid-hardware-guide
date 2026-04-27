@@ -25,7 +25,7 @@ export class CompressionInterceptor implements NestInterceptor {
     if (['POST', 'PUT', 'PATCH'].includes(request.method)) {
       const contentEncoding = request.headers['content-encoding'] || '';
       // Only allow gzip as Express body-parser natively supports it. br (brotli) requires additional middleware not configured.
-      if (!contentEncoding.includes('gzip')) {
+      if (contentEncoding && !contentEncoding.includes('gzip')) {
         throw new UnsupportedMediaTypeException('Incoming payload must be compressed with gzip');
       }
     }

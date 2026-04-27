@@ -55,9 +55,14 @@ export class OcrController {
             case 'TEMPERATURE':
               temperature = entity.numericValue;
               break;
+            case 'BLOOD_PRESSURE_DIASTOLIC':
+              if (typeof bloodPressure === 'string' && bloodPressure.includes('/...')) {
+                bloodPressure = bloodPressure.replace('/...', `/${entity.numericValue}`);
+              }
+              break;
             case 'BLOOD_PRESSURE_SYSTOLIC':
               bloodPressure = `${entity.numericValue}/...`;
-              break; // Simplification
+              break;
           }
         }
 

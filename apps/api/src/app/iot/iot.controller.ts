@@ -1,8 +1,10 @@
-import { Controller, Post, Body, HttpStatus, HttpException, Logger } from '@nestjs/common';
+import { Controller, Post, Body, HttpStatus, HttpException, Logger, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { IotMedicalService, BleBloodPressurePayloadSchema, SmartPenInkPayloadSchema } from './iot.service';
 import { z } from 'zod';
 
 @Controller('iot')
+@UseGuards(AuthGuard('jwt'))
 export class IotController {
   private readonly logger = new Logger(IotController.name);
 

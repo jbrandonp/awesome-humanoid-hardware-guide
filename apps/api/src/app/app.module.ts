@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SyncModule } from './sync/sync.module';
@@ -42,6 +42,7 @@ import { CryptoModule } from './crypto/crypto.module';
 import { EmarModule } from './emar/emar.module';
 import { PhiMaskingInterceptor } from './interceptors/phi-masking.interceptor';
 import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
+import { ThrottlerGuard } from '@nestjs/throttler';
 
 @Module({
   imports: [
@@ -55,7 +56,7 @@ import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 5000,
         connectTimeoutMS: 5000,
-        maxPoolSize: 1,
+        maxPoolSize: 10,
         retryWrites: false,
         bufferCommands: false,
         autoIndex: false,
@@ -67,11 +68,11 @@ import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
        connection: {
           host: process.env.REDIS_HOST || 'localhost',
           port: parseInt(process.env.REDIS_PORT || '6379', 10),
-          maxRetriesPerRequest: 0,
-          enableOfflineQueue: false,
+          maxRetriesPerRequest: 3,
+          enableOfflineQueue: true,
           connectTimeout: 5000,
-          lazyConnect: true,
-          retryStrategy: (times) => null,
+          lazyConnect: false,
+          retryStrategy: (times) => Math.min(times * 100, 3000),
        }
     }),
     // Core
@@ -98,6 +99,10 @@ import { IdempotencyInterceptor } from './interceptors/idempotency.interceptor';
     {
       provide: APP_INTERCEPTOR,
       useClass: PhiMaskingInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
     },
   ],
 })

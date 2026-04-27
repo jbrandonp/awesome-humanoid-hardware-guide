@@ -28,6 +28,7 @@ const schema: AppSchema = appSchema({
         { name: 'blood_pressure', type: 'string', isOptional: true },
         { name: 'heart_rate', type: 'number', isOptional: true },
         { name: 'temperature', type: 'number', isOptional: true },
+        { name: 'glucose', type: 'number', isOptional: true },
         { name: 'recorded_at', type: 'number' },
         { name: 'deleted_at', type: 'number', isOptional: true },
       ],

@@ -71,6 +71,8 @@ export function useBleScanner(patientId?: string): BleScannerState & {
   const managerRef = useRef<BleManager | null>(null);
   const isScanningRef = useRef<boolean>(false);
   const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const monitorSubRef = useRef<{ remove: () => void } | null>(null);
+  const disconnectSubRef = useRef<{ remove: () => void } | null>(null);
 
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -156,6 +158,10 @@ export function useBleScanner(patientId?: string): BleScannerState & {
         setIsConnected(false);
       }
     }
+
+    // Nettoyer les souscriptions BLE pour eviter les fuites memoire (BLE6, BLE7)
+    if (monitorSubRef.current) { monitorSubRef.current.remove(); monitorSubRef.current = null; }
+    if (disconnectSubRef.current) { disconnectSubRef.current.remove(); disconnectSubRef.current = null; }
   };
 
   /**
@@ -297,8 +303,10 @@ export function useBleScanner(patientId?: string): BleScannerState & {
         throw new Error('Périphérique non supporté.');
       }
 
-      // Souscription aux valeurs envoyées en temps réel par le capteur
-      readyDevice.monitorCharacteristicForService(
+      // Souscription aux valeurs envoyees en temps reel par le capteur
+      // Nettoyer l'ancienne souscription avant d'en creer une nouvelle
+      if (monitorSubRef.current) { monitorSubRef.current.remove(); }
+      monitorSubRef.current = readyDevice.monitorCharacteristicForService(
         targetService,
         targetChar,
         (
@@ -330,7 +338,7 @@ export function useBleScanner(patientId?: string): BleScannerState & {
               // SÉCURITÉ & TRAÇABILITÉ : Sauvegarde locale dans WatermelonDB
               // La DB locale stockera l'info, puis l'application poussera l'AuditLog
               // DPDPA vers NestJS lors du retour réseau.
-              saveVitalDataOfflineSecurely(vitalData);
+              await saveVitalDataOfflineSecurely(vitalData);
             } catch (decodeError: unknown) {
               console.error('[BLE] Échec du décodage hexadécimal', decodeError);
               setSystemError(
@@ -341,8 +349,10 @@ export function useBleScanner(patientId?: string): BleScannerState & {
         },
       );
 
-      // Listener global de déconnexion inattendue
-      manager.onDeviceDisconnected(targetDevice.id, () => {
+      // Listener global de deconnexion inattendue
+      // Nettoyer l'ancien listener avant d'en ajouter un nouveau
+      if (disconnectSubRef.current) { disconnectSubRef.current.remove(); }
+      disconnectSubRef.current = manager.onDeviceDisconnected(targetDevice.id, () => {
         console.warn(`[BLE] Perte de signal Bluetooth avec ${targetDevice.id}`);
         setIsConnected(false);
         setActiveDevice(null);
@@ -377,6 +387,19 @@ export function useBleScanner(patientId?: string): BleScannerState & {
   };
 
   /**
+   * Décodage IEEE-11073 16-bit SFLOAT
+   * Format: 4-bit exponent (signed) + 12-bit mantissa (signed)
+   * value = mantissa * 10^exponent
+   */
+  const decodeSFLOAT = (rawValue: number): number => {
+    const mantissa = rawValue & 0x0FFF;
+    const exponent = (rawValue >> 12) & 0x0F;
+    const signedMantissa = mantissa >= 0x0800 ? mantissa - 0x1000 : mantissa;
+    const signedExponent = exponent >= 8 ? exponent - 16 : exponent;
+    return signedMantissa * Math.pow(10, signedExponent);
+  };
+
+  /**
    * Décodage IEEE-11073 16-bit SFLOAT (Tensiomètre)
    */
   const decodeBloodPressure = (
@@ -389,19 +412,22 @@ export function useBleScanner(patientId?: string): BleScannerState & {
 
     const flags = buffer.readUInt8(0);
     const isPulsePresent = (flags & 0x02) !== 0;
+    const isTimestampPresent = (flags & 0x01) !== 0;
+    const pulseOffset = isTimestampPresent ? 14 : 7;
 
-    // IEEE 11073 SFLOAT extraction
     const rawSystolic = buffer.readUInt16LE(1);
     const rawDiastolic = buffer.readUInt16LE(3);
     const rawMap = buffer.readUInt16LE(5);
     const pulseRate =
-      isPulsePresent && buffer.length >= 9 ? buffer.readUInt16LE(7) : undefined;
+      isPulsePresent && buffer.length >= pulseOffset + 2
+        ? decodeSFLOAT(buffer.readUInt16LE(pulseOffset))
+        : undefined;
 
     return {
       type: 'BLOOD_PRESSURE',
-      systolicMmHg: rawSystolic,
-      diastolicMmHg: rawDiastolic,
-      mapMmHg: rawMap,
+      systolicMmHg: decodeSFLOAT(rawSystolic),
+      diastolicMmHg: decodeSFLOAT(rawDiastolic),
+      mapMmHg: decodeSFLOAT(rawMap),
       heartRateBpm: pulseRate,
       timestampIso: new Date().toISOString(),
       hardwareMacAddress: hardwareId,
@@ -437,20 +463,21 @@ export function useBleScanner(patientId?: string): BleScannerState & {
 
   /**
    * Décodage Glucose Profile (Glucomètre)
+   * IEEE 11073-10417 : offset 0=flags, 1=sequence, 3=timestamp(7bytes), 10=glucose(SFLOAT)
    */
   const decodeGlucose = (
     base64Payload: string,
     hardwareId: string,
   ): MedicalVitalMeasurement => {
     const buffer = Buffer.from(base64Payload, 'base64');
-    // Le vrai profil IEEE est complexe (sfloat), on simule une extraction sécurisée
-    if (buffer.length < 3) throw new Error('Payload Glucose corrompu.');
+    if (buffer.length < 12) throw new Error('Payload Glucose corrompu.');
 
-    const glucoseMgDl = buffer.readUInt16LE(1);
+    const glucoseRaw = buffer.readUInt16LE(10);
+    const glucoseMgDl = decodeSFLOAT(glucoseRaw);
 
     return {
       type: 'GLUCOSE',
-      glucoseMgDl: glucoseMgDl,
+      glucoseMgDl,
       timestampIso: new Date().toISOString(),
       hardwareMacAddress: hardwareId,
     };

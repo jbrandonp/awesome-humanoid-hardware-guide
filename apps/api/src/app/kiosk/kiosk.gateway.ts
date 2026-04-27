@@ -11,12 +11,13 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { KioskService } from './kiosk.service';
+import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // For this demo, allow all origins since Kiosk might run on a distinct port/IP
+    origin: '*',
   },
-  transports: ['websocket'], // Use native WebSockets for performance/resilience
+  transports: ['websocket'],
 })
 export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(KioskGateway.name);
@@ -24,7 +25,10 @@ export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly kioskService: KioskService) {}
+  constructor(
+    private readonly kioskService: KioskService,
+    private readonly jwtService: JwtService,
+  ) {}
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     afterInit(_server: Server): void {
@@ -32,7 +36,19 @@ export class KioskGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
   }
 
   handleConnection(client: Socket): void {
-    this.logger.log(`Kiosk Client connected: ${client.id}`);
+    try {
+      const token = client.handshake.auth?.token || client.handshake.headers['authorization']?.split(' ')[1];
+      if (!token) {
+        this.logger.warn(`Kiosk connection rejected (no token): ${client.id}`);
+        client.disconnect();
+        return;
+      }
+      this.jwtService.verify(token);
+      this.logger.log(`Kiosk Client connected: ${client.id}`);
+    } catch {
+      this.logger.warn(`Kiosk connection rejected (invalid token): ${client.id}`);
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket): void {

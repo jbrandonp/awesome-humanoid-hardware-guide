@@ -45,30 +45,20 @@ export class BillingService {
     this.logger.log(`[Billing] Requête de facturation reçue. Patient: ${payload.patientId} | Clé: ${payload.idempotencyKey}`);
 
     try {
-      // 1. IDEMPOTENCE ABSOLUE
-      // Vérifier si cette facture exacte n'a pas déjà été traitée (ex: retry réseau)
-      const existingInvoice = await this.prisma.invoice.findUnique({
-        where: { idempotencyKey: payload.idempotencyKey }
-      });
+      const result = await this.prisma.$transaction(async (tx) => {
+        // 1. IDEMPOTENCE ABSOLUE — dans la transaction (atomique)
+        const existingInvoice = await tx.invoice.findUnique({
+          where: { idempotencyKey: payload.idempotencyKey }
+        });
 
-      if (existingInvoice) {
-        this.logger.warn(`[Billing] Rejet: Clé d'idempotence déjà utilisée (${payload.idempotencyKey}). Retour de la facture existante.`);
-        return {
-           status: 'ALREADY_PROCESSED',
-           invoiceId: existingInvoice.id,
-           totalCents: existingInvoice.totalCents,
-           currency: existingInvoice.currency,
-           message: "Cette facture a déjà été payée ou générée. Doublon annulé."
-        };
-      }
+        if (existingInvoice) {
+          return { __duplicate: true as const, invoice: existingInvoice };
+        }
 
-      // 2. TRANSACTION ATOMIQUE (PostgreSQL)
-      // Si la facturation échoue (ex: rupture de stock), la facture N'EST PAS créée.
-      const invoice = await this.prisma.$transaction(async (tx) => {
-         let subtotalCents = 0;
+        let subtotalCents = 0;
 
-         // A. Calcul des lignes et déduction d'inventaire
-         // ⚡ OPTIMIZATION: N+1 Query Fix
+        // A. Calcul des lignes et déduction d'inventaire
+        // ⚡ OPTIMIZATION: N+1 Query Fix
          // Fetch all inventory items in a single query
          const itemNames = payload.items.map(i => i.inventoryItemName);
          const foundItemsList = await tx.inventoryItem.findMany({
@@ -146,13 +136,24 @@ export class BillingService {
          return newInvoice;
       });
 
-      this.logger.log(`[Billing] Facture ${invoice.id} générée avec succès. Total: ${invoice.totalCents / 100} ${invoice.currency}`);
+      if ('__duplicate' in result) {
+        this.logger.warn(`[Billing] Clé d'idempotence déjà utilisée (${payload.idempotencyKey}). Retour de la facture existante.`);
+        return {
+           status: 'ALREADY_PROCESSED',
+           invoiceId: result.invoice.id,
+           totalCents: result.invoice.totalCents,
+           currency: result.invoice.currency,
+           message: "Cette facture a déjà été payée ou générée. Doublon annulé."
+        };
+      }
+
+      this.logger.log(`[Billing] Facture ${result.id} générée avec succès. Total: ${result.totalCents / 100} ${result.currency}`);
 
       return {
          status: 'SUCCESS',
-         invoiceId: invoice.id,
-         totalCents: invoice.totalCents,
-         currency: invoice.currency,
+         invoiceId: result.id,
+         totalCents: result.totalCents,
+         currency: result.currency,
          message: "Facturation et déduction d'inventaire terminées avec succès."
       };
 

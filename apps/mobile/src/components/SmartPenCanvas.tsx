@@ -70,9 +70,10 @@ export function SmartPenCanvas() {
           }
         );
 
-        // --- MOCK POUR LE SANDBOX : Injection artificielle d'événements Bluetooth ---
-        // Simule un médecin écrivant rapidement une longue ordonnance (Test de charge mémoire)
-        mockIntervalId = simulateHeavyBluetoothStream();
+        // Simulation Bluetooth UNIQUEMENT en développement
+        if (__DEV__) {
+          mockIntervalId = simulateHeavyBluetoothStream();
+        }
 
       } catch (sdkError: unknown) {
         console.error("[SmartPen FATAL] Le SDK du stylo Bluetooth a crashé.", sdkError);
@@ -158,10 +159,14 @@ export function SmartPenCanvas() {
   const commitCurrentPathToState = () => {
     const finalizedPath = currentPathRef.current;
     if (finalizedPath) {
-       setInkPaths(prev => [
-         ...prev,
-         { id: `ink-${Date.now()}-${Math.random().toString(36).substring(7)}`, pathData: finalizedPath }
-       ]);
+       setInkPaths(prev => {
+         const next = [
+           ...prev,
+           { id: `ink-${Date.now()}-${Math.random().toString(36).substring(7)}`, pathData: finalizedPath }
+         ];
+         // Cap a 500 paths max pour eviter OOM (PEN2)
+         return next.length > 500 ? next.slice(next.length - 500) : next;
+       });
        currentPathRef.current = "";
        // Note : setCurrentPathData("") n'est utile que si on implémente un "Live Render" avec setNativeProps
        // Dans React Native SVG classique, l'accumulation par paquets (Chunks) est la norme de compromis.

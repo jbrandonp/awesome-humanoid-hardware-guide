@@ -3,6 +3,13 @@ import * as TaskManager from 'expo-task-manager';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import * as Crypto from 'expo-crypto';
+
+const base64ToString = (base64: string): string =>
+  decodeURIComponent(
+    Array.from(atob(base64))
+      .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+      .join('')
+  );
 // (Note: En environnement complet, on utiliserait le Sync de WatermelonDB ou une vraie DB SQLite,
 // mais AsyncStorage est adéquat pour une queue d'urgence/fallback simple structurée).
 
@@ -78,7 +85,7 @@ TaskManager.defineTask(BACKGROUND_SYNC_TASK_NAME, async () => {
 
        // 3. TENTATIVE DE CONNEXION AU SERVEUR (NESTJS)
        try {
-         const payloadData = JSON.parse(Buffer.from(task.payloadBase64, 'base64').toString('utf-8'));
+          const payloadData = JSON.parse(base64ToString(task.payloadBase64));
 
          // Appel API avec Timeout extrêmement court (3 secondes).
          // Si le Wi-Fi de la clinique est apparu juste 5 secondes, on veut envoyer le CRITICAL et couper

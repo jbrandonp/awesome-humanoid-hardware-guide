@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query, Post, Body } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Body, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { RemotePatientMonitoringService } from './remote-patient-monitoring.service';
 import { VitalsSchema } from '@systeme-sante/models';
 import { z } from 'zod';
@@ -13,19 +14,14 @@ const CreateVitalsSchema = VitalsSchema.omit({ id: true, _status: true, deleted_
     respiratoryRate: z.number().optional().nullable(),
     oxygenSaturation: z.number().optional().nullable(),
     glucose: z.number().optional().nullable(),
-    patientName: z.string().optional(), // pour compatibilité avec l'app mobile
-  }).transform((data) => {
-    // Convert systolic/diastolic to bloodPressure string if provided
-    if (data.systolic !== undefined && data.diastolic !== undefined) {
-      return {
-        ...data,
-        bloodPressure: `${data.systolic}/${data.diastolic}`,
-      };
-    }
-    return data;
-  });
+  })
+  .transform((data) => ({
+    ...data,
+    bloodPressure: data.systolic ? `${data.systolic}/${data.diastolic}` : undefined,
+  }));
 
 @Controller('remote-patient-monitoring')
+@UseGuards(AuthGuard('jwt'))
 export class RemotePatientMonitoringController {
   constructor(private readonly remotePatientMonitoringService: RemotePatientMonitoringService) {}
 

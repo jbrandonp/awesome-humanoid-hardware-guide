@@ -316,27 +316,36 @@ export class IotMedicalService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-      // 4. CRDT ENCAPSULATION (Yjs)
+    // 4.a FIND EXISTING VISIT
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const existingVisit = await this.prisma.visit.findFirst({
+      where: {
+        patientId: payload.patientId,
+        createdAt: { gte: oneHourAgo },
+        status: 'created'
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+      // 4.b CRDT ENCAPSULATION (Yjs)
       try {
-      // Integrating Smart Pen ink into the clinical notes CRDT format
       const doc = new Y.Doc();
+
+      // Restore existing CRDT state if available
+      if (existingVisit?.notes) {
+        try {
+          Y.applyUpdate(doc, new Uint8Array(existingVisit.notes));
+        } catch {
+          this.logger.warn(`[IoT-PEN] Existing visit notes could not be decoded as Yjs, starting fresh for visit ${existingVisit.id}`);
+        }
+      }
+
+      // Append new stroke to the restored document
       const yText = doc.getText('notes');
-      yText.insert(0, payload.rawSvgPathData);
+      yText.insert(yText.length, payload.rawSvgPathData);
       const binaryUpdate = Buffer.from(Y.encodeStateAsUpdate(doc));
 
-      // 4.b TRANSACTION ATOMIC OR SESSION-AWARE INGESTION
-      // Optimization: Instead of creating a new Visit for every ink stroke (which would pollute the DB),
-      // we try to append to an existing "active" visit for this patient within the last hour.
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      
-      const existingVisit = await this.prisma.visit.findFirst({
-        where: {
-          patientId: payload.patientId,
-          createdAt: { gte: oneHourAgo },
-          status: 'created'
-        },
-        orderBy: { createdAt: 'desc' }
-      });
+      // 4.c TRANSACTION ATOMIC OR SESSION-AWARE INGESTION
 
       let visitId: string;
 
@@ -417,8 +426,7 @@ export class IotMedicalService implements OnModuleInit, OnModuleDestroy {
       `[WATCHDOG] Vidage de la file d'attente IoT (${this.fallbackQueue.length} records en attente)...`,
     );
 
-    const itemsToProcess = [...this.fallbackQueue];
-    this.fallbackQueue = []; // On vide la queue courante
+    const itemsToProcess = this.fallbackQueue.splice(0); // Atomique : pas de race condition (IOT3)
 
     for (const item of itemsToProcess) {
       try {
@@ -436,9 +444,9 @@ export class IotMedicalService implements OnModuleInit, OnModuleDestroy {
           // In this architecture, it's safer to let the watchdog manage the retry count.
           this.fallbackQueue.push(item);
         } else {
+          const payloadKeys = item.payload ? Object.keys(item.payload).filter(k => k !== 'patientId' && k !== 'practitionerId').join(', ') : 'none';
           this.logger.error(
-            `[FATAL] Donnée IoT perdue définitivement après 10 tentatives. Payload:`,
-            item.payload,
+            `[FATAL] Donnee IoT perdue definitivement apres 10 tentatives. Type: ${item.type}, Retries: ${item.retryCount}, Fields: [${payloadKeys}]`,
           );
         }
       }

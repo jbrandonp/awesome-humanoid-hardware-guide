@@ -141,9 +141,9 @@ const serverCertPem = forge.pki.certificateToPem(serverCert);
 const serverKeyPem = forge.pki.privateKeyToPem(serverKeys.privateKey);
 
 fs.writeFileSync(path.join(certsDir, 'ca.crt'), caCertPem);
-fs.writeFileSync(path.join(certsDir, 'ca.key'), caKeyPem);
+fs.writeFileSync(path.join(certsDir, 'ca.key'), caKeyPem, { mode: 0o600 });
 fs.writeFileSync(path.join(certsDir, 'server.crt'), serverCertPem);
-fs.writeFileSync(path.join(certsDir, 'server.key'), serverKeyPem);
+fs.writeFileSync(path.join(certsDir, 'server.key'), serverKeyPem, { mode: 0o600 });
 
 console.log(`Certificates successfully generated and saved in ${certsDir}:`);
 console.log('- ca.crt (Root CA Certificate - distribute to clients)');

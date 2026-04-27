@@ -1,6 +1,5 @@
 import React, { useState, useRef, useCallback } from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
-// @ts-ignore
 import { CameraView, useCameraPermissions } from "expo-camera";
 
 export function RPPGBiosensor() {
@@ -25,6 +24,12 @@ export function RPPGBiosensor() {
     setTimeLeft(30);
     setResult(null);
     setErrorMsg(null);
+
+    if (!__DEV__) {
+      setErrorMsg('La capture rPPG nécessite un dispositif médical validé. Fonctionnalité indisponible en production.');
+      setIsMeasuring(false);
+      return;
+    }
 
     // In a real environment with frame access, we would collect raw pixel channel means here.
     // For this simulation/demonstration, we generate a synthetic clean signal with added noise

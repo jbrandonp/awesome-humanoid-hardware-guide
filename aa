@@ -1,0 +1,12 @@
+from langchain_deepseek import ChatDeepSeek
+
+# Initialisation du modèle
+llm = ChatDeepSeek(
+    model="deepseek-reasoner", # Utilise le mode raisonnement
+    temperature=0,
+    api_key="VOTRE_CLE_DEEPSEEK" 
+)
+
+# Test de la connexion
+response = llm.invoke("Pourquoi Antigravity est-il qualifié d'IDE agent-first ?")
+print(response.content)

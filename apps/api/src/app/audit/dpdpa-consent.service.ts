@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClinicalRecordService } from '../clinical-record/clinical-record.service';
 import * as crypto from 'crypto';
 
 // ============================================================================
@@ -17,9 +16,8 @@ export interface ConsentGrantPayload {
 }
 
 export interface ConsentRevocationResult {
-  status: 'REVOKED_AND_PURGED' | 'FAILED_ROLLBACK';
+  status: 'REVOKED' | 'FAILED';
   message: string;
-  recordsDeletedCount: number;
 }
 
 @Injectable()
@@ -28,8 +26,6 @@ export class DpdpaConsentService {
 
   constructor(
     private readonly prisma: PrismaService,
-    // Service MongoDB pour purger les formulaires cliniques dynamiques
-    private readonly clinicalRecordService: ClinicalRecordService
   ) {}
 
   /**
@@ -137,109 +133,43 @@ export class DpdpaConsentService {
     }
 
     try {
-      // ============================================================================
-      // TRANSACTION ATOMIQUE POSTGRESQL (Rollback automatique si échec)
-      // ============================================================================
-      const purgeStats = await this.prisma.$transaction(async (tx) => {
-        let totalDeleted = 0;
-
-        // 1. Destruction des Administrations de Médicaments (via Prescription)
-        const deletedAdmins = await tx.medicationAdministration.deleteMany({
-           where: { prescription: { patientId } }
-        });
-        totalDeleted += deletedAdmins.count;
-
-        // 2. Destruction des Prescriptions
-        const deletedPrescriptions = await tx.prescription.deleteMany({
-           where: { patientId }
-        });
-        totalDeleted += deletedPrescriptions.count;
-
-        // 3. Destruction des Diagnostics (via Visit)
-        const deletedDiagnoses = await tx.diagnosis.deleteMany({
-          where: { visit: { patientId } }
-        });
-        totalDeleted += deletedDiagnoses.count;
-
-        // 4. Destruction des Constantes Vitales (Vitals IoT)
-        const deletedVitals = await tx.vital.deleteMany({
-           where: { patientId }
-        });
-        totalDeleted += deletedVitals.count;
-
-        // 5. Destruction des Notes Cliniques (Yjs CRDT Visits)
-        const deletedVisits = await tx.visit.deleteMany({
-           where: { patientId }
-        });
-        totalDeleted += deletedVisits.count;
-
-        // 6. Destruction de l'Imagerie Médicale (DICOM)
-        const deletedInstances = await tx.dicomInstance.deleteMany({
-          where: { series: { study: { patientId } } }
-        });
-        const deletedSeries = await tx.dicomSeries.deleteMany({
-          where: { study: { patientId } }
-        });
-        const deletedStudies = await tx.dicomStudy.deleteMany({
-          where: { patientId }
-        });
-        totalDeleted += (deletedInstances.count + deletedSeries.count + deletedStudies.count);
-
-        // 7. Révocation du Droit d'Accès lui-même
+      await this.prisma.$transaction(async (tx) => {
+        // 1. Révocation du consentement pour cette paire médecin-patient
         await tx.dpdpaConsent.deleteMany({
           where: { userId, patientId }
         });
 
-        // 8. TRACE INALTÉRABLE : L'Audit Log est la SEULE donnée conservée
+        // 2. TRACE INALTÉRABLE
         await tx.auditLog.create({
           data: {
              userId: userId,
              patientId: patientId,
-             action: 'DPDPA_CONSENT_REVOKED_AND_PURGED',
+             action: 'DPDPA_CONSENT_REVOKED',
              ipAddress: revokedByIp,
              metadata: {
                revocationTimestamp: new Date().toISOString(),
-               postgresRecordsPurged: totalDeleted,
-               status: 'HARD_DELETE_SUCCESSFUL'
+               status: 'ACCESS_REVOKED'
              }
           }
         });
 
-        return totalDeleted;
+        return true;
       }, {
-        timeout: 30000 // 30s for large purges
+        timeout: 30000
       });
 
-      // ============================================================================
-      // PURGE DE LA BASE DOCUMENTAIRE (MongoDB - Spécialités Dynamiques)
-      // Exécutée après la validation de la transaction Postgres
-      // ============================================================================
-      let totalPurged = purgeStats;
-      try {
-         const mongoDeletedCount = await this.clinicalRecordService.hardDeletePatientRecords(patientId);
-         this.logger.log(`[DPDPA PURGE] ${mongoDeletedCount} documents MongoDB détruits pour le patient ${patientId}.`);
-         totalPurged += mongoDeletedCount;
-      } catch (mongoError: unknown) {
-         // Si Mongo crash, on a au moins détruit Postgres. On log l'échec partiel
-         this.logger.error(`[DPDPA PURGE PARTIAL FAILURE] Les données Postgres sont détruites, mais MongoDB a échoué.`, mongoError);
-         // Dans un système d'entreprise, on relancerait une file d'attente (Dead Letter Queue)
-      }
-
-      this.logger.log(`[DPDPA PURGE SUCCESS] Dossier patient ${patientId} totalement effacé (Total: ${totalPurged} entrées) de l'appareil du médecin ${userId}.`);
+      this.logger.log(`[DPDPA] Consentement révoqué pour le médecin ${userId} / patient ${patientId}.`);
 
       return {
-         status: 'REVOKED_AND_PURGED',
-         message: "Consentement révoqué. Les données du patient ont été physiquement et irréversiblement effacées du système (Hard Delete).",
-         recordsDeletedCount: totalPurged
+         status: 'REVOKED',
+         message: "Consentement révoqué. Le praticien ne peut plus accéder aux données de ce patient.",
       };
 
     } catch (transactionError: unknown) {
-      // En cas de crash de la Base de Données au milieu de la purge (ex: Clé Étrangère, Lock)
-      // Prisma exécute le ROLLBACK automatiquement : aucune donnée n'est supprimée à moitié.
-      this.logger.error(`[DPDPA PURGE ROLLBACK] La transaction de destruction a échoué. Les données n'ont pas pu être effacées.`, transactionError);
+      this.logger.error(`[DPDPA] La révocation du consentement a échoué.`, transactionError);
 
       throw new HttpException(
-        'Erreur critique lors de la purge légale des données. La transaction a été annulée (Rollback). Veuillez réessayer.',
+        'Erreur critique lors de la révocation du consentement. Veuillez réessayer.',
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }

@@ -22,8 +22,7 @@ export function HardwareStatusIndicator() {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        // @ts-ignore
-        if (window.__TAURI_INTERNALS__) {
+        if ((window as any).__TAURI_INTERNALS__) {
           const res = await invoke<HardwareStatus>('check_hardware_health');
           setStatus(res);
         }

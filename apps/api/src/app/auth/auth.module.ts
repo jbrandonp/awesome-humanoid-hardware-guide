@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { BlacklistService } from './blacklist.service';
 import { JwtStrategy } from './jwt.strategy';
+import { RolesGuard } from './roles.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { ThrottlerModule } from '@nestjs/throttler';
 
@@ -22,6 +23,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
     AuthService,
     BlacklistService,
     JwtStrategy,
+    RolesGuard,
   ],
   controllers: [AuthController],
   exports: [AuthService, JwtModule, BlacklistService],

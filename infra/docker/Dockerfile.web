@@ -15,10 +15,12 @@ RUN npm ci
 COPY . .
 
 # Build the PWA
-RUN npx nx build portail-pwa --prod
+RUN npx nx build portail-pwa --configuration=production
 
 # Production stage
 FROM node:20-alpine
+
+RUN apk add --no-cache curl
 
 WORKDIR /app
 ENV NODE_ENV=production
@@ -26,7 +28,7 @@ ENV PORT=3001
 
 # Copy package.json for production dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copy built application
 COPY --from=builder /app/dist/apps/portail-pwa/.next/standalone ./

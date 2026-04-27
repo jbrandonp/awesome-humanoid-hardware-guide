@@ -4,7 +4,6 @@ module.exports = {
     project: 'tsconfig.base.json',
     tsconfigRootDir: __dirname,
     sourceType: 'module',
-    createDefaultProgram: true,
   },
   plugins: ['@typescript-eslint/eslint-plugin'],
   extends: ['plugin:@typescript-eslint/recommended'],
@@ -27,7 +26,6 @@ module.exports = {
     'coverage',
   ],
   rules: {
-    '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'warn',
     '@typescript-eslint/explicit-module-boundary-types': 'warn',
     '@typescript-eslint/no-explicit-any': 'warn',

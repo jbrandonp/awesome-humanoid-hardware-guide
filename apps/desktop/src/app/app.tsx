@@ -18,8 +18,7 @@ export function App() {
     }
 
     // Only run in Tauri environment
-    // @ts-ignore
-    if (window.__TAURI_INTERNALS__) {
+    if ((window as any).__TAURI_INTERNALS__) {
       discoverApi();
     } else {
       setApiUrl("http://localhost:3000"); // Dev fallback

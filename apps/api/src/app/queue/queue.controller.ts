@@ -1,6 +1,6 @@
-import { Controller, Post, Body, Get, Put, Param, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, Param } from '@nestjs/common';
 import { QueueService } from './queue.service';
-import { TriageInput, TriageInputSchema } from './triage.schema';
+import { TriageInputSchema } from './triage.schema';
 import { z } from 'zod';
 
 const AddPatientSchema = z.object({

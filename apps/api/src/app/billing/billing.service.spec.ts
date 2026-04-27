@@ -74,6 +74,7 @@ describe('BillingService', () => {
                 updateMany: jest.fn().mockResolvedValue({ count: 1 })
             },
             invoice: {
+                findUnique: jest.fn().mockResolvedValue(null),
                 create: jest.fn().mockResolvedValue({ id: 'inv-1', totalCents: 420, currency: 'INR' })
             },
             auditLog: {

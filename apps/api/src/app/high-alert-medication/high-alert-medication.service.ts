@@ -1,7 +1,7 @@
 import { Injectable, UnauthorizedException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { DualSignOffSchema, DualSignOff } from '@systeme-sante/models';
+import { DualSignOff } from '@systeme-sante/models';
 import { ActionType } from '@prisma/client';
 import * as crypto from 'crypto';
 

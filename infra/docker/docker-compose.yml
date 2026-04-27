@@ -53,7 +53,7 @@ services:
   # --- PRODUCTION DEPLOYMENT ---
   api:
     build:
-      context: ..
+      context: ../..
       dockerfile: infra/docker/Dockerfile.api
     container_name: systeme-sante-api
     ports:

@@ -11,6 +11,12 @@ import { AppModule } from './app/app.module';
 import dnssd from 'node-dns-sd';
 
 async function bootstrap(): Promise<void> {
+  // Blocker le demarrage si JWT_SECRET n'est pas configure
+  if (process.env.NODE_ENV === 'production' &&
+      (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'production-secret-key-change-me')) {
+    throw new Error('JWT_SECRET non configure — demarrage bloque en production');
+  }
+
   const fastifyAdapter = new FastifyAdapter({
     // Support Yjs CRDT payloads, High-Res Images & Whisper audio (up to 50MB)
     bodyLimit: 50 * 1024 * 1024,

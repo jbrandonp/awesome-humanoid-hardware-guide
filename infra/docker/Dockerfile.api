@@ -9,10 +9,12 @@ COPY . .
 # Génération Prisma
 RUN npx prisma generate
 # Compilation de l'API avec Nx
-RUN npx nx build api --prod
+RUN npx nx build api --configuration=production
 
 # Production Stage
 FROM node:20-alpine
+
+RUN apk add --no-cache curl
 
 WORKDIR /app
 # Variables d'environnements (surpassables au run)
@@ -21,14 +23,14 @@ ENV PORT=3000
 
 # On copie uniquement les dépendances de prod (via un installeur propre)
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copie Prisma client
 COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 COPY --from=builder /app/prisma /app/prisma
 
 # Copie de l'artefact buildé de l'API
-COPY --from=builder /app/dist/apps/api /app/dist/apps/api
+COPY --from=builder /app/apps/api/dist /app/dist/apps/api
 
 EXPOSE 3000
 

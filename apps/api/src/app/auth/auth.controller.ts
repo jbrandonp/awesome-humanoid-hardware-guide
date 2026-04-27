@@ -1,42 +1,49 @@
-import { Controller, Post, Get, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Roles } from './roles.decorator';
 import { RolesGuard } from './roles.guard';
 import { Role } from '@prisma/client';
 import { AuthService } from './auth.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
-
-interface LoginDto {
-  email?: string;
-  password?: string;
-}
+import * as crypto from 'crypto';
 
 interface RegisterStaffDto {
   email: string;
   role: Role;
-  firstName?: string;
-  lastName?: string;
 }
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  /**
-   * Endpoint de login avec Rate Limiting pour contrer les attaques force brute.
-   * On simule ici la validation des identifiants (qui utiliserait bcrypt.compare en vrai).
-   */
   @UseGuards(ThrottlerGuard)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requêtes par minute
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @Post('login')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async login(@Body() _body: LoginDto): Promise<unknown> {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    // NOTE: In a real scenario, validate email/password here.
-    // For now we assume they are valid and fetch the user (or fake one)
-    const userId = '123e4567-e89b-12d3-a456-426614174000';
-    const role = Role.DOCTOR;
-    return this.authService.login(userId, role);
+  async login(@Body() body: { email?: string; password?: string }): Promise<unknown> {
+    if (!body.email || !body.password) {
+      throw new UnauthorizedException('Email et mot de passe requis.');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { email: body.email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Identifiants invalides.');
+    }
+
+    const hashedInput = crypto.createHash('sha256').update(body.password).digest('hex');
+    const storedPassword = user.password;
+
+    if (hashedInput !== storedPassword) {
+      throw new UnauthorizedException('Identifiants invalides.');
+    }
+
+    return this.authService.login(user.id, user.role);
   }
 
   @UseGuards(ThrottlerGuard)
@@ -76,12 +83,21 @@ export class AuthController {
   @Post('users')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(Role.ADMIN)
-  async registerNewStaff(@Body() userData: RegisterStaffDto): Promise<{ message: string; data: RegisterStaffDto }> {
-    // Cette route rejettera tout User n'ayant pas le rôle "ADMIN" (code HTTP 403 Forbidden).
-    // Dans une DB réelle, on chiffrerait le mot de passe avec bcrypt ici.
+  async registerNewStaff(@Body() userData: RegisterStaffDto): Promise<{ message: string; userId: string }> {
+    const existingUser = await this.prisma.user.findUnique({ where: { email: userData.email } });
+    if (existingUser) {
+      throw new UnauthorizedException('Un utilisateur avec cet email existe déjà.');
+    }
+    const user = await this.prisma.user.create({
+      data: {
+        email: userData.email,
+        role: userData.role,
+        password: crypto.randomBytes(32).toString('hex'),
+      },
+    });
     return {
-      message: 'Utilisateur administratif ou praticien créé avec succès.',
-      data: userData
+      message: 'Utilisateur créé avec succès.',
+      userId: user.id,
     };
   }
 

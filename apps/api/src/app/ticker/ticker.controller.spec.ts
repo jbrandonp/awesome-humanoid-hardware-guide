@@ -37,7 +37,7 @@ describe('TickerController', () => {
         ip: '127.0.0.1'
       };
 
-      const result = await controller.exportEpidemiologyReport(mockReq);
+      const result = await controller.exportEpidemiologyReport(mockReq as any);
 
       expect(mockAuditService.logAudit).toHaveBeenCalledWith({
         userId: 'admin-456',
@@ -58,7 +58,7 @@ describe('TickerController', () => {
         ip: '127.0.0.1'
       };
 
-      await expect(controller.exportEpidemiologyReport(mockReq))
+      await expect(controller.exportEpidemiologyReport(mockReq as any))
         .rejects
         .toThrow(InternalServerErrorException);
     });
@@ -69,7 +69,7 @@ describe('TickerController', () => {
         ip: '127.0.0.1'
       };
 
-      await expect(controller.exportEpidemiologyReport(mockReq))
+      await expect(controller.exportEpidemiologyReport(mockReq as any))
         .rejects
         .toThrow(ForbiddenException);
     });
